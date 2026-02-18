@@ -1,3 +1,7 @@
+  ## Install Backend Libraries
+
+  All developers on the team must run ```pip install -r requirements.txt``` in VS Code Console inside of the folder before working on the project. This will prevent "it works on my device" problems.
+  
   ## Running the code
 
   Run `npm i` to install the dependencies.
