@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 
+const Color appPrimaryColor = Color(0xFFA12727);
+const Color appBackgroundColor = Color(0xFFFFFFFF);
+const Color appMutedTextColor = Color(0xFF7A4A4A);
+const Color appPlaceholderColor = Color(0xFFEBD1D1);
+
 void main() {
   runApp(const UniFindApp());
 }
@@ -13,12 +18,21 @@ class UniFindApp extends StatefulWidget {
 
 class _UniFindAppState extends State<UniFindApp> {
   int _selectedIndex = 0;
+  bool _isLoggedIn = false;
+  String _currentUserEmail = '';
 
   final List<MarketplaceItem> _marketplaceItems =
       List<MarketplaceItem>.from(seedMarketplaceItems);
   final List<LostFoundItem> _lostFoundItems =
       List<LostFoundItem>.from(seedLostFoundItems);
 
+  /// Uses the logged-in identity as listing owner so "My Listings" stays scoped
+  /// to the active account instead of a hardcoded placeholder.
+  String get _activeOwner =>
+      _currentUserEmail.isEmpty ? 'You' : _currentUserEmail;
+
+  /// Adds a newly submitted listing into in-memory state.
+  /// Keeps insertion at index 0 so the user immediately sees newly posted items.
   void _addListing(NewListingInput input) {
     setState(() {
       if (input.type == ListingType.marketplace) {
@@ -32,7 +46,7 @@ class _UniFindAppState extends State<UniFindApp> {
             category: input.category,
             condition: input.condition,
             image: input.imageUrl,
-            seller: 'You',
+            seller: _activeOwner,
             createdAt: DateTime.now(),
             location: input.location,
           ),
@@ -49,7 +63,7 @@ class _UniFindAppState extends State<UniFindApp> {
                 ? LostFoundType.lost
                 : LostFoundType.found,
             image: input.imageUrl,
-            poster: 'You',
+            poster: _activeOwner,
             createdAt: DateTime.now(),
             location: input.location,
             status: 'active',
@@ -60,70 +74,226 @@ class _UniFindAppState extends State<UniFindApp> {
     });
   }
 
+  void _goToPostTab() {
+    setState(() {
+      _selectedIndex = 2;
+    });
+  }
+
+  void _handleLogin(String email) {
+    setState(() {
+      _isLoggedIn = true;
+      _currentUserEmail = email;
+      _selectedIndex = 0;
+    });
+  }
+
+  void _handleLogout() {
+    setState(() {
+      _isLoggedIn = false;
+      _currentUserEmail = '';
+      _selectedIndex = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'UniFind',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB91C1C)),
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-      ),
-      home: Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFB91C1C),
-          foregroundColor: Colors.white,
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('UniFind', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Montclair State', style: TextStyle(fontSize: 12)),
-            ],
+        colorScheme: ColorScheme.fromSeed(seedColor: appPrimaryColor).copyWith(
+          primary: appPrimaryColor,
+          secondary: appPrimaryColor,
+          surface: appBackgroundColor,
+          onPrimary: appBackgroundColor,
+        ),
+        scaffoldBackgroundColor: appBackgroundColor,
+        cardColor: appBackgroundColor,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: appPrimaryColor,
+          foregroundColor: appBackgroundColor,
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: appPrimaryColor,
+            foregroundColor: appBackgroundColor,
           ),
         ),
-        body: IndexedStack(
-          index: _selectedIndex,
-          children: [
-            MarketplaceScreen(items: _marketplaceItems),
-            LostFoundScreen(items: _lostFoundItems),
-            PostListingScreen(onPost: _addListing),
-            MyListingsScreen(
-              marketplaceItems: _marketplaceItems
-                  .where((item) => item.seller == 'You')
-                  .toList(),
-              lostFoundItems: _lostFoundItems
-                  .where((item) => item.poster == 'You')
-                  .toList(),
-            ),
-            const DocumentationScreen(),
-          ],
-        ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.storefront_outlined), label: 'Shop'),
-            NavigationDestination(
-                icon: Icon(Icons.search), label: 'Lost/Found'),
-            NavigationDestination(
-                icon: Icon(Icons.add_circle_outline), label: 'Post'),
-            NavigationDestination(
-                icon: Icon(Icons.inventory_2_outlined), label: 'My'),
-            NavigationDestination(
-                icon: Icon(Icons.menu_book_outlined), label: 'Docs'),
-          ],
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: appPrimaryColor,
+            side: const BorderSide(color: appPrimaryColor),
+          ),
         ),
       ),
+      home: !_isLoggedIn
+          ? LoginScreen(onLogin: _handleLogin)
+          : Scaffold(
+              appBar: AppBar(
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('UniFind',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      _currentUserEmail,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Log out',
+                    onPressed: _handleLogout,
+                    icon: const Icon(Icons.logout),
+                  ),
+                ],
+              ),
+              body: IndexedStack(
+                index: _selectedIndex,
+                children: [
+                  MarketplaceScreen(
+                    items: _marketplaceItems,
+                    onListItem: _goToPostTab,
+                  ),
+                  LostFoundScreen(items: _lostFoundItems),
+                  PostListingScreen(onPost: _addListing),
+                  MyListingsScreen(
+                    marketplaceItems: _marketplaceItems
+                        .where((item) => item.seller == _activeOwner)
+                        .toList(),
+                    lostFoundItems: _lostFoundItems
+                        .where((item) => item.poster == _activeOwner)
+                        .toList(),
+                    onListItem: _goToPostTab,
+                  ),
+                  const DocumentationScreen(),
+                ],
+              ),
+              bottomNavigationBar: NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) =>
+                    setState(() => _selectedIndex = index),
+                destinations: const [
+                  NavigationDestination(
+                      icon: Icon(Icons.storefront_outlined), label: 'Shop'),
+                  NavigationDestination(
+                      icon: Icon(Icons.search), label: 'Lost/Found'),
+                  NavigationDestination(
+                      icon: Icon(Icons.add_circle_outline), label: 'Post'),
+                  NavigationDestination(
+                      icon: Icon(Icons.inventory_2_outlined), label: 'My'),
+                  NavigationDestination(
+                      icon: Icon(Icons.menu_book_outlined), label: 'Docs'),
+                ],
+              ),
+            ),
     );
   }
 }
 
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key, required this.onLogin});
+
+  final void Function(String email) onLogin;
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  String _email = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('UniFind Login'),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Sign in to browse listings',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _email = value,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email is required';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) => (value == null || value.isEmpty)
+                            ? 'Password is required'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: _submit,
+                        child: const Text('Log In'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    widget.onLogin(_email.trim());
+  }
+}
+
 class MarketplaceScreen extends StatefulWidget {
-  const MarketplaceScreen({super.key, required this.items});
+  const MarketplaceScreen({
+    super.key,
+    required this.items,
+    required this.onListItem,
+  });
 
   final List<MarketplaceItem> items;
+  final VoidCallback onListItem;
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -146,6 +316,17 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: widget.onListItem,
+              icon: const Icon(Icons.add),
+              label: const Text('List an Item'),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: TextField(
@@ -179,88 +360,131 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: filteredItems.isEmpty
-              ? const Center(
-                  child: Text('No items found matching your criteria'))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: filteredItems.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.72,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+          child: widget.items.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('No listings yet'),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: widget.onListItem,
+                        icon: const Icon(Icons.add),
+                        label: const Text('List an Item'),
+                      ),
+                    ],
                   ),
-                  itemBuilder: (context, index) {
-                    final item = filteredItems[index];
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ItemDetailScreen(item: item),
+                )
+              : filteredItems.isEmpty
+                  ? const Center(
+                      child: Text('No items found matching your criteria'))
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: filteredItems.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.72,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ItemDetailScreen(item: item),
+                              ),
+                            );
+                          },
+                          child: Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Image.network(
+                                    item.image,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const ColoredBox(
+                                      color: appPlaceholderColor,
+                                      child: Center(
+                                          child:
+                                              Icon(Icons.image_not_supported)),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '\$${item.price.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          color: appPrimaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(item.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: appBackgroundColor,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                          border: Border.all(
+                                              color: appPrimaryColor),
+                                        ),
+                                        child: Text(
+                                          item.category,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: appPrimaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.location,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: appMutedTextColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        item.condition,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: appMutedTextColor),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
-                      child: Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Image.network(
-                                item.image,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const ColoredBox(
-                                  color: Color(0xFFE5E7EB),
-                                  child: Center(
-                                      child: Icon(Icons.image_not_supported)),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '\$${item.price.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      color: Color(0xFFB91C1C),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(item.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.location,
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.black54),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    item.condition,
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.black54),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                    ),
         ),
       ],
     );
@@ -312,50 +536,11 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
-              Expanded(
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      setState(() => selectedType = LostFilter.all),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: selectedType == LostFilter.all
-                        ? const Color(0xFFB91C1C)
-                        : null,
-                    foregroundColor:
-                        selectedType == LostFilter.all ? Colors.white : null,
-                  ),
-                  child: const Text('All'),
-                ),
-              ),
+              Expanded(child: _typeFilterButton(LostFilter.all, 'All')),
               const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      setState(() => selectedType = LostFilter.lost),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: selectedType == LostFilter.lost
-                        ? const Color(0xFFEA580C)
-                        : null,
-                    foregroundColor:
-                        selectedType == LostFilter.lost ? Colors.white : null,
-                  ),
-                  child: const Text('Lost'),
-                ),
-              ),
+              Expanded(child: _typeFilterButton(LostFilter.lost, 'Lost')),
               const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      setState(() => selectedType = LostFilter.found),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: selectedType == LostFilter.found
-                        ? const Color(0xFF16A34A)
-                        : null,
-                    foregroundColor:
-                        selectedType == LostFilter.found ? Colors.white : null,
-                  ),
-                  child: const Text('Found'),
-                ),
-              ),
+              Expanded(child: _typeFilterButton(LostFilter.found, 'Found')),
             ],
           ),
         ),
@@ -417,7 +602,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                   width: 82,
                                   height: 82,
                                   child: ColoredBox(
-                                    color: Color(0xFFE5E7EB),
+                                    color: appPlaceholderColor,
                                     child: Icon(Icons.image_not_supported),
                                   ),
                                 ),
@@ -445,9 +630,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: item.type == LostFoundType.lost
-                                              ? const Color(0xFFFED7AA)
-                                              : const Color(0xFFDCFCE7),
+                                          color: appBackgroundColor,
                                           borderRadius:
                                               BorderRadius.circular(999),
                                         ),
@@ -458,10 +641,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
-                                            color:
-                                                item.type == LostFoundType.lost
-                                                    ? const Color(0xFF9A3412)
-                                                    : const Color(0xFF166534),
+                                            color: appPrimaryColor,
                                           ),
                                         ),
                                       ),
@@ -472,8 +652,8 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                     item.description,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style:
-                                        const TextStyle(color: Colors.black54),
+                                    style: const TextStyle(
+                                        color: appMutedTextColor),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -481,7 +661,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                        fontSize: 12, color: Colors.black45),
+                                        fontSize: 12, color: appMutedTextColor),
                                   ),
                                 ],
                               ),
@@ -494,6 +674,19 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  /// Centralized style for Lost/Found type filters to avoid drift.
+  Widget _typeFilterButton(LostFilter value, String label) {
+    final selected = selectedType == value;
+    return FilledButton.tonal(
+      onPressed: () => setState(() => selectedType = value),
+      style: FilledButton.styleFrom(
+        backgroundColor: selected ? appPrimaryColor : null,
+        foregroundColor: selected ? appBackgroundColor : null,
+      ),
+      child: Text(label),
     );
   }
 }
@@ -555,7 +748,6 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
               TextFormField(
                 decoration: const InputDecoration(
                     labelText: 'Title *', border: OutlineInputBorder()),
@@ -658,25 +850,14 @@ class _PostListingScreenState extends State<PostListingScreen> {
 
   Widget _typeButton({required String label, required ListingType type}) {
     final selected = listingType == type;
-    Color? background;
-    if (selected && type == ListingType.marketplace) {
-      background = const Color(0xFFB91C1C);
-    }
-    if (selected && type == ListingType.lost) {
-      background = const Color(0xFFEA580C);
-    }
-    if (selected && type == ListingType.found) {
-      background = const Color(0xFF16A34A);
-    }
-
     return FilledButton.tonal(
       onPressed: () => setState(() {
         listingType = type;
         category = '';
       }),
       style: FilledButton.styleFrom(
-        backgroundColor: background,
-        foregroundColor: selected ? Colors.white : null,
+        backgroundColor: selected ? appPrimaryColor : null,
+        foregroundColor: selected ? appBackgroundColor : null,
       ),
       child: Text(label),
     );
@@ -718,10 +899,12 @@ class MyListingsScreen extends StatefulWidget {
     super.key,
     required this.marketplaceItems,
     required this.lostFoundItems,
+    required this.onListItem,
   });
 
   final List<MarketplaceItem> marketplaceItems;
   final List<LostFoundItem> lostFoundItems;
+  final VoidCallback onListItem;
 
   @override
   State<MyListingsScreen> createState() => _MyListingsScreenState();
@@ -743,6 +926,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         children: [
           const Text('My Listings',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: widget.onListItem,
+            icon: const Icon(Icons.add),
+            label: const Text('List an Item'),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -857,7 +1046,7 @@ class ItemDetailScreen extends StatelessWidget {
                 item.image,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const ColoredBox(
-                  color: Color(0xFFE5E7EB),
+                  color: appPlaceholderColor,
                   child: Center(child: Icon(Icons.image_not_supported)),
                 ),
               ),
@@ -867,7 +1056,7 @@ class ItemDetailScreen extends StatelessWidget {
           Text(
             '\$${item.price.toStringAsFixed(0)}',
             style: const TextStyle(
-              color: Color(0xFFB91C1C),
+              color: appPrimaryColor,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
