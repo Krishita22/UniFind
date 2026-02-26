@@ -39,13 +39,13 @@
     },
     {
       "name": "flutter",
-      "rootUri": "file:///opt/homebrew/share/flutter/packages/flutter",
+      "rootUri": "file:///Users/krishitavaghani/flutter/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
       "name": "flutter_test",
-      "rootUri": "file:///opt/homebrew/share/flutter/packages/flutter_test",
+      "rootUri": "file:///Users/krishitavaghani/flutter/packages/flutter_test",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -92,14 +92,8 @@
       "languageVersion": "3.4"
     },
     {
-      "name": "plugin_platform_interface",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/plugin_platform_interface-2.1.8",
-      "packageUri": "lib/",
-      "languageVersion": "3.0"
-    },
-    {
       "name": "sky_engine",
-      "rootUri": "file:///opt/homebrew/share/flutter/bin/cache/pkg/sky_engine",
+      "rootUri": "file:///Users/krishitavaghani/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -135,7 +129,7 @@
     },
     {
       "name": "test_api",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/test_api-0.7.9",
+      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/test_api-0.7.8",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -152,30 +146,6 @@
       "languageVersion": "3.5"
     },
     {
-      "name": "webview_flutter",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/webview_flutter-4.13.1",
-      "packageUri": "lib/",
-      "languageVersion": "3.8"
-    },
-    {
-      "name": "webview_flutter_android",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/webview_flutter_android-4.10.11",
-      "packageUri": "lib/",
-      "languageVersion": "3.9"
-    },
-    {
-      "name": "webview_flutter_platform_interface",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/webview_flutter_platform_interface-2.14.0",
-      "packageUri": "lib/",
-      "languageVersion": "3.6"
-    },
-    {
-      "name": "webview_flutter_wkwebview",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/webview_flutter_wkwebview-3.23.6",
-      "packageUri": "lib/",
-      "languageVersion": "3.9"
-    },
-    {
       "name": "unifind_flutter",
       "rootUri": "../",
       "packageUri": "lib/",
@@ -184,7 +154,7 @@
   ],
   "generator": "pub",
   "generatorVersion": "3.11.0",
-  "flutterRoot": "file:///opt/homebrew/share/flutter",
-  "flutterVersion": "3.41.1",
+  "flutterRoot": "file:///Users/krishitavaghani/flutter",
+  "flutterVersion": "3.41.0",
   "pubCache": "file:///Users/krishitavaghani/.pub-cache"
 }
