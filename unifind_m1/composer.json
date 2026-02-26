@@ -1,0 +1,9 @@
+{
+  "name": "unifind/milestone1",
+  "description": "UniFind Milestone 1 cPanel PHP app",
+  "type": "project",
+  "require": {
+    "php": ">=8.0",
+    "phpmailer/phpmailer": "^6.9"
+  }
+}
