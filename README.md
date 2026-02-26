@@ -6,9 +6,23 @@ This repository contains:
 - A React + Vite web app
 - A native Flutter app (`unifind_flutter/`)
 
-## Quick Start (Flutter)
+## Run Locally
 
-Run from the repository root:
+1. Clone and enter the repo:
+
+```bash
+git clone https://github.com/ivanovs1/UniFind.git
+cd UniFind
+```
+
+2. Pull latest `main`:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+### Run Flutter app
 
 ```bash
 cd unifind_flutter
@@ -17,12 +31,12 @@ flutter devices
 flutter run -d <device_id>
 ```
 
-Common targets:
-- Chrome: `flutter run -d chrome`
-- macOS desktop: `flutter run -d macos`
-- iOS Simulator: `flutter run -d ios` (with Simulator open)
+Examples:
+- `flutter run -d chrome`
+- `flutter run -d macos`
+- `flutter run -d ios` (open iOS Simulator first)
 
-## Quick Start (Web)
+### Run web app
 
 ```bash
 npm install
@@ -74,38 +88,6 @@ Milestone I test cases will validate:
 - Verification emails are sent and login succeeds/fails correctly based on credentials.
 - Only verified users can view approved listings on the landing page; all approved listings appear as expected.
 - Verified users can create listings when all required fields are provided; incomplete listings are rejected with clear feedback.
-
----
-
-## Running the web app
-
-```bash
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173` in your browser to view the web app.
-
-## Running with Flutter
-
-- **Prerequisites:** Install Flutter (https://flutter.dev).
-
-- **Run locally:**
-
-   ```bash
-   cd unifind_flutter
-   flutter pub get
-   flutter run
-   ```
-
-- **Choose a target device:**
-
-   ```bash
-   flutter devices
-   flutter run -d <device_id>
-   ```
-
-- The Flutter app is now a native Dart implementation of UniFind's core screens and does not depend on the web dev server.
 
 ---
 
