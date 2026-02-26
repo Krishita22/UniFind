@@ -1,31 +1,45 @@
-# UniFind Flutter shell
+# UniFind Flutter (Native)
 
-This minimal Flutter project loads the existing Vite/React UniFind app inside a WebView for quick testing on mobile.
+This Flutter project is a native Dart implementation of UniFind's core flows:
+- Marketplace browsing + item details
+- Lost & Found feed
+- Post listing form (For Sale / Lost / Found)
+- My Listings view
+- Docs page
 
-Quick steps
+## Prerequisites
 
-1) Build and preview your web app from the repo root:
+- Flutter SDK installed (`flutter --version`)
+- Android Studio or Xcode (for mobile simulators/devices)
 
-```bash
-npm run build
-npm run preview
-```
-
-Preview serves the production files (default port `5173`).
-
-2) Run the Flutter app
+## Run the app
 
 ```bash
 cd unifind_flutter
 flutter pub get
-flutter run -d <device>
+flutter run
 ```
 
-Notes
-- Android emulator: use `http://10.0.2.2:5173` (already configured in `lib/main.dart`).
-- iOS simulator: `http://localhost:5173` works.
-- Physical devices: use your machine IP (e.g. `http://192.168.1.5:5173`) and ensure both are on the same network.
-- Android: ensure `android/app/src/main/AndroidManifest.xml` contains `<uses-permission android:name="android.permission.INTERNET"/>`.
-- iOS: if loading non-HTTPS, add App Transport Security exceptions in `ios/Runner/Info.plist`.
+## Run on a specific target
 
-If you want the web build bundled inside the Flutter app (offline), I can add the steps to copy the `dist` output into the Flutter `assets/` and load it from local files.
+List available devices:
+
+```bash
+flutter devices
+```
+
+Run on device id:
+
+```bash
+flutter run -d <device_id>
+```
+
+Examples:
+- Android emulator: `flutter run -d emulator-5554`
+- iOS simulator: `flutter run -d ios`
+- Chrome (web): `flutter run -d chrome`
+
+## Notes
+
+- The app uses in-memory mock data from Dart models in `lib/main.dart`.
+- Posted items appear immediately in the app state and in `My Listings`.
