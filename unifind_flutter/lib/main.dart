@@ -590,8 +590,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   onChanged: (value) => price = double.tryParse(value) ?? 0,
                   validator: (value) {
                     final parsed = double.tryParse(value ?? '');
-                    if (parsed == null || parsed <= 0)
+                    if (parsed == null || parsed <= 0) {
                       return 'Enter a valid price';
+                    }
                     return null;
                   },
                 ),
@@ -658,12 +659,15 @@ class _PostListingScreenState extends State<PostListingScreen> {
   Widget _typeButton({required String label, required ListingType type}) {
     final selected = listingType == type;
     Color? background;
-    if (selected && type == ListingType.marketplace)
+    if (selected && type == ListingType.marketplace) {
       background = const Color(0xFFB91C1C);
-    if (selected && type == ListingType.lost)
+    }
+    if (selected && type == ListingType.lost) {
       background = const Color(0xFFEA580C);
-    if (selected && type == ListingType.found)
+    }
+    if (selected && type == ListingType.found) {
       background = const Color(0xFF16A34A);
+    }
 
     return FilledButton.tonal(
       onPressed: () => setState(() {
