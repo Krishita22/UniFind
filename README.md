@@ -2,9 +2,7 @@
 
 Marketplace app with lost and found — CSIT 415 Project.
 
-This repository contains:
-- A React + Vite web app
-- A native Flutter app (`unifind_flutter/`)
+This repository contains a React + Vite web app and a native Flutter app.
 
 ## Run Locally
 
@@ -91,4 +89,38 @@ Milestone I test cases will validate:
 
 ---
 
-Last updated: 2026-02-26
+## Running the web app
+
+Install dependencies and start the Vite dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser to view the web app.
+
+## Running with Flutter
+
+- **Prerequisites:** Install Flutter (https://flutter.dev).
+
+- **Run locally:**
+
+   ```bash
+   cd unifind_flutter
+   flutter pub get
+   flutter run
+   ```
+
+- **Choose a target device:**
+
+   ```bash
+   flutter devices
+   flutter run -d <device_id>
+   ```
+
+- The Flutter app is now a native Dart implementation of UniFind's core screens and does not depend on the web dev server.
+
+---
+
+Last updated: 2026-02-18
