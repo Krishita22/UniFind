@@ -1,14 +1,47 @@
- # UniFind
+# UniFind
 
-Marketplace app with lost and found — CSIT 415 Project
+Marketplace app with lost and found — CSIT 415 Project.
 
 This repository contains a React + Vite web app and a native Flutter app.
 
-## Running the web app
+## Run Locally
 
-Install dependencies and start the Vite dev server:
+1. Clone and enter the repo:
 
- # UniFind
+```bash
+git clone https://github.com/ivanovs1/UniFind.git
+cd UniFind
+```
+
+2. Pull latest `main`:
+
+```bash
+git checkout main
+git pull origin main
+```
+
+### Run Flutter app
+
+```bash
+cd unifind_flutter
+flutter pub get
+flutter devices
+flutter run -d <device_id>
+```
+
+Examples:
+- `flutter run -d chrome`
+- `flutter run -d macos`
+- `flutter run -d ios` (open iOS Simulator first)
+
+### Run web app
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173`.
 
 Ryisha Heusner, Stephania Ivanov, Sumaya Rahman, Nick Seminerio, Krishita Vaghani
 
