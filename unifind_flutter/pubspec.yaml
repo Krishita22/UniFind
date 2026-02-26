@@ -1,5 +1,5 @@
 name: unifind_flutter
-description: Flutter shell app that embeds the UniFind web app via WebView
+description: Native Flutter app for UniFind marketplace and lost-and-found flows
 publish_to: 'none'
 version: 0.0.1
 environment:
@@ -8,7 +8,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  webview_flutter: ^4.0.7
 
 dev_dependencies:
   flutter_test:
