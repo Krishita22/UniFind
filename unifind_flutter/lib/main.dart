@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'auth_screens.dart';
 
 const Color appPrimaryColor = Color(0xFFA12727);
 const Color appBackgroundColor = Color(0xFFFFFFFF);
@@ -1213,28 +1212,6 @@ class _ExclusiveBanner extends StatelessWidget {
   final VoidCallback onLogin;
   const _ExclusiveBanner({required this.onLogin});
 
-  void _goToPostTab() {
-    setState(() {
-      _selectedIndex = 2;
-    });
-  }
-
-  void _handleLogin(String email) {
-    setState(() {
-      _isLoggedIn = true;
-      _currentUserEmail = email;
-      _selectedIndex = 0;
-    });
-  }
-
-  void _handleLogout() {
-    setState(() {
-      _isLoggedIn = false;
-      _currentUserEmail = '';
-      _selectedIndex = 0;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1498,13 +1475,6 @@ class _LoadingButtonState extends State<_LoadingButton> with SingleTickerProvide
         ),
       ),
     );
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-    widget.onLogin(_email.trim());
   }
 }
 
@@ -1866,19 +1836,6 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
           ),
         ),
       ),
-    );
-  }
-
-  /// Centralized style for Lost/Found type filters to avoid drift.
-  Widget _typeFilterButton(LostFilter value, String label) {
-    final selected = selectedType == value;
-    return FilledButton.tonal(
-      onPressed: () => setState(() => selectedType = value),
-      style: FilledButton.styleFrom(
-        backgroundColor: selected ? appPrimaryColor : null,
-        foregroundColor: selected ? appBackgroundColor : null,
-      ),
-      child: Text(label),
     );
   }
 }
