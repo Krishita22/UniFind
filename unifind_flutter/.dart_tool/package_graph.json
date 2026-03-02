@@ -7,7 +7,8 @@
       "name": "unifind_flutter",
       "version": "0.0.1",
       "dependencies": [
-        "flutter"
+        "flutter",
+        "http"
       ],
       "devDependencies": [
         "flutter_lints",
@@ -127,7 +128,7 @@
     },
     {
       "name": "test_api",
-      "version": "0.7.8",
+      "version": "0.7.9",
       "dependencies": [
         "async",
         "boolean_selector",
@@ -218,6 +219,38 @@
       "name": "vm_service",
       "version": "15.0.2",
       "dependencies": []
+    },
+    {
+      "name": "http",
+      "version": "1.6.0",
+      "dependencies": [
+        "async",
+        "http_parser",
+        "meta",
+        "web"
+      ]
+    },
+    {
+      "name": "web",
+      "version": "1.1.1",
+      "dependencies": []
+    },
+    {
+      "name": "http_parser",
+      "version": "4.1.2",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
+      ]
+    },
+    {
+      "name": "typed_data",
+      "version": "1.4.0",
+      "dependencies": [
+        "collection"
+      ]
     }
   ],
   "configVersion": 1
