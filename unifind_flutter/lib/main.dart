@@ -1,6 +1,6 @@
 
-
 import 'package:flutter/material.dart';
+import 'api_service.dart';
 
 const Color appPrimaryColor = Color(0xFFA12727);
 const Color appBackgroundColor = Color(0xFFFFFFFF);
@@ -23,9 +23,11 @@ class _UniFindAppState extends State<UniFindApp> {
   bool _isLoggedIn = false;
   String _currentUserEmail = '';
 
-  final List<MarketplaceItem> _marketplaceItems =
+  // Lists start with seed data as fallback,
+  // then get replaced by API data once loaded
+  List<MarketplaceItem> _marketplaceItems =
       List<MarketplaceItem>.from(seedMarketplaceItems);
-  final List<LostFoundItem> _lostFoundItems =
+  List<LostFoundItem> _lostFoundItems =
       List<LostFoundItem>.from(seedLostFoundItems);
 
   /// Uses the logged-in identity as listing owner so "My Listings" stays scoped
@@ -33,48 +35,134 @@ class _UniFindAppState extends State<UniFindApp> {
   String get _activeOwner =>
       _currentUserEmail.isEmpty ? 'You' : _currentUserEmail;
 
+  /// Fetches marketplace listings from the API.
+  /// Falls back to seed data if the API returns nothing or fails.
+  Future<void> _loadListings() async {
+    try {
+      final apiItems = await getListings();
+      if (apiItems.isNotEmpty) {
+        setState(() {
+          _marketplaceItems = apiItems.map((item) => MarketplaceItem(
+            id:          item['id'].toString(),
+            title:       item['title'],
+            price:       (item['price'] as num).toDouble(),
+            description: item['description'],
+            category:    item['category'],
+            condition:   item['condition'],
+            image:       item['image'] ?? '',
+            seller:      item['seller'] ?? '',
+            createdAt:   DateTime.tryParse(item['createdAt'] ?? '') ?? DateTime.now(),
+            location:    item['location'] ?? '',
+          )).toList();
+        });
+      }
+      // If API returns empty, seed data stays as fallback
+    } catch (_) {
+      // API failed — seed data stays as fallback
+    }
+  }
+
+  /// Fetches lost & found items from the API.
+  /// Falls back to seed data if the API returns nothing or fails.
+  Future<void> _loadLostFound() async {
+    try {
+      final apiItems = await getLostFoundItems();
+      if (apiItems.isNotEmpty) {
+        setState(() {
+          _lostFoundItems = apiItems.map((item) => LostFoundItem(
+            id:          item['id'].toString(),
+            title:       item['title'],
+            description: item['description'],
+            category:    item['category'],
+            type:        item['type'] == 'lost' ? LostFoundType.lost : LostFoundType.found,
+            image:       item['image'] ?? '',
+            poster:      item['poster'] ?? '',
+            createdAt:   DateTime.tryParse(item['createdAt'] ?? '') ?? DateTime.now(),
+            location:    item['location'] ?? '',
+            status:      item['status'] ?? 'active',
+          )).toList();
+        });
+      }
+      // If API returns empty, seed data stays as fallback
+    } catch (_) {
+      // API failed — seed data stays as fallback
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Load data from API when the app starts
+    _loadListings();
+    _loadLostFound();
+  }
+
   /// Adds a newly submitted listing into in-memory state.
-  /// Keeps insertion at index 0 so the user immediately sees newly posted items.
-  void _addListing(NewListingInput input) {
+  /// Keeping insertion at index 0 so the user immediately sees newly posted items.
+  void _addListing(NewListingInput input) async {
+  try {
+    if (input.type == ListingType.marketplace) {
+      await createListing(
+        title:       input.title,
+        description: input.description,
+        price:       input.price,
+        category:    input.category,
+        condition:   input.condition,
+        location:    input.location,
+        email:       _currentUserEmail,
+        image:       input.imageUrl,
+      );
+    } else {
+      await createLostFoundItem(
+        title:       input.title,
+        description: input.description,
+        category:    input.category,
+        type:        input.type == ListingType.lost ? 'lost' : 'found',
+        location:    input.location,
+        email:       _currentUserEmail,
+        image:       input.imageUrl,
+      );
+    }
+    // Reload from database so new item appears immediately
+    await _loadListings();
+    await _loadLostFound();
+  } catch (e) {
+    // If API fails, insert locally as fallback
     setState(() {
       if (input.type == ListingType.marketplace) {
-        _marketplaceItems.insert(
-          0,
-          MarketplaceItem(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: input.title,
-            price: input.price,
-            description: input.description,
-            category: input.category,
-            condition: input.condition,
-            image: input.imageUrl,
-            seller: _activeOwner,
-            createdAt: DateTime.now(),
-            location: input.location,
-          ),
-        );
+        _marketplaceItems.insert(0, MarketplaceItem(
+          id:          DateTime.now().millisecondsSinceEpoch.toString(),
+          title:       input.title,
+          price:       input.price,
+          description: input.description,
+          category:    input.category,
+          condition:   input.condition,
+          image:       input.imageUrl,
+          seller:      _activeOwner,
+          createdAt:   DateTime.now(),
+          location:    input.location,
+        ));
       } else {
-        _lostFoundItems.insert(
-          0,
-          LostFoundItem(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: input.title,
-            description: input.description,
-            category: input.category,
-            type: input.type == ListingType.lost
-                ? LostFoundType.lost
-                : LostFoundType.found,
-            image: input.imageUrl,
-            poster: _activeOwner,
-            createdAt: DateTime.now(),
-            location: input.location,
-            status: 'active',
-          ),
-        );
+        _lostFoundItems.insert(0, LostFoundItem(
+          id:          DateTime.now().millisecondsSinceEpoch.toString(),
+          title:       input.title,
+          description: input.description,
+          category:    input.category,
+          type:        input.type == ListingType.lost ? LostFoundType.lost : LostFoundType.found,
+          image:       input.imageUrl,
+          poster:      _activeOwner,
+          createdAt:   DateTime.now(),
+          location:    input.location,
+          status:      'active',
+        ));
       }
-      _selectedIndex = input.type == ListingType.marketplace ? 0 : 1;
     });
   }
+
+  setState(() {
+    _selectedIndex = input.type == ListingType.marketplace ? 0 : 1;
+  });
+}
 
   void _goToPostTab() {
     setState(() {
@@ -1048,6 +1136,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
+  String _password = '';
+  bool _isLoading = false;
+  String _errorMessage = '';
 
   @override
   Widget build(BuildContext context) {
@@ -1100,16 +1191,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: 'Password',
                           border: OutlineInputBorder(),
                         ),
+                        onChanged: (value) => _password = value,
                         validator: (value) =>
                             (value == null || value.isEmpty)
                                 ? 'Password is required'
                                 : null,
                       ),
+                      // Show error message from API if login fails
+                      if (_errorMessage.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          _errorMessage,
+                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                      ],
                       const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: _submit,
-                        child: const Text('Log In'),
-                      ),
+                      // Show loading indicator while API call is in progress
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : FilledButton(
+                              onPressed: _submit,
+                              child: const Text('Log In'),
+                            ),
                     ],
                   ),
                 ),
@@ -1121,9 +1224,31 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _submit() {
+  /// Calls the API to verify login credentials.
+  /// Falls back to basic email validation if the API is unreachable.
+  void _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    widget.onLogin(_email.trim());
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      await loginUser(_email.trim(), _password.trim());
+      widget.onLogin(_email.trim());
+    } catch (e) {
+      final errorMsg = e.toString();
+      if (errorMsg.contains('connect') || errorMsg.contains('server')) {
+        // Network error — fall back to basic email validation
+        widget.onLogin(_email.trim());
+      } else {
+        setState(() {
+          _errorMessage = 'Invalid email or password.';
+          _isLoading = false;
+        });
+      }
+    }
   }
 }
 
@@ -2242,6 +2367,4 @@ final List<LostFoundItem> seedLostFoundItems = [
     status: 'active',
   ),
 ];
-
-
 
