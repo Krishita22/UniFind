@@ -60,9 +60,7 @@ class _UniFindAppState extends State<UniFindApp> {
             title: input.title,
             description: input.description,
             category: input.category,
-            type: input.type == ListingType.lost
-                ? LostFoundType.lost
-                : LostFoundType.found,
+            type: input.type == ListingType.lost ? LostFoundType.lost : LostFoundType.found,
             image: input.imageUrl,
             poster: _activeOwner,
             createdAt: DateTime.now(),
@@ -307,11 +305,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredItems = widget.items.where((item) {
-      final categoryMatch =
-          selectedCategory == 'All' || item.category == selectedCategory;
+      final categoryMatch = selectedCategory == 'All' || item.category == selectedCategory;
       final query = searchQuery.toLowerCase();
-      final searchMatch = item.title.toLowerCase().contains(query) ||
-          item.description.toLowerCase().contains(query);
+      final searchMatch =
+          item.title.toLowerCase().contains(query) || item.description.toLowerCase().contains(query);
       return categoryMatch && searchMatch;
     }).toList();
 
@@ -351,8 +348,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                     child: ChoiceChip(
                       label: Text(category),
                       selected: selectedCategory == category,
-                      onSelected: (_) =>
-                          setState(() => selectedCategory = category),
+                      onSelected: (_) => setState(() => selectedCategory = category),
                     ),
                   ),
                 )
@@ -509,13 +505,11 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
   @override
   Widget build(BuildContext context) {
     final filteredItems = widget.items.where((item) {
-      final categoryMatch =
-          selectedCategory == 'All' || item.category == selectedCategory;
-      final typeMatch =
-          selectedType == LostFilter.all || item.type.name == selectedType.name;
+      final categoryMatch = selectedCategory == 'All' || item.category == selectedCategory;
+      final typeMatch = selectedType == LostFilter.all || item.type.name == selectedType.name;
       final query = searchQuery.toLowerCase();
-      final searchMatch = item.title.toLowerCase().contains(query) ||
-          item.description.toLowerCase().contains(query);
+      final searchMatch =
+          item.title.toLowerCase().contains(query) || item.description.toLowerCase().contains(query);
       return categoryMatch && typeMatch && searchMatch;
     }).toList();
 
@@ -526,8 +520,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-              Text('Lost & Found',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text('Lost & Found', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               SizedBox(height: 4),
               Text('Help fellow students reunite with their belongings'),
             ],
@@ -568,8 +561,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                     child: ChoiceChip(
                       label: Text(category),
                       selected: selectedCategory == category,
-                      onSelected: (_) =>
-                          setState(() => selectedCategory = category),
+                      onSelected: (_) => setState(() => selectedCategory = category),
                     ),
                   ),
                 )
@@ -579,8 +571,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
         const SizedBox(height: 8),
         Expanded(
           child: filteredItems.isEmpty
-              ? const Center(
-                  child: Text('No items found matching your criteria'))
+              ? const Center(child: Text('No items found matching your criteria'))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: filteredItems.length,
@@ -619,8 +610,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                       Expanded(
                                         child: Text(
                                           item.title,
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w600),
+                                          style: const TextStyle(fontWeight: FontWeight.w600),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -636,9 +626,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                               BorderRadius.circular(999),
                                         ),
                                         child: Text(
-                                          item.type == LostFoundType.lost
-                                              ? 'Lost'
-                                              : 'Found',
+                                          item.type == LostFoundType.lost ? 'Lost' : 'Found',
                                           style: TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
@@ -712,10 +700,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
   String location = '';
   double price = 0;
 
-  List<String> get _availableCategories =>
-      listingType == ListingType.marketplace
-          ? categories.where((item) => item != 'All').toList()
-          : lostFoundCategories.where((item) => item != 'All').toList();
+  List<String> get _availableCategories => listingType == ListingType.marketplace
+      ? categories.where((item) => item != 'All').toList()
+      : lostFoundCategories.where((item) => item != 'All').toList();
 
   @override
   Widget build(BuildContext context) {
@@ -727,17 +714,14 @@ class _PostListingScreenState extends State<PostListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Post an Item',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const Text('Post an Item', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 14),
-              const Text('Listing Type',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Listing Type', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(
-                    child: _typeButton(
-                        label: 'For Sale', type: ListingType.marketplace),
+                    child: _typeButton(label: 'For Sale', type: ListingType.marketplace),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -750,12 +734,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 ],
               ),
               TextFormField(
-                decoration: const InputDecoration(
-                    labelText: 'Title *', border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: 'Title *', border: OutlineInputBorder()),
                 onChanged: (value) => title = value,
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Title is required'
-                    : null,
+                validator: (value) => (value == null || value.trim().isEmpty) ? 'Title is required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -766,9 +747,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 minLines: 3,
                 maxLines: 5,
                 onChanged: (value) => description = value,
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Description is required'
-                    : null,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Description is required' : null,
               ),
               if (listingType == ListingType.marketplace) ...[
                 const SizedBox(height: 12),
@@ -778,14 +758,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     prefixText: '\$',
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (value) => price = double.tryParse(value) ?? 0,
                   validator: (value) {
                     final parsed = double.tryParse(value ?? '');
-                    if (parsed == null || parsed <= 0) {
-                      return 'Enter a valid price';
-                    }
+                    if (parsed == null || parsed <= 0) return 'Enter a valid price';
                     return null;
                   },
                 ),
@@ -797,11 +774,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: const ['New', 'Like New', 'Good', 'Fair']
-                      .map((item) =>
-                          DropdownMenuItem(value: item, child: Text(item)))
+                      .map((item) => DropdownMenuItem(value: item, child: Text(item)))
                       .toList(),
-                  onChanged: (value) =>
-                      setState(() => condition = value ?? 'Good'),
+                  onChanged: (value) => setState(() => condition = value ?? 'Good'),
                 ),
               ],
               const SizedBox(height: 12),
@@ -812,13 +787,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   border: OutlineInputBorder(),
                 ),
                 items: _availableCategories
-                    .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(item)))
+                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
                     .toList(),
                 onChanged: (value) => setState(() => category = value ?? ''),
-                validator: (value) => (value == null || value.isEmpty)
-                    ? 'Category is required'
-                    : null,
+                validator: (value) => (value == null || value.isEmpty) ? 'Category is required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -827,9 +799,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) => location = value,
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Location is required'
-                    : null,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Location is required' : null,
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -967,10 +938,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                                 child: ListTile(
                                   leading: const Icon(Icons.storefront),
                                   title: Text(item.title),
-                                  subtitle: Text(
-                                      '${item.category} • ${item.location}'),
-                                  trailing: Text(
-                                      '\$${item.price.toStringAsFixed(0)}'),
+                                  subtitle: Text('${item.category} • ${item.location}'),
+                                  trailing: Text('\$${item.price.toStringAsFixed(0)}'),
                                 ),
                               ),
                             )
@@ -983,11 +952,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                                       ? Icons.report_problem_outlined
                                       : Icons.check_circle_outline),
                                   title: Text(item.title),
-                                  subtitle: Text(
-                                      '${item.category} • ${item.location}'),
-                                  trailing: Text(item.type == LostFoundType.lost
-                                      ? 'Lost'
-                                      : 'Found'),
+                                  subtitle: Text('${item.category} • ${item.location}'),
+                                  trailing: Text(item.type == LostFoundType.lost ? 'Lost' : 'Found'),
                                 ),
                               ),
                             )
@@ -1008,8 +974,7 @@ class DocumentationScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: const [
-        Text('UniFind Documentation',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        Text('UniFind Documentation', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         SizedBox(height: 12),
         Text(
           'UniFind is a campus marketplace and lost-and-found app for Montclair State University. '
@@ -1063,9 +1028,7 @@ class ItemDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(item.title,
-              style:
-                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Text(item.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -1082,8 +1045,7 @@ class ItemDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text('Description',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Description', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
           Text(item.description),
           const SizedBox(height: 12),
@@ -1097,9 +1059,7 @@ class ItemDetailScreen extends StatelessWidget {
           FilledButton.icon(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text(
-                        'Contact flow can be connected to chat/API next.')),
+                const SnackBar(content: Text('Contact flow can be connected to chat/API next.')),
               );
             },
             icon: const Icon(Icons.message_outlined),
@@ -1126,8 +1086,7 @@ class NewListingInput {
     required this.condition,
     required this.location,
     required this.price,
-    this.imageUrl =
-        'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400',
+    this.imageUrl = 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400',
   });
 
   final ListingType type;
@@ -1222,8 +1181,7 @@ final List<MarketplaceItem> seedMarketplaceItems = [
     id: '1',
     title: 'Chemistry Textbook - 11th Edition',
     price: 45,
-    description:
-        'Barely used chemistry textbook. Perfect condition with no highlighting or notes.',
+    description: 'Barely used chemistry textbook. Perfect condition with no highlighting or notes.',
     category: 'Textbooks',
     condition: 'Like New',
     image: 'https://images.unsplash.com/photo-1589998059171-988d887df646?w=400',
@@ -1235,8 +1193,7 @@ final List<MarketplaceItem> seedMarketplaceItems = [
     id: '2',
     title: 'Mini Fridge - Perfect for Dorms',
     price: 80,
-    description:
-        'Compact mini fridge, great for dorm rooms. Works perfectly, very quiet.',
+    description: 'Compact mini fridge, great for dorm rooms. Works perfectly, very quiet.',
     category: 'Furniture',
     condition: 'Good',
     image: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400',
@@ -1248,8 +1205,7 @@ final List<MarketplaceItem> seedMarketplaceItems = [
     id: '3',
     title: 'Scientific Calculator TI-84',
     price: 60,
-    description:
-        'TI-84 Plus graphing calculator. Great for math and science courses.',
+    description: 'TI-84 Plus graphing calculator. Great for math and science courses.',
     category: 'Electronics',
     condition: 'Good',
     image: 'https://images.unsplash.com/photo-1611367840531-628f328d9a49?w=400',
@@ -1261,8 +1217,7 @@ final List<MarketplaceItem> seedMarketplaceItems = [
     id: '4',
     title: 'Desk Lamp with USB Port',
     price: 15,
-    description:
-        'LED desk lamp with adjustable brightness and USB charging port.',
+    description: 'LED desk lamp with adjustable brightness and USB charging port.',
     category: 'Furniture',
     condition: 'Like New',
     image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400',
@@ -1274,8 +1229,7 @@ final List<MarketplaceItem> seedMarketplaceItems = [
     id: '5',
     title: 'MacBook Pro Charger',
     price: 30,
-    description:
-        'Original Apple 61W USB-C power adapter. Compatible with MacBook Pro.',
+    description: 'Original Apple 61W USB-C power adapter. Compatible with MacBook Pro.',
     category: 'Electronics',
     condition: 'Good',
     image: 'https://images.unsplash.com/photo-1591290619762-d06df1a8a8b0?w=400',
@@ -1314,8 +1268,7 @@ final List<LostFoundItem> seedLostFoundItems = [
   LostFoundItem(
     id: 'lf2',
     title: 'Found: AirPods in Case',
-    description:
-        'Found AirPods with charging case near the dining hall entrance.',
+    description: 'Found AirPods with charging case near the dining hall entrance.',
     category: 'Electronics',
     type: LostFoundType.found,
     image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400',
@@ -1327,8 +1280,7 @@ final List<LostFoundItem> seedLostFoundItems = [
   LostFoundItem(
     id: 'lf3',
     title: 'Lost Student ID Card',
-    description:
-        'Lost my student ID card somewhere between Dickson Hall and the parking lot.',
+    description: 'Lost my student ID card somewhere between Dickson Hall and the parking lot.',
     category: 'ID/Cards',
     type: LostFoundType.lost,
     image: 'https://images.unsplash.com/photo-1585155770958-eeb77df44de8?w=400',
