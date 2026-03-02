@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'auth_screens.dart';
 
 const Color appPrimaryColor = Color(0xFFA12727);
 const Color appBackgroundColor = Color(0xFFFFFFFF);
@@ -128,7 +129,7 @@ class _UniFindAppState extends State<UniFindApp> {
         ),
       ),
       home: !_isLoggedIn
-          ? LoginScreen(onLogin: _handleLogin)
+          ? AuthScreen(onLogin: _handleLogin)
           : Scaffold(
               appBar: AppBar(
                 title: Column(
