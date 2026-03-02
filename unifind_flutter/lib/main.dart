@@ -1,4 +1,11 @@
+
+
 import 'package:flutter/material.dart';
+
+const Color appPrimaryColor = Color(0xFFA12727);
+const Color appBackgroundColor = Color(0xFFFFFFFF);
+const Color appMutedTextColor = Color(0xFF7A4A4A);
+const Color appPlaceholderColor = Color(0xFFEBD1D1);
 
 void main() {
   runApp(const UniFindApp());
@@ -13,12 +20,21 @@ class UniFindApp extends StatefulWidget {
 
 class _UniFindAppState extends State<UniFindApp> {
   int _selectedIndex = 0;
+  bool _isLoggedIn = false;
+  String _currentUserEmail = '';
 
   final List<MarketplaceItem> _marketplaceItems =
       List<MarketplaceItem>.from(seedMarketplaceItems);
   final List<LostFoundItem> _lostFoundItems =
       List<LostFoundItem>.from(seedLostFoundItems);
 
+  /// Uses the logged-in identity as listing owner so "My Listings" stays scoped
+  /// to the active account instead of a hardcoded placeholder.
+  String get _activeOwner =>
+      _currentUserEmail.isEmpty ? 'You' : _currentUserEmail;
+
+  /// Adds a newly submitted listing into in-memory state.
+  /// Keeps insertion at index 0 so the user immediately sees newly posted items.
   void _addListing(NewListingInput input) {
     setState(() {
       if (input.type == ListingType.marketplace) {
@@ -32,7 +48,7 @@ class _UniFindAppState extends State<UniFindApp> {
             category: input.category,
             condition: input.condition,
             image: input.imageUrl,
-            seller: 'You',
+            seller: _activeOwner,
             createdAt: DateTime.now(),
             location: input.location,
           ),
@@ -49,7 +65,7 @@ class _UniFindAppState extends State<UniFindApp> {
                 ? LostFoundType.lost
                 : LostFoundType.found,
             image: input.imageUrl,
-            poster: 'You',
+            poster: _activeOwner,
             createdAt: DateTime.now(),
             location: input.location,
             status: 'active',
@@ -60,59 +76,188 @@ class _UniFindAppState extends State<UniFindApp> {
     });
   }
 
+  void _goToPostTab() {
+    setState(() {
+      _selectedIndex = 2;
+    });
+  }
+
+  void _handleLogin(String email) {
+    setState(() {
+      _isLoggedIn = true;
+      _currentUserEmail = email;
+      _selectedIndex = 0;
+    });
+  }
+
+  void _handleLogout() {
+    setState(() {
+      _isLoggedIn = false;
+      _currentUserEmail = '';
+      _selectedIndex = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'UniFind',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB91C1C)),
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-      ),
-      home: Scaffold(
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFB91C1C),
-          foregroundColor: Colors.white,
-          title: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('UniFind', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Montclair State', style: TextStyle(fontSize: 12)),
-            ],
+        colorScheme: ColorScheme.fromSeed(seedColor: appPrimaryColor).copyWith(
+          primary: appPrimaryColor,
+          secondary: appPrimaryColor,
+          surface: appBackgroundColor,
+          onPrimary: appBackgroundColor,
+        ),
+        scaffoldBackgroundColor: appBackgroundColor,
+        cardColor: appBackgroundColor,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: appPrimaryColor,
+          foregroundColor: appBackgroundColor,
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: appPrimaryColor,
+            foregroundColor: appBackgroundColor,
           ),
         ),
-        body: IndexedStack(
-          index: _selectedIndex,
-          children: [
-            MarketplaceScreen(items: _marketplaceItems),
-            LostFoundScreen(items: _lostFoundItems),
-            PostListingScreen(onPost: _addListing),
-            MyListingsScreen(
-              marketplaceItems: _marketplaceItems
-                  .where((item) => item.seller == 'You')
-                  .toList(),
-              lostFoundItems: _lostFoundItems
-                  .where((item) => item.poster == 'You')
-                  .toList(),
-            ),
-            const DocumentationScreen(),
-          ],
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: appPrimaryColor,
+            side: const BorderSide(color: appPrimaryColor),
+          ),
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.storefront_outlined), label: 'Shop'),
-            NavigationDestination(
-                icon: Icon(Icons.search), label: 'Lost/Found'),
-            NavigationDestination(
-                icon: Icon(Icons.add_circle_outline), label: 'Post'),
-            NavigationDestination(
-                icon: Icon(Icons.inventory_2_outlined), label: 'My'),
-            NavigationDestination(
-                icon: Icon(Icons.menu_book_outlined), label: 'Docs'),
+      ),
+      // Landing → Login → Main App
+      // Replaced LoginScreen with LandingPage as the entry point when logged out
+      home: !_isLoggedIn
+          ? LandingPage(onLogin: _handleLogin)
+          : Scaffold(
+              appBar: AppBar(
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('UniFind',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      _currentUserEmail,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Log out',
+                    onPressed: _handleLogout,
+                    icon: const Icon(Icons.logout),
+                  ),
+                ],
+              ),
+              body: IndexedStack(
+                index: _selectedIndex,
+                children: [
+                  MarketplaceScreen(
+                    items: _marketplaceItems,
+                    onListItem: _goToPostTab,
+                  ),
+                  LostFoundScreen(items: _lostFoundItems),
+                  PostListingScreen(onPost: _addListing),
+                  MyListingsScreen(
+                    marketplaceItems: _marketplaceItems
+                        .where((item) => item.seller == _activeOwner)
+                        .toList(),
+                    lostFoundItems: _lostFoundItems
+                        .where((item) => item.poster == _activeOwner)
+                        .toList(),
+                    onListItem: _goToPostTab,
+                  ),
+                  const DocumentationScreen(),
+                ],
+              ),
+                bottomNavigationBar: NavigationBar(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: (index) =>
+                    setState(() => _selectedIndex = index),
+                destinations: const [
+                  NavigationDestination(
+                      icon: Icon(Icons.storefront_outlined), label: 'Shop'),
+                  NavigationDestination(
+                      icon: Icon(Icons.search), label: 'Lost/Found'),
+                  NavigationDestination(
+                      icon: Icon(Icons.add_circle_outline), label: 'Post'),
+                  NavigationDestination(
+                      icon: Icon(Icons.inventory_2_outlined), label: 'My'),
+                  NavigationDestination(
+                      icon: Icon(Icons.menu_book_outlined), label: 'Docs'),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// --------------------
+
+class LandingPage extends StatelessWidget {
+  const LandingPage({super.key, required this.onLogin});
+
+  // Called when the user successfully logs in from the LoginScreen.
+  final void Function(String email) onLogin;
+
+  static final GlobalKey aboutKey = GlobalKey();
+  static final GlobalKey howItWorksKey = GlobalKey();
+  static final GlobalKey faqKey = GlobalKey();
+
+  void _scrollTo(GlobalKey key) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  // Opens the Login screen. Once the user logs in successfully,
+  // the app marks them as logged in and returns them to the home screen.
+  void _openLogin(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(
+          onLogin: (email) {
+            onLogin(email); 
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _LandingNavbar(
+              onAboutTap: () => _scrollTo(aboutKey),
+              onHowItWorksTap: () => _scrollTo(howItWorksKey),
+              onFaqTap: () => _scrollTo(faqKey),
+              onLoginTap: () => _openLogin(context),
+            ),
+            _HeroSection(onLoginTap: () => _openLogin(context)),
+            Container(key: howItWorksKey, child: const _HowItWorksSection()),
+            const _FeaturesSection(),
+            Container(key: aboutKey, child: const _AboutSection()),
+            Container(key: faqKey, child: const _FaqSection()),
+            _ExclusiveBanner(onLoginTap: () => _openLogin(context)),
+            const _Footer(),
           ],
         ),
       ),
@@ -120,10 +265,878 @@ class _UniFindAppState extends State<UniFindApp> {
   }
 }
 
+// --------------------
+// LANDING PAGE
+// Navigation Bar
+// --------------------
+
+class _LandingNavbar extends StatelessWidget {
+  final VoidCallback onAboutTap;
+  final VoidCallback onHowItWorksTap;
+  final VoidCallback onFaqTap;
+  final VoidCallback onLoginTap;
+
+  const _LandingNavbar({
+    required this.onAboutTap,
+    required this.onHowItWorksTap,
+    required this.onFaqTap,
+    required this.onLoginTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF8B1A1A),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Logo
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    width: 2.5,
+                  ),
+                ),
+                child: const Center(
+                  child: Text(
+                    'MSU',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'UniFind',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+
+          // Nav links + login and sign up buttons
+          Row(
+            children: [
+              TextButton(
+                onPressed: onAboutTap,
+                child: const Text('About',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
+              ),
+              TextButton(
+                onPressed: onHowItWorksTap,
+                child: const Text('How It Works',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
+              ),
+              TextButton(
+                onPressed: onFaqTap,
+                child: const Text('FAQ',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
+              ),
+              Container(
+                height: 20,
+                width: 1,
+                color: Colors.white38,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              TextButton(
+                onPressed: onLoginTap,
+                child: const Text('Log In',
+                    style: TextStyle(color: Colors.white, fontSize: 14)),
+              ),
+              const SizedBox(width: 6),
+              ElevatedButton(
+                onPressed: onLoginTap,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF8B1A1A),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  textStyle: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                child: const Text('Sign Up'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// Welcome Sign / Welcome Screen Section
+// --------------------
+
+class _HeroSection extends StatelessWidget {
+  final VoidCallback onLoginTap;
+  const _HeroSection({required this.onLoginTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFFFF5F5),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 80),
+      child: Column(
+        children: [
+          const Text(
+            'Your Campus.\nYour Marketplace.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1A1A1A),
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Buy, sell, and reunite with lost items within the \nMontclair State University community.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 18, color: Color(0xFF555555), height: 1.6),
+          ),
+          const SizedBox(height: 40),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: onLoginTap,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B1A1A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 36, vertical: 18),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                  textStyle: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                child: const Text('Log In'),
+              ),
+              const SizedBox(width: 16),
+              OutlinedButton(
+                onPressed: onLoginTap,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF8B1A1A),
+                  side: const BorderSide(color: Color(0xFF8B1A1A), width: 2),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 36, vertical: 18),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                  textStyle: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                child: const Text('Sign Up'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// How It Works Section
+// --------------------
+
+class _HowItWorksSection extends StatelessWidget {
+  const _HowItWorksSection();
+
+  @override
+  Widget build(BuildContext context) {
+    const steps = [
+      _Step(
+          number: '1',
+          title: 'Sign Up',
+          description:
+              'Create an account using your university email to join the MSU community.'),
+      _Step(
+          number: '2',
+          title: 'Browse or Post',
+          description:
+              'Find items for sale, report lost belongings, or create your own listings in just a few seconds.'),
+      _Step(
+          number: '3',
+          title: 'Connect',
+          description:
+              'Message fellow students, arrange pickups, and complete your exchange safely on campus.'),
+    ];
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
+      child: Column(
+        children: [
+          const Text('How It Works',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A))),
+          const SizedBox(height: 8),
+          const Text('Get started in three simple steps',
+              style: TextStyle(fontSize: 16, color: Color(0xFF777777))),
+          const SizedBox(height: 48),
+          Wrap(
+            spacing: 24,
+            runSpacing: 24,
+            alignment: WrapAlignment.center,
+            children: steps.map((s) => _StepCard(step: s)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Step {
+  final String number, title, description;
+  const _Step(
+      {required this.number, required this.title, required this.description});
+}
+
+class _StepCard extends StatelessWidget {
+  final _Step step;
+  const _StepCard({required this.step});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 260,
+      height: 230,
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF5F5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFEDD5D5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: const Color(0xFF8B1A1A),
+              child: Text(step.number,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 14),
+            Text(step.title,
+                style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A1A))),
+            const SizedBox(height: 8),
+            Flexible(
+              child: Text(step.description,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF666666),
+                      height: 1.5)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// Features Sections
+// --------------------
+
+class _FeaturesSection extends StatelessWidget {
+  const _FeaturesSection();
+
+  @override
+  Widget build(BuildContext context) {
+    const features = [
+      _Feature(
+          icon: Icons.storefront_rounded,
+          title: 'Campus Marketplace',
+          description:
+              'Buy and sell textbooks, electronics, furniture, clothing, and more with other MSU students.'),
+      _Feature(
+          icon: Icons.search_rounded,
+          title: 'Lost & Found',
+          description:
+              'Report lost items or post things you\'ve found to help reunite students with their belongings.'),
+      _Feature(
+          icon: Icons.add_circle_outline_rounded,
+          title: 'Post in Seconds',
+          description:
+              'Create a listing with a title, photo, price, and category in just a few clicks.'),
+      _Feature(
+          icon: Icons.lock_outline_rounded,
+          title: 'MSU Community Only',
+          description:
+              'Exclusively for Montclair State University students, faculty, and staff, providing a trusted and safe community you can rely on.'),
+    ];
+
+    return Container(
+      color: const Color(0xFFFAFAFA),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
+      child: Column(
+        children: [
+          const Text('Everything You Need',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A))),
+          const SizedBox(height: 8),
+          const Text('Your campus life was just made easier',
+              style: TextStyle(fontSize: 16, color: Color(0xFF777777))),
+          const SizedBox(height: 48),
+          Wrap(
+            spacing: 24,
+            runSpacing: 24,
+            alignment: WrapAlignment.center,
+            children: features.map((f) => _FeatureCard(feature: f)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Feature {
+  final IconData icon;
+  final String title, description;
+  const _Feature(
+      {required this.icon, required this.title, required this.description});
+}
+
+class _FeatureCard extends StatelessWidget {
+  final _Feature feature;
+  const _FeatureCard({required this.feature});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 260,
+      height: 230,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF0EE),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child:
+                  Icon(feature.icon, color: const Color(0xFF8B1A1A), size: 28),
+            ),
+            const SizedBox(height: 14),
+            Text(feature.title,
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A1A))),
+            const SizedBox(height: 8),
+            Flexible(
+              child: Text(feature.description,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF666666),
+                      height: 1.5)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// About Section
+// --------------------
+
+class _AboutSection extends StatelessWidget {
+  const _AboutSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
+      child: Column(
+        children: [
+          const Text('About UniFind',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A))),
+          const SizedBox(height: 8),
+          const Text('Built for every member of the Red Hawk community',
+              style: TextStyle(fontSize: 16, color: Color(0xFF777777))),
+          const SizedBox(height: 48),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: const Column(
+                children: [
+                  _AboutStrip(
+                      icon: Icons.school_rounded,
+                      title: 'Our Mission',
+                      description:
+                          'UniFind was created to make campus life easier at Montclair State University. We believe everyone deserves a safe, trusted platform to buy, sell, and recover lost belongings within their own community.',
+                      shaded: false),
+                  _AboutStrip(
+                      icon: Icons.groups_rounded,
+                      title: 'Who We Are',
+                      description:
+                          'We are MSU students who saw a need for a dedicated campus marketplace. UniFind is built with the MSU community in mind. Every feature is designed around how students actually live and interact on campus.',
+                      shaded: true),
+                  _AboutStrip(
+                      icon: Icons.favorite_rounded,
+                      title: 'Why UniFind',
+                      description:
+                          'Unlike other marketplaces, UniFind is exclusively for individuals who are a part of the MSU community. That means safer transactions, familiar faces, and a community you can trust. No strangers, just fellow Red Hawks.',
+                      shaded: false),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AboutStrip extends StatelessWidget {
+  final IconData icon;
+  final String title, description;
+  final bool shaded;
+
+  const _AboutStrip({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.shaded,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+      decoration: BoxDecoration(
+        color: shaded ? const Color(0xFFFFF8F8) : Colors.white,
+        border: const Border(
+            bottom: BorderSide(color: Color(0xFFF5E5E5), width: 1)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF0EE),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFEDD5D5), width: 2),
+            ),
+            child: Icon(icon, color: const Color(0xFF8B1A1A), size: 24),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8B1A1A))),
+                const SizedBox(height: 6),
+                Text(description,
+                    style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF555555),
+                        height: 1.6)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// FAQ Section
+// --------------------
+
+class _FaqSection extends StatelessWidget {
+  const _FaqSection();
+
+  @override
+  Widget build(BuildContext context) {
+    const faqs = [
+      _Faq(
+          question: 'Who can use UniFind?',
+          answer:
+              'UniFind is exclusively for Montclair State University students, faculty, and staff. You must sign up with a valid MSU email address to access the platform.'),
+      _Faq(
+          question: 'Is UniFind safe?',
+          answer:
+              'Yes! UniFind will have administrators monitoring listings and users to ensure listings are legitimate and all users are verified MSU students and faculty'),
+      _Faq(
+          question: 'How do I post an item for sale?',
+          answer:
+              'After signing in, tap the "Post" tab at the bottom of the app. Fill in the title, description, price, category, and location. Afterwards, hit Post Item. It takes less than a minute!'),
+      _Faq(
+          question: 'What categories are available?',
+          answer:
+              'Right now, you can list items under Textbooks, Electronics, Furniture, Clothing, and Other. The Lost & Found board supports Electronics, Bags, Keys, ID/Cards, Clothing, and Other.'),
+      _Faq(
+          question: 'How does Lost & Found work?',
+          answer:
+              'Students can post items they\'ve lost or found on campus. Browse the Lost & Found feed, filter by category, and reach out to reunite items with their owners.'),
+      _Faq(
+          question: 'How do I contact a seller?',
+          answer:
+              'Once you\'re signed in and viewing a listing, you can message the seller directly through the app to arrange a meetup or ask questions.'),
+    ];
+
+    return Container(
+      color: const Color(0xFFFAFAFA),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
+      child: Column(
+        children: [
+          const Text('Frequently Asked Questions',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A))),
+          const SizedBox(height: 8),
+          const Text('Everything you need to know before getting started',
+              style: TextStyle(fontSize: 16, color: Color(0xFF777777))),
+          const SizedBox(height: 48),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              children: faqs.map((f) => _FaqTile(faq: f)).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Faq {
+  final String question, answer;
+  const _Faq({required this.question, required this.answer});
+}
+
+class _FaqTile extends StatefulWidget {
+  final _Faq faq;
+  const _FaqTile({required this.faq});
+
+  @override
+  State<_FaqTile> createState() => _FaqTileState();
+}
+
+class _FaqTileState extends State<_FaqTile> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEDD5D5), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF8B1A1A).withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF8B1A1A), Color(0xFFB03030)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.faq.question,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Container(
+              width: double.infinity,
+              color: const Color(0xFFFFF8F8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Text(
+                widget.faq.answer,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF555555),
+                  height: 1.6,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// Bottome of the Page Banner
+// --------------------
+
+class _ExclusiveBanner extends StatelessWidget {
+  final VoidCallback onLoginTap;
+  const _ExclusiveBanner({required this.onLoginTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF8B1A1A),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 56),
+      child: Column(
+        children: [
+          const Text('Made for the Montclair State University Community',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          const Text(
+            'UniFind is designed solely for the Montclair State University community, offering a safe and verified space to sell and connect on campus.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: Color(0xFFFFCCCC), fontSize: 16, height: 1.6),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton(
+            onPressed: onLoginTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF8B1A1A),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
+              textStyle: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            child: const Text('Join UniFind Today'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --------------------
+// LANDING PAGE
+// Footer
+// --------------------
+
+class _Footer extends StatelessWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF1A1A1A),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+      child: const Center(
+        child: Text(
+          '2026 UniFind · Montclair State University',
+          style: TextStyle(color: Color(0xFF888888), fontSize: 13),
+        ),
+      ),
+    );
+  }
+}
+
+// END OF LANDING PAGE SECTIONS
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key, required this.onLogin});
+
+  final void Function(String email) onLogin;
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  String _email = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('UniFind Login'),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Sign in to browse listings',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _email = value,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email is required';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) =>
+                            (value == null || value.isEmpty)
+                                ? 'Password is required'
+                                : null,
+                      ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: _submit,
+                        child: const Text('Log In'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    widget.onLogin(_email.trim());
+  }
+}
+
+
 class MarketplaceScreen extends StatefulWidget {
-  const MarketplaceScreen({super.key, required this.items});
+  const MarketplaceScreen({
+    super.key,
+    required this.items,
+    required this.onListItem,
+  });
 
   final List<MarketplaceItem> items;
+  final VoidCallback onListItem;
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -146,6 +1159,17 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: widget.onListItem,
+              icon: const Icon(Icons.add),
+              label: const Text('List an Item'),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: TextField(
@@ -179,88 +1203,133 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: filteredItems.isEmpty
-              ? const Center(
-                  child: Text('No items found matching your criteria'))
-              : GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: filteredItems.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.72,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+          child: widget.items.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('No listings yet'),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: widget.onListItem,
+                        icon: const Icon(Icons.add),
+                        label: const Text('List an Item'),
+                      ),
+                    ],
                   ),
-                  itemBuilder: (context, index) {
-                    final item = filteredItems[index];
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ItemDetailScreen(item: item),
+                )
+              : filteredItems.isEmpty
+                  ? const Center(
+                      child:
+                          Text('No items found matching your criteria'))
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: filteredItems.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.72,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ItemDetailScreen(item: item),
+                              ),
+                            );
+                          },
+                          child: Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Image.network(
+                                    item.image,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        const ColoredBox(
+                                      color: appPlaceholderColor,
+                                      child: Center(
+                                          child: Icon(
+                                              Icons.image_not_supported)),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '\$${item.price.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          color: appPrimaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(item.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: appBackgroundColor,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                          border: Border.all(
+                                              color: appPrimaryColor),
+                                        ),
+                                        child: Text(
+                                          item.category,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: appPrimaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.location,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: appMutedTextColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        item.condition,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: appMutedTextColor),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
-                      child: Card(
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Image.network(
-                                item.image,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const ColoredBox(
-                                  color: Color(0xFFE5E7EB),
-                                  child: Center(
-                                      child: Icon(Icons.image_not_supported)),
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '\$${item.price.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                      color: Color(0xFFB91C1C),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(item.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item.location,
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.black54),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Text(
-                                    item.condition,
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.black54),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                    ),
         ),
       ],
     );
@@ -286,8 +1355,8 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
     final filteredItems = widget.items.where((item) {
       final categoryMatch =
           selectedCategory == 'All' || item.category == selectedCategory;
-      final typeMatch =
-          selectedType == LostFilter.all || item.type.name == selectedType.name;
+      final typeMatch = selectedType == LostFilter.all ||
+          item.type.name == selectedType.name;
       final query = searchQuery.toLowerCase();
       final searchMatch = item.title.toLowerCase().contains(query) ||
           item.description.toLowerCase().contains(query);
@@ -302,7 +1371,8 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               Text('Lost & Found',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
               SizedBox(height: 4),
               Text('Help fellow students reunite with their belongings'),
             ],
@@ -313,49 +1383,13 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
           child: Row(
             children: [
               Expanded(
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      setState(() => selectedType = LostFilter.all),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: selectedType == LostFilter.all
-                        ? const Color(0xFFB91C1C)
-                        : null,
-                    foregroundColor:
-                        selectedType == LostFilter.all ? Colors.white : null,
-                  ),
-                  child: const Text('All'),
-                ),
-              ),
+                  child: _typeFilterButton(LostFilter.all, 'All')),
               const SizedBox(width: 8),
               Expanded(
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      setState(() => selectedType = LostFilter.lost),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: selectedType == LostFilter.lost
-                        ? const Color(0xFFEA580C)
-                        : null,
-                    foregroundColor:
-                        selectedType == LostFilter.lost ? Colors.white : null,
-                  ),
-                  child: const Text('Lost'),
-                ),
-              ),
+                  child: _typeFilterButton(LostFilter.lost, 'Lost')),
               const SizedBox(width: 8),
               Expanded(
-                child: FilledButton.tonal(
-                  onPressed: () =>
-                      setState(() => selectedType = LostFilter.found),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: selectedType == LostFilter.found
-                        ? const Color(0xFF16A34A)
-                        : null,
-                    foregroundColor:
-                        selectedType == LostFilter.found ? Colors.white : null,
-                  ),
-                  child: const Text('Found'),
-                ),
-              ),
+                  child: _typeFilterButton(LostFilter.found, 'Found')),
             ],
           ),
         ),
@@ -413,12 +1447,14 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                 width: 82,
                                 height: 82,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const SizedBox(
+                                errorBuilder: (_, __, ___) =>
+                                    const SizedBox(
                                   width: 82,
                                   height: 82,
                                   child: ColoredBox(
-                                    color: Color(0xFFE5E7EB),
-                                    child: Icon(Icons.image_not_supported),
+                                    color: appPlaceholderColor,
+                                    child: Icon(
+                                        Icons.image_not_supported),
                                   ),
                                 ),
                               ),
@@ -426,7 +1462,8 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
@@ -445,9 +1482,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: item.type == LostFoundType.lost
-                                              ? const Color(0xFFFED7AA)
-                                              : const Color(0xFFDCFCE7),
+                                          color: appBackgroundColor,
                                           borderRadius:
                                               BorderRadius.circular(999),
                                         ),
@@ -455,13 +1490,10 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                           item.type == LostFoundType.lost
                                               ? 'Lost'
                                               : 'Found',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600,
-                                            color:
-                                                item.type == LostFoundType.lost
-                                                    ? const Color(0xFF9A3412)
-                                                    : const Color(0xFF166534),
+                                            color: appPrimaryColor,
                                           ),
                                         ),
                                       ),
@@ -472,8 +1504,8 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                     item.description,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style:
-                                        const TextStyle(color: Colors.black54),
+                                    style: const TextStyle(
+                                        color: appMutedTextColor),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -481,7 +1513,8 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
-                                        fontSize: 12, color: Colors.black45),
+                                        fontSize: 12,
+                                        color: appMutedTextColor),
                                   ),
                                 ],
                               ),
@@ -494,6 +1527,18 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _typeFilterButton(LostFilter value, String label) {
+    final selected = selectedType == value;
+    return FilledButton.tonal(
+      onPressed: () => setState(() => selectedType = value),
+      style: FilledButton.styleFrom(
+        backgroundColor: selected ? appPrimaryColor : null,
+        foregroundColor: selected ? appBackgroundColor : null,
+      ),
+      child: Text(label),
     );
   }
 }
@@ -534,7 +1579,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Post an Item',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 14),
               const Text('Listing Type',
                   style: TextStyle(fontWeight: FontWeight.w600)),
@@ -547,22 +1593,25 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _typeButton(label: 'Lost', type: ListingType.lost),
+                    child: _typeButton(
+                        label: 'Lost', type: ListingType.lost),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _typeButton(label: 'Found', type: ListingType.found),
+                    child: _typeButton(
+                        label: 'Found', type: ListingType.found),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
               TextFormField(
                 decoration: const InputDecoration(
-                    labelText: 'Title *', border: OutlineInputBorder()),
+                    labelText: 'Title *',
+                    border: OutlineInputBorder()),
                 onChanged: (value) => title = value,
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Title is required'
-                    : null,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty)
+                        ? 'Title is required'
+                        : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -573,9 +1622,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 minLines: 3,
                 maxLines: 5,
                 onChanged: (value) => description = value,
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Description is required'
-                    : null,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty)
+                        ? 'Description is required'
+                        : null,
               ),
               if (listingType == ListingType.marketplace) ...[
                 const SizedBox(height: 12),
@@ -587,7 +1637,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (value) => price = double.tryParse(value) ?? 0,
+                  onChanged: (value) =>
+                      price = double.tryParse(value) ?? 0,
                   validator: (value) {
                     final parsed = double.tryParse(value ?? '');
                     if (parsed == null || parsed <= 0) {
@@ -622,10 +1673,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     .map((item) =>
                         DropdownMenuItem(value: item, child: Text(item)))
                     .toList(),
-                onChanged: (value) => setState(() => category = value ?? ''),
-                validator: (value) => (value == null || value.isEmpty)
-                    ? 'Category is required'
-                    : null,
+                onChanged: (value) =>
+                    setState(() => category = value ?? ''),
+                validator: (value) =>
+                    (value == null || value.isEmpty)
+                        ? 'Category is required'
+                        : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -634,9 +1687,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) => location = value,
-                validator: (value) => (value == null || value.trim().isEmpty)
-                    ? 'Location is required'
-                    : null,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty)
+                        ? 'Location is required'
+                        : null,
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -658,25 +1712,14 @@ class _PostListingScreenState extends State<PostListingScreen> {
 
   Widget _typeButton({required String label, required ListingType type}) {
     final selected = listingType == type;
-    Color? background;
-    if (selected && type == ListingType.marketplace) {
-      background = const Color(0xFFB91C1C);
-    }
-    if (selected && type == ListingType.lost) {
-      background = const Color(0xFFEA580C);
-    }
-    if (selected && type == ListingType.found) {
-      background = const Color(0xFF16A34A);
-    }
-
     return FilledButton.tonal(
       onPressed: () => setState(() {
         listingType = type;
         category = '';
       }),
       style: FilledButton.styleFrom(
-        backgroundColor: background,
-        foregroundColor: selected ? Colors.white : null,
+        backgroundColor: selected ? appPrimaryColor : null,
+        foregroundColor: selected ? appBackgroundColor : null,
       ),
       child: Text(label),
     );
@@ -718,10 +1761,12 @@ class MyListingsScreen extends StatefulWidget {
     super.key,
     required this.marketplaceItems,
     required this.lostFoundItems,
+    required this.onListItem,
   });
 
   final List<MarketplaceItem> marketplaceItems;
   final List<LostFoundItem> lostFoundItems;
+  final VoidCallback onListItem;
 
   @override
   State<MyListingsScreen> createState() => _MyListingsScreenState();
@@ -742,20 +1787,29 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('My Listings',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              style: TextStyle(
+                  fontSize: 24, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: widget.onListItem,
+            icon: const Icon(Icons.add),
+            label: const Text('List an Item'),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
               ChoiceChip(
                 label: const Text('Marketplace Items'),
                 selected: showMarketplace,
-                onSelected: (_) => setState(() => showMarketplace = true),
+                onSelected: (_) =>
+                    setState(() => showMarketplace = true),
               ),
               const SizedBox(width: 8),
               ChoiceChip(
                 label: const Text('Lost & Found'),
                 selected: !showMarketplace,
-                onSelected: (_) => setState(() => showMarketplace = false),
+                onSelected: (_) =>
+                    setState(() => showMarketplace = false),
               ),
             ],
           ),
@@ -775,7 +1829,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                             .map(
                               (item) => Card(
                                 child: ListTile(
-                                  leading: const Icon(Icons.storefront),
+                                  leading:
+                                      const Icon(Icons.storefront),
                                   title: Text(item.title),
                                   subtitle: Text(
                                       '${item.category} • ${item.location}'),
@@ -789,15 +1844,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                             .map(
                               (item) => Card(
                                 child: ListTile(
-                                  leading: Icon(item.type == LostFoundType.lost
-                                      ? Icons.report_problem_outlined
-                                      : Icons.check_circle_outline),
+                                  leading: Icon(
+                                      item.type == LostFoundType.lost
+                                          ? Icons.report_problem_outlined
+                                          : Icons.check_circle_outline),
                                   title: Text(item.title),
                                   subtitle: Text(
                                       '${item.category} • ${item.location}'),
-                                  trailing: Text(item.type == LostFoundType.lost
-                                      ? 'Lost'
-                                      : 'Found'),
+                                  trailing: Text(
+                                      item.type == LostFoundType.lost
+                                          ? 'Lost'
+                                          : 'Found'),
                                 ),
                               ),
                             )
@@ -826,7 +1883,8 @@ class DocumentationScreen extends StatelessWidget {
           'This Flutter version mirrors the React flows: browse, filter, post, and track your listings.',
         ),
         SizedBox(height: 12),
-        Text('Core Features', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text('Core Features',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         SizedBox(height: 6),
         Text('• Marketplace browsing with category and search filters'),
         Text('• Lost & Found feed with Lost/Found filtering'),
@@ -857,7 +1915,7 @@ class ItemDetailScreen extends StatelessWidget {
                 item.image,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const ColoredBox(
-                  color: Color(0xFFE5E7EB),
+                  color: appPlaceholderColor,
                   child: Center(child: Icon(Icons.image_not_supported)),
                 ),
               ),
@@ -867,15 +1925,15 @@ class ItemDetailScreen extends StatelessWidget {
           Text(
             '\$${item.price.toStringAsFixed(0)}',
             style: const TextStyle(
-              color: Color(0xFFB91C1C),
+              color: appPrimaryColor,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Text(item.title,
-              style:
-                  const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              style: const TextStyle(
+                  fontSize: 24, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -1036,7 +2094,8 @@ final List<MarketplaceItem> seedMarketplaceItems = [
         'Barely used chemistry textbook. Perfect condition with no highlighting or notes.',
     category: 'Textbooks',
     condition: 'Like New',
-    image: 'https://images.unsplash.com/photo-1589998059171-988d887df646?w=400',
+    image:
+        'https://images.unsplash.com/photo-1589998059171-988d887df646?w=400',
     seller: 'Sarah M.',
     createdAt: DateTime(2026, 2, 10),
     location: 'Blanton Hall',
@@ -1049,7 +2108,8 @@ final List<MarketplaceItem> seedMarketplaceItems = [
         'Compact mini fridge, great for dorm rooms. Works perfectly, very quiet.',
     category: 'Furniture',
     condition: 'Good',
-    image: 'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400',
+    image:
+        'https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=400',
     seller: 'Mike T.',
     createdAt: DateTime(2026, 2, 9),
     location: 'Freeman Hall',
@@ -1062,7 +2122,8 @@ final List<MarketplaceItem> seedMarketplaceItems = [
         'TI-84 Plus graphing calculator. Great for math and science courses.',
     category: 'Electronics',
     condition: 'Good',
-    image: 'https://images.unsplash.com/photo-1611367840531-628f328d9a49?w=400',
+    image:
+        'https://images.unsplash.com/photo-1611367840531-628f328d9a49?w=400',
     seller: 'Jessica L.',
     createdAt: DateTime(2026, 2, 8),
     location: 'Student Center',
@@ -1075,7 +2136,8 @@ final List<MarketplaceItem> seedMarketplaceItems = [
         'LED desk lamp with adjustable brightness and USB charging port.',
     category: 'Furniture',
     condition: 'Like New',
-    image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400',
+    image:
+        'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400',
     seller: 'Alex K.',
     createdAt: DateTime(2026, 2, 7),
     location: 'Bohn Hall',
@@ -1088,7 +2150,8 @@ final List<MarketplaceItem> seedMarketplaceItems = [
         'Original Apple 61W USB-C power adapter. Compatible with MacBook Pro.',
     category: 'Electronics',
     condition: 'Good',
-    image: 'https://images.unsplash.com/photo-1591290619762-d06df1a8a8b0?w=400',
+    image:
+        'https://images.unsplash.com/photo-1591290619762-d06df1a8a8b0?w=400',
     seller: 'David R.',
     createdAt: DateTime(2026, 2, 6),
     location: 'Library',
@@ -1100,7 +2163,8 @@ final List<MarketplaceItem> seedMarketplaceItems = [
     description: 'White lab coat, size medium. Lightly used for one semester.',
     category: 'Other',
     condition: 'Good',
-    image: 'https://images.unsplash.com/photo-1576671081837-49000212a370?w=400',
+    image:
+        'https://images.unsplash.com/photo-1576671081837-49000212a370?w=400',
     seller: 'Emma W.',
     createdAt: DateTime(2026, 2, 5),
     location: 'Richardson Hall',
@@ -1115,7 +2179,8 @@ final List<LostFoundItem> seedLostFoundItems = [
         'Lost black Jansport backpack containing a laptop and notebooks. Left in the library on the 3rd floor.',
     category: 'Bags',
     type: LostFoundType.lost,
-    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400',
+    image:
+        'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400',
     poster: 'James P.',
     createdAt: DateTime(2026, 2, 11),
     location: 'Sprague Library - 3rd Floor',
@@ -1128,7 +2193,8 @@ final List<LostFoundItem> seedLostFoundItems = [
         'Found AirPods with charging case near the dining hall entrance.',
     category: 'Electronics',
     type: LostFoundType.found,
-    image: 'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400',
+    image:
+        'https://images.unsplash.com/photo-1606841837239-c5a1a4a07af7?w=400',
     poster: 'Maria G.',
     createdAt: DateTime(2026, 2, 10),
     location: 'Student Center Dining Hall',
@@ -1141,7 +2207,8 @@ final List<LostFoundItem> seedLostFoundItems = [
         'Lost my student ID card somewhere between Dickson Hall and the parking lot.',
     category: 'ID/Cards',
     type: LostFoundType.lost,
-    image: 'https://images.unsplash.com/photo-1585155770958-eeb77df44de8?w=400',
+    image:
+        'https://images.unsplash.com/photo-1585155770958-eeb77df44de8?w=400',
     poster: 'Kevin S.',
     createdAt: DateTime(2026, 2, 9),
     location: 'Between Dickson Hall & Lot 60',
@@ -1153,7 +2220,8 @@ final List<LostFoundItem> seedLostFoundItems = [
     description: 'Hydro Flask water bottle found in the gym locker room.',
     category: 'Other',
     type: LostFoundType.found,
-    image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400',
+    image:
+        'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400',
     poster: 'Lisa M.',
     createdAt: DateTime(2026, 2, 9),
     location: 'Recreation Center',
@@ -1166,10 +2234,14 @@ final List<LostFoundItem> seedLostFoundItems = [
         'Lost my keys with a distinctive red bottle opener keychain. Please contact if found!',
     category: 'Keys',
     type: LostFoundType.lost,
-    image: 'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=400',
+    image:
+        'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=400',
     poster: 'Ryan B.',
     createdAt: DateTime(2026, 2, 8),
     location: 'University Hall',
     status: 'active',
   ),
 ];
+
+
+
