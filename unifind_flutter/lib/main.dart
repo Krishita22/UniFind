@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'auth_screens.dart';
+
+const Color appPrimaryColor = Color(0xFFA12727);
+const Color appBackgroundColor = Color(0xFFFFFFFF);
+const Color appMutedTextColor = Color(0xFF7A4A4A);
+const Color appPlaceholderColor = Color(0xFFEBD1D1);
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const Color cRed = Color(0xFFA12727);
@@ -1207,6 +1213,28 @@ class _ExclusiveBanner extends StatelessWidget {
   final VoidCallback onLogin;
   const _ExclusiveBanner({required this.onLogin});
 
+  void _goToPostTab() {
+    setState(() {
+      _selectedIndex = 2;
+    });
+  }
+
+  void _handleLogin(String email) {
+    setState(() {
+      _isLoggedIn = true;
+      _currentUserEmail = email;
+      _selectedIndex = 0;
+    });
+  }
+
+  void _handleLogout() {
+    setState(() {
+      _isLoggedIn = false;
+      _currentUserEmail = '';
+      _selectedIndex = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1471,6 +1499,13 @@ class _LoadingButtonState extends State<_LoadingButton> with SingleTickerProvide
       ),
     );
   }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    widget.onLogin(_email.trim());
+  }
 }
 
 // ─── MARKETPLACE SCREEN ──────────────────────────────────────────────────────
@@ -1516,6 +1551,17 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           ),
         ),
         // Search
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: widget.onListItem,
+              icon: const Icon(Icons.add),
+              label: const Text('List an Item'),
+            ),
+          ),
+        ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: _SearchField(hint: 'Search marketplace...', onChanged: (v) => setState(() => _q = v)),
@@ -1820,6 +1866,19 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
           ),
         ),
       ),
+    );
+  }
+
+  /// Centralized style for Lost/Found type filters to avoid drift.
+  Widget _typeFilterButton(LostFilter value, String label) {
+    final selected = selectedType == value;
+    return FilledButton.tonal(
+      onPressed: () => setState(() => selectedType = value),
+      style: FilledButton.styleFrom(
+        backgroundColor: selected ? appPrimaryColor : null,
+        foregroundColor: selected ? appBackgroundColor : null,
+      ),
+      child: Text(label),
     );
   }
 }
