@@ -1,4 +1,8 @@
+
 import 'package:flutter/material.dart';
+import 'api_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const Color cRed = Color(0xFFA12727);
@@ -28,52 +32,154 @@ class UniFindApp extends StatefulWidget {
 }
 
 class _UniFindAppState extends State<UniFindApp> {
-  int _tab = 0;
-  bool _loggedIn = false;
-  String _email = '';
+  int _selectedIndex = 0;
+  bool _isLoggedIn = false;
+  String _currentUserEmail = '';
 
-  final List<MarketplaceItem> _market = List.from(seedMarketplace);
-  final List<LostFoundItem> _lostFound = List.from(seedLostFound);
+  // Lists start with seed data as fallback,
+  // then get replaced by API data once loaded
+  List<MarketplaceItem> _marketplaceItems =
+      List<MarketplaceItem>.from(seedMarketplaceItems);
+  List<LostFoundItem> _lostFoundItems =
+      List<LostFoundItem>.from(seedLostFoundItems);
 
-  String get _owner => _email.isEmpty ? 'You' : _email;
+  /// Uses the logged-in identity as listing owner so "My Listings" stays scoped
+  /// to the active account instead of a hardcoded placeholder.
+  String get _activeOwner =>
+      _currentUserEmail.isEmpty ? 'You' : _currentUserEmail;
 
-  void _addListing(NewListingInput in_) {
-    setState(() {
-      if (in_.type == ListingType.marketplace) {
-        _market.insert(
-          0,
-          MarketplaceItem(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: in_.title,
-            price: in_.price,
-            description: in_.description,
-            category: in_.category,
-            condition: in_.condition,
-            image: in_.imageUrl,
-            seller: _owner,
-            createdAt: DateTime.now(),
-            location: in_.location,
-          ),
-        );
-        _tab = 0;
-      } else {
-        _lostFound.insert(
-          0,
-          LostFoundItem(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: in_.title,
-            description: in_.description,
-            category: in_.category,
-            type: in_.type == ListingType.lost ? LostFoundType.lost : LostFoundType.found,
-            image: in_.imageUrl,
-            poster: _owner,
-            createdAt: DateTime.now(),
-            location: in_.location,
-            status: 'active',
-          ),
-        );
-        _tab = 1;
+  /// Fetches marketplace listings from the API.
+  /// Falls back to seed data if the API returns nothing or fails.
+  Future<void> _loadListings() async {
+    try {
+      final apiItems = await getListings();
+      if (apiItems.isNotEmpty) {
+        setState(() {
+          _marketplaceItems = apiItems.map((item) => MarketplaceItem(
+            id:          item['id'].toString(),
+            title:       item['title'],
+            price:       (item['price'] as num).toDouble(),
+            description: item['description'],
+            category:    item['category'],
+            condition:   item['condition'],
+            image:       item['image'] ?? '',
+            seller:      item['seller'] ?? '',
+            createdAt:   DateTime.tryParse(item['createdAt'] ?? '') ?? DateTime.now(),
+            location:    item['location'] ?? '',
+          )).toList();
+        });
       }
+      // If API returns empty, seed data stays as fallback
+    } catch (_) {
+      // API failed — seed data stays as fallback
+    }
+  }
+
+  /// Fetches lost & found items from the API.
+  /// Falls back to seed data if the API returns nothing or fails.
+  Future<void> _loadLostFound() async {
+    try {
+      final apiItems = await getLostFoundItems();
+      if (apiItems.isNotEmpty) {
+        setState(() {
+          _lostFoundItems = apiItems.map((item) => LostFoundItem(
+            id:          item['id'].toString(),
+            title:       item['title'],
+            description: item['description'],
+            category:    item['category'],
+            type:        item['type'] == 'lost' ? LostFoundType.lost : LostFoundType.found,
+            image:       item['image'] ?? '',
+            poster:      item['poster'] ?? '',
+            createdAt:   DateTime.tryParse(item['createdAt'] ?? '') ?? DateTime.now(),
+            location:    item['location'] ?? '',
+            status:      item['status'] ?? 'active',
+          )).toList();
+        });
+      }
+      // If API returns empty, seed data stays as fallback
+    } catch (_) {
+      // API failed — seed data stays as fallback
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Load data from API when the app starts
+    _loadListings();
+    _loadLostFound();
+  }
+
+  /// Adds a newly submitted listing into in-memory state.
+  /// Keeping insertion at index 0 so the user immediately sees newly posted items.
+  void _addListing(NewListingInput input) async {
+  try {
+    if (input.type == ListingType.marketplace) {
+      await createListing(
+        title:       input.title,
+        description: input.description,
+        price:       input.price,
+        category:    input.category,
+        condition:   input.condition,
+        location:    input.location,
+        email:       _currentUserEmail,
+        image:       input.imageUrl,
+      );
+    } else {
+      await createLostFoundItem(
+        title:       input.title,
+        description: input.description,
+        category:    input.category,
+        type:        input.type == ListingType.lost ? 'lost' : 'found',
+        location:    input.location,
+        email:       _currentUserEmail,
+        image:       input.imageUrl,
+      );
+    }
+    // Reload from database so new item appears immediately
+    await _loadListings();
+    await _loadLostFound();
+  } catch (e) {
+    // If API fails, insert locally as fallback
+    setState(() {
+      if (input.type == ListingType.marketplace) {
+        _marketplaceItems.insert(0, MarketplaceItem(
+          id:          DateTime.now().millisecondsSinceEpoch.toString(),
+          title:       input.title,
+          price:       input.price,
+          description: input.description,
+          category:    input.category,
+          condition:   input.condition,
+          image:       input.imageUrl,
+          seller:      _activeOwner,
+          createdAt:   DateTime.now(),
+          location:    input.location,
+        ));
+      } else {
+        _lostFoundItems.insert(0, LostFoundItem(
+          id:          DateTime.now().millisecondsSinceEpoch.toString(),
+          title:       input.title,
+          description: input.description,
+          category:    input.category,
+          type:        input.type == ListingType.lost ? LostFoundType.lost : LostFoundType.found,
+          image:       input.imageUrl,
+          poster:      _activeOwner,
+          createdAt:   DateTime.now(),
+          location:    input.location,
+          status:      'active',
+        ));
+      }
+    });
+  }
+
+  setState(() {
+    _selectedIndex = input.type == ListingType.marketplace ? 0 : 1;
+  });
+}
+
+  void _goToPostTab() {
+    setState(() {
+      _selectedIndex = 2;
     });
   }
 
@@ -1286,28 +1392,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
-  bool _loading = false;
-  late AnimationController _c;
-  late Animation<double> _fade, _slide;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _fade = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
-    _slide = Tween(begin: 24.0, end: 0.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
-    _c.forward();
-  }
-
-  @override
-  void dispose() { _c.dispose(); super.dispose(); }
-
-  void _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    widget.onLogin(_email.trim());
-  }
+  String _password = '';
+  bool _isLoading = false;
+  String _errorMessage = '';
 
   @override
   Widget build(BuildContext context) {
@@ -1379,12 +1466,28 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             ],
                           ),
                         ),
+                        onChanged: (value) => _password = value,
+                        validator: (value) =>
+                            (value == null || value.isEmpty)
+                                ? 'Password is required'
+                                : null,
                       ),
-                      const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        child: const Text('← Back to homepage', style: TextStyle(color: cMuted, fontSize: 13)),
-                      ),
+                      // Show error message from API if login fails
+                      if (_errorMessage.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          _errorMessage,
+                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      // Show loading indicator while API call is in progress
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : FilledButton(
+                              onPressed: _submit,
+                              child: const Text('Log In'),
+                            ),
                     ],
                   ),
                 ),
@@ -1397,47 +1500,31 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   }
 }
 
-class _StyledField extends StatelessWidget {
-  final String label, hint;
-  final IconData icon;
-  final bool obscure;
-  final String? Function(String?)? validator;
-  final ValueChanged<String>? onChanged;
+  /// Calls the API to verify login credentials.
+  /// Falls back to basic email validation if the API is unreachable.
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  const _StyledField({
-    required this.label,
-    required this.hint,
-    required this.icon,
-    this.obscure = false,
-    this.validator,
-    this.onChanged,
-  });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
-        const SizedBox(height: 6),
-        TextFormField(
-          obscureText: obscure,
-          onChanged: onChanged,
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
-            prefixIcon: Icon(icon, size: 18, color: cMuted),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
-            filled: true,
-            fillColor: cBg,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-      ],
-    );
+    try {
+      await loginUser(_email.trim(), _password.trim());
+      widget.onLogin(_email.trim());
+    } catch (e) {
+      final errorMsg = e.toString();
+      if (errorMsg.contains('connect') || errorMsg.contains('server')) {
+        // Network error — fall back to basic email validation
+        widget.onLogin(_email.trim());
+      } else {
+        setState(() {
+          _errorMessage = 'Invalid email or password.';
+          _isLoading = false;
+        });
+      }
+    }
   }
 }
 
@@ -1638,6 +1725,104 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                         ),
                         child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
                       ),
+                      itemBuilder: (context, index) {
+                        final item = filteredItems[index];
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    ItemDetailScreen(item: item),
+                              ),
+                            );
+                          },
+                          child: Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Image.network(
+                                    item.image,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    headers: const {'Access-Control-Allow-Origin': '*'},
+                                    errorBuilder: (_, __, ___) =>
+                                        const ColoredBox(
+                                      color: appPlaceholderColor,
+                                      child: Center(
+                                          child: Icon(
+                                              Icons.image_not_supported)),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(10),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '\$${item.price.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          color: appPrimaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(item.title,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: appBackgroundColor,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                          border: Border.all(
+                                              color: appPrimaryColor),
+                                        ),
+                                        child: Text(
+                                          item.category,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: appPrimaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.location,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: appMutedTextColor),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        item.condition,
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: appMutedTextColor),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -1740,8 +1925,100 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
               ? const _EmptyState(message: 'No items found')
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
-                  itemCount: filtered.length,
-                  itemBuilder: (_, i) => _LostFoundCard(item: filtered[i]),
+                  itemCount: filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final item = filteredItems[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                item.image,
+                                width: 82,
+                                height: 82,
+                                fit: BoxFit.cover,
+                                headers: const {'Access-Control-Allow-Origin': '*'},
+                                errorBuilder: (_, __, ___) =>
+                                    const SizedBox(
+                                  width: 82,
+                                  height: 82,
+                                  child: ColoredBox(
+                                    color: appPlaceholderColor,
+                                    child: Icon(
+                                        Icons.image_not_supported),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.title,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: appBackgroundColor,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          item.type == LostFoundType.lost
+                                              ? 'Lost'
+                                              : 'Found',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: appPrimaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.description,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: appMutedTextColor),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${item.location} • ${item.poster} • ${formatDate(item.createdAt)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: appMutedTextColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
         ),
       ],
@@ -1856,9 +2133,77 @@ class _PostListingScreenState extends State<PostListingScreen> {
   String _title = '', _desc = '', _cat = '', _cond = 'Good', _loc = '';
   double _price = 0;
 
-  List<String> get _cats => _type == ListingType.marketplace
-      ? categories.where((c) => c != 'All').toList()
-      : lostFoundCategories.where((c) => c != 'All').toList();
+  ListingType listingType = ListingType.marketplace;
+  String title = '';
+  String description = '';
+  String category = '';
+  String condition = 'Good';
+  String location = '';
+  double price = 0;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+
+  List<String> get _availableCategories =>
+      listingType == ListingType.marketplace
+          ? categories.where((item) => item != 'All').toList()
+          : lostFoundCategories.where((item) => item != 'All').toList();
+
+// Opens a bottom sheet so user can choose camera or gallery
+Future<void> _pickImage() async {
+  showModalBottomSheet(
+    context: context,
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Take a Photo'),
+            onTap: () async {
+              Navigator.pop(context);
+              final picked = await _picker.pickImage(
+                source: ImageSource.camera,
+                imageQuality: 40,
+                maxWidth: 800,
+                maxHeight: 800,
+              );
+              if (picked != null) {
+                final bytes = await picked.readAsBytes();
+                setState(() {
+                  _selectedImage = picked;
+                  _selectedImageBytes = bytes;
+                });
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () async {
+              Navigator.pop(context);
+              final picked = await _picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 40,
+                maxWidth: 800,
+                maxHeight: 800,
+              );
+              if (picked != null) {
+                final bytes = await picked.readAsBytes();
+                setState(() {
+                  _selectedImage = picked;
+                  _selectedImageBytes = bytes;
+                });
+              }
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1870,49 +2215,28 @@ class _PostListingScreenState extends State<PostListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [cRed, cRedDark]),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
-                    ),
-                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Post an Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-                      Text('Create a new listing', style: TextStyle(fontSize: 12, color: cMuted)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Type selector
-              _FormLabel(label: 'Listing Type'),
+              const Text('Post an Item',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 14),
+              const Text('Listing Type',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Expanded(child: _TypeBtn(label: 'For Sale', type: ListingType.marketplace, selected: _type == ListingType.marketplace, onTap: () => setState(() { _type = ListingType.marketplace; _cat = ''; }))),
+                  Expanded(child: _typeButton(label: 'For Sale', type: ListingType.marketplace)),
                   const SizedBox(width: 8),
-                  Expanded(child: _TypeBtn(label: 'Lost', type: ListingType.lost, selected: _type == ListingType.lost, onTap: () => setState(() { _type = ListingType.lost; _cat = ''; }))),
+                  Expanded(child: _typeButton(label: 'Lost', type: ListingType.lost)),
                   const SizedBox(width: 8),
-                  Expanded(child: _TypeBtn(label: 'Found', type: ListingType.found, selected: _type == ListingType.found, onTap: () => setState(() { _type = ListingType.found; _cat = ''; }))),
+                  Expanded(child: _typeButton(label: 'Found', type: ListingType.found)),
                 ],
               ),
-              const SizedBox(height: 16),
-              _StyledField(
-                label: 'Title *',
-                hint: 'What are you listing?',
-                icon: Icons.title_rounded,
-                onChanged: (v) => _title = v,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Title is required' : null,
+              const SizedBox(height: 12),
+              TextFormField(
+                decoration: const InputDecoration(
+                    labelText: 'Title *', border: OutlineInputBorder()),
+                onChanged: (value) => title = value,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Title is required' : null,
               ),
               const SizedBox(height: 12),
               _FormLabel(label: 'Description *'),
@@ -1931,16 +2255,26 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   fillColor: cBg,
                   contentPadding: const EdgeInsets.all(14),
                 ),
+                minLines: 3,
+                maxLines: 5,
+                onChanged: (value) => description = value,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Description is required' : null,
               ),
               if (_type == ListingType.marketplace) ...[
                 const SizedBox(height: 12),
-                _StyledField(
-                  label: 'Price *',
-                  hint: '0.00',
-                  icon: Icons.attach_money_rounded,
-                  validator: (v) {
-                    final p = double.tryParse(v ?? '');
-                    return (p == null || p <= 0) ? 'Enter a valid price' : null;
+                TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Price *',
+                    prefixText: '\$',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) => price = double.tryParse(value) ?? 0,
+                  validator: (value) {
+                    final parsed = double.tryParse(value ?? '');
+                    if (parsed == null || parsed <= 0) return 'Enter a valid price';
+                    return null;
                   },
                   onChanged: (v) => _price = double.tryParse(v) ?? 0,
                 ),
@@ -1957,27 +2291,90 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     fillColor: cBg,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   ),
-                  items: ['New', 'Like New', 'Good', 'Fair'].map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
-                  onChanged: (v) => setState(() => _cond = v ?? 'Good'),
+                  items: const ['New', 'Like New', 'Good', 'Fair']
+                      .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                      .toList(),
+                  onChanged: (value) => setState(() => condition = value ?? 'Good'),
                 ),
               ],
               const SizedBox(height: 12),
               _FormLabel(label: 'Category *'),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: _cat.isEmpty ? null : _cat,
-                hint: const Text('Select a category', style: TextStyle(color: cMuted)),
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
-                  filled: true,
-                  fillColor: cBg,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                initialValue: category.isEmpty ? null : category,
+                decoration: const InputDecoration(
+                  labelText: 'Category *',
+                  border: OutlineInputBorder(),
                 ),
-                items: _cats.map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
-                onChanged: (v) => setState(() => _cat = v ?? ''),
-                validator: (v) => (v == null || v.isEmpty) ? 'Category is required' : null,
+                items: _availableCategories
+                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                    .toList(),
+                onChanged: (value) => setState(() => category = value ?? ''),
+                validator: (value) =>
+                    (value == null || value.isEmpty) ? 'Category is required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                decoration: const InputDecoration(
+                  labelText: 'Location *',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => location = value,
+                validator: (value) =>
+                    (value == null || value.trim().isEmpty) ? 'Location is required' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Image picker section
+              const Text('Item Image',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+
+              // Show preview if image selected, otherwise show placeholder
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: appPlaceholderColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: appPrimaryColor, width: 1.5),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _selectedImageBytes != null
+                      ? Image.memory(_selectedImageBytes!, fit: BoxFit.cover)
+                      : const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo_outlined,
+                                size: 40, color: appPrimaryColor),
+                            SizedBox(height: 8),
+                            Text('Tap to add a photo',
+                                style: TextStyle(color: appPrimaryColor)),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Tap the box to choose from gallery or take a photo',
+                style: TextStyle(fontSize: 12, color: appMutedTextColor),
+              ),
+              const SizedBox(height: 20),
+
+              // Show loading spinner while uploading, otherwise show Post button
+              SizedBox(
+                width: double.infinity,
+                child: _isUploading
+                    ? const Center(child: CircularProgressIndicator())
+                    : FilledButton(
+                        onPressed: _submit,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('Post Item'),
+                        ),
+                      ),
               ),
               const SizedBox(height: 12),
               _StyledField(
@@ -2027,42 +2424,61 @@ class _PostListingScreenState extends State<PostListingScreen> {
   }
 }
 
-class _FormLabel extends StatelessWidget {
-  final String label;
-  const _FormLabel({required this.label});
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  @override
-  Widget build(BuildContext context) {
-    return Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3));
-  }
-}
+    setState(() => _isUploading = true);
 
-class _TypeBtn extends StatelessWidget {
-  final String label;
-  final ListingType type;
-  final bool selected;
-  final VoidCallback onTap;
-  const _TypeBtn({required this.label, required this.type, required this.selected, required this.onTap});
+    try {
+      // Upload image to server if one was selected
+      // Otherwise fall back to default placeholder image
+      String imageUrl = 'https://placehold.co/400x400?text=?';
+      if (_selectedImage != null) {
+        imageUrl = await uploadImage(_selectedImage!.path, _selectedImageBytes!);
+        print('IMAGE URL: $imageUrl');
+      }
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: kMid,
-        height: 44,
-        decoration: BoxDecoration(
-          gradient: selected ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
-          color: selected ? null : cSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? Colors.transparent : cBorder, width: 1.5),
-          boxShadow: selected ? [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))] : null,
+      widget.onPost(
+        NewListingInput(
+          type:        listingType,
+          title:       title.trim(),
+          description: description.trim(),
+          category:    category,
+          condition:   condition,
+          location:    location.trim(),
+          price:       price,
+          imageUrl:    imageUrl,
         ),
-        child: Center(
-          child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: selected ? Colors.white : cMuted)),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('URL: $imageUrl'),
+          duration: const Duration(seconds: 10),
         ),
-      ),
-    );
+      );
+
+      // Reset the form after successful post
+      setState(() {
+        title = '';
+        description = '';
+        category = '';
+        condition = 'Good';
+        location = '';
+        price = 0;
+        _selectedImage = null;
+        _selectedImageBytes = null;
+        _isUploading = false;
+        _formKey.currentState?.reset();
+      });
+
+    } catch (e) {
+      // Show error if upload or post failed
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to post item: ${e.toString()}')),
+      );
+    }
   }
 }
 
@@ -2268,7 +2684,11 @@ class ItemDetailScreen extends StatelessWidget {
               background: Image.network(
                 item.image,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, size: 48, color: cMuted))),
+                headers: const {'Access-Control-Allow-Origin': '*'},
+                errorBuilder: (_, __, ___) => const ColoredBox(
+                  color: appPlaceholderColor,
+                  child: Center(child: Icon(Icons.image_not_supported)),
+                ),
               ),
             ),
           ),
@@ -2562,7 +2982,8 @@ class NewListingInput {
     required this.condition,
     required this.location,
     required this.price,
-    this.imageUrl = 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400',
+    this.imageUrl =
+        'https://placehold.co/400x400?text=?',
   });
 }
 
