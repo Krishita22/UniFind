@@ -1,6 +1,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:typed_data';
 
 // api_service.dart
 // Handles all HTTP calls to the UniFind PHP API
@@ -103,7 +104,7 @@ Future<Map<String, dynamic>> createListing({
   required String condition,
   required String location,
   required String email,
-  String image = 'https://www.floraly.com.au/cdn/shop/articles/All_the_roses.jpg?v=1583911408',
+  String image = 'https://placehold.co/400x400?text=?',
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/post_listing.php'),
@@ -140,7 +141,7 @@ Future<Map<String, dynamic>> createLostFoundItem({
   required String type,
   required String location,
   required String email,
-  String image = 'https://www.floraly.com.au/cdn/shop/articles/All_the_roses.jpg?v=1583911408',
+  String image = 'https://placehold.co/400x400?text=?',
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/post_lostfound.php'),
@@ -165,4 +166,34 @@ Future<Map<String, dynamic>> createLostFoundItem({
   }
 }
 
+// UPLOAD IMAGE
+// Sends an image file from the device to upload_image.php
+// Returns the public URL of the uploaded image on the server
 
+Future<String> uploadImage(String filePath, Uint8List fileBytes) async {
+  if (fileBytes.isEmpty) {
+    throw Exception('Image data is empty.');
+  }
+
+  final uri = Uri.parse('https://api.cloudinary.com/v1_1/dj4lyjpnv/image/upload');
+  final request = http.MultipartRequest('POST', uri);
+  
+  request.fields['upload_preset'] = 'Unifind';
+  request.files.add(
+    http.MultipartFile.fromBytes(
+      'file',
+      fileBytes,
+      filename: 'upload.jpg',
+    ),
+  );
+
+  final streamedResponse = await request.send();
+  final response = await http.Response.fromStream(streamedResponse);
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode == 200) {
+    return data['secure_url'];
+  } else {
+    throw Exception(data['error']['message'] ?? 'Failed to upload image.');
+  }
+}

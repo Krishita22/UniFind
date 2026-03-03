@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 import 'api_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 
 const Color appPrimaryColor = Color(0xFFA12727);
 const Color appBackgroundColor = Color(0xFFFFFFFF);
@@ -1382,6 +1384,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                                     item.image,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
+                                    headers: const {'Access-Control-Allow-Origin': '*'},
                                     errorBuilder: (_, __, ___) =>
                                         const ColoredBox(
                                       color: appPlaceholderColor,
@@ -1572,6 +1575,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                                 width: 82,
                                 height: 82,
                                 fit: BoxFit.cover,
+                                headers: const {'Access-Control-Allow-Origin': '*'},
                                 errorBuilder: (_, __, ___) =>
                                     const SizedBox(
                                   width: 82,
@@ -1687,11 +1691,70 @@ class _PostListingScreenState extends State<PostListingScreen> {
   String condition = 'Good';
   String location = '';
   double price = 0;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
 
   List<String> get _availableCategories =>
       listingType == ListingType.marketplace
           ? categories.where((item) => item != 'All').toList()
           : lostFoundCategories.where((item) => item != 'All').toList();
+
+// Opens a bottom sheet so user can choose camera or gallery
+Future<void> _pickImage() async {
+  showModalBottomSheet(
+    context: context,
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Take a Photo'),
+            onTap: () async {
+              Navigator.pop(context);
+              final picked = await _picker.pickImage(
+                source: ImageSource.camera,
+                imageQuality: 40,
+                maxWidth: 800,
+                maxHeight: 800,
+              );
+              if (picked != null) {
+                final bytes = await picked.readAsBytes();
+                setState(() {
+                  _selectedImage = picked;
+                  _selectedImageBytes = bytes;
+                });
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Choose from Gallery'),
+            onTap: () async {
+              Navigator.pop(context);
+              final picked = await _picker.pickImage(
+                source: ImageSource.gallery,
+                imageQuality: 40,
+                maxWidth: 800,
+                maxHeight: 800,
+              );
+              if (picked != null) {
+                final bytes = await picked.readAsBytes();
+                setState(() {
+                  _selectedImage = picked;
+                  _selectedImageBytes = bytes;
+                });
+              }
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -1704,39 +1767,27 @@ class _PostListingScreenState extends State<PostListingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Post an Item',
-                  style: TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 14),
               const Text('Listing Type',
                   style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Expanded(
-                    child: _typeButton(
-                        label: 'For Sale', type: ListingType.marketplace),
-                  ),
+                  Expanded(child: _typeButton(label: 'For Sale', type: ListingType.marketplace)),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: _typeButton(
-                        label: 'Lost', type: ListingType.lost),
-                  ),
+                  Expanded(child: _typeButton(label: 'Lost', type: ListingType.lost)),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: _typeButton(
-                        label: 'Found', type: ListingType.found),
-                  ),
+                  Expanded(child: _typeButton(label: 'Found', type: ListingType.found)),
                 ],
               ),
+              const SizedBox(height: 12),
               TextFormField(
                 decoration: const InputDecoration(
-                    labelText: 'Title *',
-                    border: OutlineInputBorder()),
+                    labelText: 'Title *', border: OutlineInputBorder()),
                 onChanged: (value) => title = value,
                 validator: (value) =>
-                    (value == null || value.trim().isEmpty)
-                        ? 'Title is required'
-                        : null,
+                    (value == null || value.trim().isEmpty) ? 'Title is required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -1748,9 +1799,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 maxLines: 5,
                 onChanged: (value) => description = value,
                 validator: (value) =>
-                    (value == null || value.trim().isEmpty)
-                        ? 'Description is required'
-                        : null,
+                    (value == null || value.trim().isEmpty) ? 'Description is required' : null,
               ),
               if (listingType == ListingType.marketplace) ...[
                 const SizedBox(height: 12),
@@ -1760,15 +1809,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     prefixText: '\$',
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (value) =>
-                      price = double.tryParse(value) ?? 0,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (value) => price = double.tryParse(value) ?? 0,
                   validator: (value) {
                     final parsed = double.tryParse(value ?? '');
-                    if (parsed == null || parsed <= 0) {
-                      return 'Enter a valid price';
-                    }
+                    if (parsed == null || parsed <= 0) return 'Enter a valid price';
                     return null;
                   },
                 ),
@@ -1780,11 +1825,9 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: const ['New', 'Like New', 'Good', 'Fair']
-                      .map((item) =>
-                          DropdownMenuItem(value: item, child: Text(item)))
+                      .map((item) => DropdownMenuItem(value: item, child: Text(item)))
                       .toList(),
-                  onChanged: (value) =>
-                      setState(() => condition = value ?? 'Good'),
+                  onChanged: (value) => setState(() => condition = value ?? 'Good'),
                 ),
               ],
               const SizedBox(height: 12),
@@ -1795,15 +1838,11 @@ class _PostListingScreenState extends State<PostListingScreen> {
                   border: OutlineInputBorder(),
                 ),
                 items: _availableCategories
-                    .map((item) =>
-                        DropdownMenuItem(value: item, child: Text(item)))
+                    .map((item) => DropdownMenuItem(value: item, child: Text(item)))
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => category = value ?? ''),
+                onChanged: (value) => setState(() => category = value ?? ''),
                 validator: (value) =>
-                    (value == null || value.isEmpty)
-                        ? 'Category is required'
-                        : null,
+                    (value == null || value.isEmpty) ? 'Category is required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -1813,20 +1852,60 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 ),
                 onChanged: (value) => location = value,
                 validator: (value) =>
-                    (value == null || value.trim().isEmpty)
-                        ? 'Location is required'
-                        : null,
+                    (value == null || value.trim().isEmpty) ? 'Location is required' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Image picker section
+              const Text('Item Image',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+
+              // Show preview if image selected, otherwise show placeholder
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: appPlaceholderColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: appPrimaryColor, width: 1.5),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: _selectedImageBytes != null
+                      ? Image.memory(_selectedImageBytes!, fit: BoxFit.cover)
+                      : const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo_outlined,
+                                size: 40, color: appPrimaryColor),
+                            SizedBox(height: 8),
+                            Text('Tap to add a photo',
+                                style: TextStyle(color: appPrimaryColor)),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Tap the box to choose from gallery or take a photo',
+                style: TextStyle(fontSize: 12, color: appMutedTextColor),
               ),
               const SizedBox(height: 20),
+
+              // Show loading spinner while uploading, otherwise show Post button
               SizedBox(
                 width: double.infinity,
-                child: FilledButton(
-                  onPressed: _submit,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('Post Item'),
-                  ),
-                ),
+                child: _isUploading
+                    ? const Center(child: CircularProgressIndicator())
+                    : FilledButton(
+                        onPressed: _submit,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('Post Item'),
+                        ),
+                      ),
               ),
             ],
           ),
@@ -1850,34 +1929,61 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
   }
 
-  void _submit() {
+  void _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    widget.onPost(
-      NewListingInput(
-        type: listingType,
-        title: title.trim(),
-        description: description.trim(),
-        category: category,
-        condition: condition,
-        location: location.trim(),
-        price: price,
-      ),
-    );
+    setState(() => _isUploading = true);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Item posted successfully.')),
-    );
+    try {
+      // Upload image to server if one was selected
+      // Otherwise fall back to default placeholder image
+      String imageUrl = 'https://placehold.co/400x400?text=?';
+      if (_selectedImage != null) {
+        imageUrl = await uploadImage(_selectedImage!.path, _selectedImageBytes!);
+        print('IMAGE URL: $imageUrl');
+      }
 
-    setState(() {
-      title = '';
-      description = '';
-      category = '';
-      condition = 'Good';
-      location = '';
-      price = 0;
-      _formKey.currentState?.reset();
-    });
+      widget.onPost(
+        NewListingInput(
+          type:        listingType,
+          title:       title.trim(),
+          description: description.trim(),
+          category:    category,
+          condition:   condition,
+          location:    location.trim(),
+          price:       price,
+          imageUrl:    imageUrl,
+        ),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('URL: $imageUrl'),
+          duration: const Duration(seconds: 10),
+        ),
+      );
+
+      // Reset the form after successful post
+      setState(() {
+        title = '';
+        description = '';
+        category = '';
+        condition = 'Good';
+        location = '';
+        price = 0;
+        _selectedImage = null;
+        _selectedImageBytes = null;
+        _isUploading = false;
+        _formKey.currentState?.reset();
+      });
+
+    } catch (e) {
+      // Show error if upload or post failed
+      setState(() => _isUploading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to post item: ${e.toString()}')),
+      );
+    }
   }
 }
 
@@ -2039,6 +2145,7 @@ class ItemDetailScreen extends StatelessWidget {
               child: Image.network(
                 item.image,
                 fit: BoxFit.cover,
+                headers: const {'Access-Control-Allow-Origin': '*'},
                 errorBuilder: (_, __, ___) => const ColoredBox(
                   color: appPlaceholderColor,
                   child: Center(child: Icon(Icons.image_not_supported)),
@@ -2120,7 +2227,7 @@ class NewListingInput {
     required this.location,
     required this.price,
     this.imageUrl =
-        'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400',
+        'https://placehold.co/400x400?text=?',
   });
 
   final ListingType type;
@@ -2367,4 +2474,3 @@ final List<LostFoundItem> seedLostFoundItems = [
     status: 'active',
   ),
 ];
-
