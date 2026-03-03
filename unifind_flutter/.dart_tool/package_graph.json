@@ -8,7 +8,9 @@
       "version": "0.0.1",
       "dependencies": [
         "flutter",
-        "http"
+        "flutter_image_compress",
+        "http",
+        "image_picker"
       ],
       "devDependencies": [
         "flutter_lints",
@@ -175,6 +177,24 @@
       ]
     },
     {
+      "name": "http_parser",
+      "version": "4.1.2",
+      "dependencies": [
+        "collection",
+        "source_span",
+        "string_scanner",
+        "typed_data"
+      ]
+    },
+    {
+      "name": "async",
+      "version": "2.13.0",
+      "dependencies": [
+        "collection",
+        "meta"
+      ]
+    },
+    {
       "name": "sky_engine",
       "version": "0.0.0",
       "dependencies": []
@@ -220,16 +240,19 @@
       "name": "string_scanner",
       "version": "1.4.1",
       "dependencies": [
-        "source_span"
+        "cross_file",
+        "file_selector_platform_interface",
+        "flutter"
       ]
     },
     {
-      "name": "source_span",
-      "version": "1.10.2",
+      "name": "file_selector_platform_interface",
+      "version": "2.7.0",
       "dependencies": [
-        "collection",
-        "path",
-        "term_glyph"
+        "cross_file",
+        "flutter",
+        "http",
+        "plugin_platform_interface"
       ]
     },
     {
