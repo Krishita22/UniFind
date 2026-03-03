@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
 
-const Color appPrimaryColor = Color(0xFFA12727);
-const Color appBackgroundColor = Color(0xFFFFFFFF);
-const Color appMutedTextColor = Color(0xFF7A4A4A);
-const Color appPlaceholderColor = Color(0xFFEBD1D1);
-
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const Color cRed = Color(0xFFA12727);
 const Color cRedDark = Color(0xFF7A1A1A);
@@ -220,7 +215,7 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               // Logo
               Image.asset(
-                'assets/images/logo.jpg',
+                'assets/images/whitelogo.png',
                 height: 40,
                 fit: BoxFit.contain,
               ),
@@ -260,6 +255,7 @@ class _PillButton extends StatefulWidget {
 class _PillButtonState extends State<_PillButton> with SingleTickerProviderStateMixin {
   late AnimationController _c;
   late Animation<double> _scale;
+  bool _hovered = false;
 
   @override
   void initState() {
@@ -273,26 +269,34 @@ class _PillButtonState extends State<_PillButton> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _c.forward(),
-      onTapUp: (_) { _c.reverse(); widget.onTap(); },
-      onTapCancel: () => _c.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icon, size: 14, color: Colors.white),
-              const SizedBox(width: 6),
-              Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-            ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => _c.forward(),
+        onTapUp: (_) { _c.reverse(); widget.onTap(); },
+        onTapCancel: () => _c.reverse(),
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedContainer(
+            duration: kFast,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: _hovered
+                  ? Colors.white.withValues(alpha: 0.30)
+                  : Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: _hovered ? 0.6 : 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.icon, size: 14, color: Colors.white),
+                const SizedBox(width: 6),
+                Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
           ),
         ),
       ),
@@ -526,7 +530,7 @@ class _LandingNav extends StatelessWidget {
           Row(
             children: [
               Image.asset(
-                'assets/images/logo.jpg',
+                'assets/images/whitelogo.png',
                 height: 44,
                 fit: BoxFit.contain,
               ),
@@ -699,6 +703,7 @@ class _HeroButton extends StatefulWidget {
 class _HeroButtonState extends State<_HeroButton> with SingleTickerProviderStateMixin {
   late AnimationController _c;
   late Animation<double> _scale;
+  bool _hovered = false;
 
   @override
   void initState() {
@@ -712,32 +717,42 @@ class _HeroButtonState extends State<_HeroButton> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _c.forward(),
-      onTapUp: (_) { _c.reverse(); widget.onTap(); },
-      onTapCancel: () => _c.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          decoration: BoxDecoration(
-            gradient: widget.primary
-                ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight)
-                : null,
-            color: widget.primary ? null : cSurface,
-            borderRadius: BorderRadius.circular(32),
-            border: widget.primary ? null : Border.all(color: cRed, width: 2),
-            boxShadow: widget.primary
-                ? [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))]
-                : null,
-          ),
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: widget.primary ? Colors.white : cRed,
-              letterSpacing: 0.3,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => _c.forward(),
+        onTapUp: (_) { _c.reverse(); widget.onTap(); },
+        onTapCancel: () => _c.reverse(),
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedContainer(
+            duration: kFast,
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: widget.primary
+                  ? LinearGradient(
+                      colors: _hovered ? [cRedDark, Color(0xFF5A0A0A)] : [cRed, cRedDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
+              color: widget.primary ? null : (_hovered ? cRedLight : cSurface),
+              borderRadius: BorderRadius.circular(32),
+              border: widget.primary ? null : Border.all(color: cRed, width: 2),
+              boxShadow: widget.primary
+                  ? [BoxShadow(color: cRed.withValues(alpha: _hovered ? 0.55 : 0.35), blurRadius: _hovered ? 24 : 16, offset: const Offset(0, 6))]
+                  : null,
+            ),
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: widget.primary ? Colors.white : cRed,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
         ),
@@ -755,8 +770,8 @@ class _HowItWorksSection extends StatefulWidget {
 
 class _StepData {
   final IconData icon;
-  final String num, title, desc;
-  const _StepData({required this.icon, required this.num, required this.title, required this.desc});
+  final String title, desc;
+  const _StepData({required this.icon, required this.title, required this.desc});
 }
 
 class _HowItWorksSectionState extends State<_HowItWorksSection> with SingleTickerProviderStateMixin {
@@ -769,9 +784,9 @@ class _HowItWorksSectionState extends State<_HowItWorksSection> with SingleTicke
   @override
   Widget build(BuildContext context) {
     const List<_StepData> steps = [
-      _StepData(icon: Icons.person_add_rounded, num: '01', title: 'Sign Up', desc: 'Create an account using your MSU email to join the community.'),
-      _StepData(icon: Icons.add_circle_rounded, num: '02', title: 'Browse or Post', desc: 'Find items for sale, report lost belongings, or create your own listings.'),
-      _StepData(icon: Icons.handshake_rounded, num: '03', title: 'Connect', desc: 'Message students, arrange pickups, and complete exchanges safely on campus.'),
+      _StepData(icon: Icons.person_add_rounded, title: 'Sign Up', desc: 'Create an account using your Montclair State University email to join the community.'),
+      _StepData(icon: Icons.add_circle_rounded, title: 'Browse or Post', desc: 'Find items for sale, report lost belongings, or create your own listings.'),
+      _StepData(icon: Icons.handshake_rounded, title: 'Connect', desc: 'Message students, arrange pickups, and complete exchanges safely on campus.'),
     ];
     return Container(
       color: cSurface,
@@ -782,7 +797,7 @@ class _HowItWorksSectionState extends State<_HowItWorksSection> with SingleTicke
           const SizedBox(height: 12),
           const Text('Three simple steps', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.8)),
           const SizedBox(height: 8),
-          const Text('to get started on UniFind', style: TextStyle(fontSize: 16, color: cMuted)),
+          const Text('to get started on UniFind.', style: TextStyle(fontSize: 16, color: cMuted)),
           const SizedBox(height: 52),
           Wrap(
             spacing: 20,
@@ -791,7 +806,10 @@ class _HowItWorksSectionState extends State<_HowItWorksSection> with SingleTicke
             children: List.generate(steps.length, (i) {
               final s = steps[i];
               final delay = Duration(milliseconds: 120 * i);
-              return _StepCard(icon: s.icon, num: s.num, title: s.title, desc: s.desc, delay: delay);
+              return ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 200),
+                child: _StepCard(icon: s.icon, title: s.title, desc: s.desc, delay: delay),
+              );
             }),
           ),
         ],
@@ -816,9 +834,9 @@ class _SectionLabel extends StatelessWidget {
 
 class _StepCard extends StatefulWidget {
   final IconData icon;
-  final String num, title, desc;
+  final String title, desc;
   final Duration delay;
-  const _StepCard({required this.icon, required this.num, required this.title, required this.desc, required this.delay});
+  const _StepCard({required this.icon, required this.title, required this.desc, required this.delay});
 
   @override
   State<_StepCard> createState() => _StepCardState();
@@ -857,28 +875,23 @@ class _StepCardState extends State<_StepCard> with SingleTickerProviderStateMixi
             boxShadow: [BoxShadow(color: _hovered ? cRed.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06), blurRadius: _hovered ? 20 : 10, offset: const Offset(0, 4))],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
-                    ),
-                    child: Icon(widget.icon, color: Colors.white, size: 24),
-                  ),
-                  Text(widget.num, style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: cRed.withValues(alpha: 0.15), letterSpacing: -1)),
-                ],
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Icon(widget.icon, color: Colors.white, size: 24),
               ),
-              const SizedBox(height: 18),
-              Text(widget.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: cText)),
+              const SizedBox(height: 16),
+              Text(widget.title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: cText)),
               const SizedBox(height: 8),
-              Text(widget.desc, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.6)),
+              Text(widget.desc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.6)),
             ],
           ),
         ),
@@ -915,7 +928,7 @@ class _FeaturesSection extends StatelessWidget {
           const SizedBox(height: 12),
           const Text('Everything you need', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.8)),
           const SizedBox(height: 8),
-          const Text('for campus life, simplified', style: TextStyle(fontSize: 16, color: cMuted)),
+          const Text('for campus life, simplified.', style: TextStyle(fontSize: 16, color: cMuted)),
           const SizedBox(height: 52),
           Wrap(
             spacing: 20,
@@ -972,7 +985,7 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
             boxShadow: [BoxShadow(color: _hov ? cRed.withValues(alpha: 0.14) : Colors.black.withValues(alpha: 0.07), blurRadius: _hov ? 24 : 12, offset: const Offset(0, 4))],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               AnimatedContainer(
                 duration: kMid,
@@ -987,9 +1000,9 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
                 child: Icon(widget.icon, color: _hov ? Colors.white : cRed, size: 24),
               ),
               const SizedBox(height: 16),
-              Text(widget.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cText)),
+              Text(widget.title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cText)),
               const SizedBox(height: 8),
-              Text(widget.desc, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.6)),
+              Text(widget.desc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.6)),
             ],
           ),
         ),
@@ -1025,7 +1038,7 @@ class _AboutSection extends StatelessWidget {
           const SizedBox(height: 12),
           const Text('About UniFind', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.8)),
           const SizedBox(height: 8),
-          const Text('Built for the Red Hawk community', style: TextStyle(fontSize: 16, color: cMuted)),
+          const Text('Built for the Red Hawk community.', style: TextStyle(fontSize: 16, color: cMuted)),
           const SizedBox(height: 52),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
@@ -1214,35 +1227,34 @@ class _ExclusiveBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [cNavBg, cNavBgDark, Color(0xFF4A0A0A)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: [cNavBg, cNavBgDark, Color(0xFF4A0A0A)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 64),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
+            ),
+            child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 64),
-          child: Column(
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
-                ),
-                child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
-              ),
-              const SizedBox(height: 20),
-              const Text('Made for the Red Hawk Community', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-              const SizedBox(height: 14),
-              Text('UniFind is designed solely for MSU — a safe, verified space to sell and connect.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 15, height: 1.6)),
-              const SizedBox(height: 32),
-              _HeroButton(label: 'Join UniFind Today', primary: false, onTap: onLogin),
-            ],
-          ),
-        ),
-      ],
+          const SizedBox(height: 20),
+          const Text('Made for the Red Hawk Community', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+          const SizedBox(height: 14),
+          Text('UniFind is designed solely for MSU — a safe, verified space to sell and connect.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 15, height: 1.6)),
+          const SizedBox(height: 32),
+          _HeroButton(label: 'Join UniFind Today', primary: false, onTap: onLogin),
+        ],
+      ),
     );
   }
 }
@@ -1521,17 +1533,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           ),
         ),
         // Search
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: widget.onListItem,
-              icon: const Icon(Icons.add),
-              label: const Text('List an Item'),
-            ),
-          ),
-        ),
         Padding(
           padding: const EdgeInsets.all(12),
           child: _SearchField(hint: 'Search marketplace...', onChanged: (v) => setState(() => _q = v)),
