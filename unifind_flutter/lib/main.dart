@@ -2026,72 +2026,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                               ],
                               if (_errorMessage != null) ...[
                                 const SizedBox(height: 10),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: cRedLight,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: cRed.withValues(alpha: 0.35),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Icon(
-                                        Icons.error_outline_rounded,
-                                        color: cRedDark,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          _errorMessage!,
-                                          style: const TextStyle(
-                                            color: cRedDark,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(
+                                    color: cRedDark,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (_emailNotFound) ...[
-                                  const SizedBox(height: 8),
-                                  OutlinedButton.icon(
-                                    onPressed: () {
-                                      Navigator.of(context).pushReplacement(
-                                        MaterialPageRoute(
-                                          builder: (_) => RegistrationScreen(
-                                            onRegister: (_) {
-                                              Navigator.of(context).popUntil((r) => r.isFirst);
-                                            },
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
-                                    label: const Text('Go To Sign Up'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: cRedDark,
-                                      side: BorderSide(
-                                        color: cRed.withValues(alpha: 0.45),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 10,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ],
                               const SizedBox(height: 24),
                               _AuthButton(
