@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
+import 'api_service.dart';
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const Color cRed = Color(0xFFA12727);
@@ -37,43 +40,145 @@ class _UniFindAppState extends State<UniFindApp> {
 
   String get _owner => _email.isEmpty ? 'You' : _email;
 
-  void _addListing(NewListingInput in_) {
-    setState(() {
-      if (in_.type == ListingType.marketplace) {
-        _market.insert(
-          0,
-          MarketplaceItem(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: in_.title,
-            price: in_.price,
-            description: in_.description,
-            category: in_.category,
-            condition: in_.condition,
-            image: in_.imageUrl,
-            seller: _owner,
-            createdAt: DateTime.now(),
-            location: in_.location,
-          ),
-        );
-        _tab = 0;
-      } else {
-        _lostFound.insert(
-          0,
-          LostFoundItem(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            title: in_.title,
-            description: in_.description,
-            category: in_.category,
-            type: in_.type == ListingType.lost ? LostFoundType.lost : LostFoundType.found,
-            image: in_.imageUrl,
-            poster: _owner,
-            createdAt: DateTime.now(),
-            location: in_.location,
-            status: 'active',
-          ),
-        );
-        _tab = 1;
+  Future<void> _loadListings() async {
+    try {
+      final apiItems = await getListings();
+      if (apiItems.isNotEmpty) {
+        setState(() {
+          _market
+            ..clear()
+            ..addAll(
+              apiItems.map(
+                (item) => MarketplaceItem(
+                  id: item['id'].toString(),
+                  title: item['title'],
+                  price: (item['price'] as num).toDouble(),
+                  description: item['description'],
+                  category: item['category'],
+                  condition: item['condition'],
+                  image: item['image'] ?? '',
+                  seller: item['seller'] ?? '',
+                  createdAt:
+                      DateTime.tryParse(item['createdAt'] ?? '') ??
+                      DateTime.now(),
+                  location: item['location'] ?? '',
+                ),
+              ),
+            );
+        });
       }
+    } catch (_) {}
+  }
+
+  Future<void> _loadLostFound() async {
+    try {
+      final apiItems = await getLostFoundItems();
+      if (apiItems.isNotEmpty) {
+        setState(() {
+          _lostFound
+            ..clear()
+            ..addAll(
+              apiItems.map(
+                (item) => LostFoundItem(
+                  id: item['id'].toString(),
+                  title: item['title'],
+                  description: item['description'],
+                  category: item['category'],
+                  type: item['type'] == 'lost'
+                      ? LostFoundType.lost
+                      : LostFoundType.found,
+                  image: item['image'] ?? '',
+                  poster: item['poster'] ?? '',
+                  createdAt:
+                      DateTime.tryParse(item['createdAt'] ?? '') ??
+                      DateTime.now(),
+                  location: item['location'] ?? '',
+                  status: item['status'] ?? 'active',
+                ),
+              ),
+            );
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+    _loadLostFound();
+  }
+
+  void _goToPostTab() => setState(() => _tab = 2);
+
+  Future<void> _addListing(NewListingInput in_) async {
+    try {
+      if (in_.type == ListingType.marketplace) {
+        await createListing(
+          title: in_.title,
+          description: in_.description,
+          price: in_.price,
+          category: in_.category,
+          condition: in_.condition,
+          location: in_.location,
+          email: _email,
+          image: in_.imageUrl,
+        );
+      } else {
+        await createLostFoundItem(
+          title: in_.title,
+          description: in_.description,
+          category: in_.category,
+          type: in_.type == ListingType.lost ? 'lost' : 'found',
+          location: in_.location,
+          email: _email,
+          image: in_.imageUrl,
+        );
+      }
+      await _loadListings();
+      await _loadLostFound();
+    } catch (_) {
+      setState(() {
+        if (in_.type == ListingType.marketplace) {
+          _market.insert(
+            0,
+            MarketplaceItem(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              title: in_.title,
+              price: in_.price,
+              description: in_.description,
+              category: in_.category,
+              condition: in_.condition,
+              image: in_.imageUrl,
+              seller: _owner,
+              createdAt: DateTime.now(),
+              location: in_.location,
+            ),
+          );
+        } else {
+          _lostFound.insert(
+            0,
+            LostFoundItem(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              title: in_.title,
+              description: in_.description,
+              category: in_.category,
+              type: in_.type == ListingType.lost
+                  ? LostFoundType.lost
+                  : LostFoundType.found,
+              image: in_.imageUrl,
+              poster: _owner,
+              createdAt: DateTime.now(),
+              location: in_.location,
+              status: 'active',
+            ),
+          );
+        }
+      });
+    }
+
+    setState(() {
+      _tab = in_.type == ListingType.marketplace ? 0 : 1;
     });
   }
 
@@ -95,18 +200,74 @@ class _UniFindAppState extends State<UniFindApp> {
       title: 'UniFind',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
-      home: _loggedIn
-          ? _MainShell(
-              tab: _tab,
-              email: _email,
-              market: _market,
-              lostFound: _lostFound,
-              owner: _owner,
-              onTabChange: (i) => setState(() => _tab = i),
-              onPost: _addListing,
-              onLogout: _logout,
-            )
-          : LandingPage(onLogin: _login),
+      home: !_loggedIn
+          ? LandingPage(onLogin: _login)
+          : Scaffold(
+              appBar: AppBar(
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'UniFind',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(_email, style: const TextStyle(fontSize: 12)),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Log out',
+                    onPressed: _logout,
+                    icon: const Icon(Icons.logout),
+                  ),
+                ],
+              ),
+              body: IndexedStack(
+                index: _tab,
+                children: [
+                  MarketplaceScreen(items: _market, onListItem: _goToPostTab),
+                  LostFoundScreen(items: _lostFound),
+                  PostListingScreen(onPost: _addListing),
+                  MyListingsScreen(
+                    marketplaceItems: _market
+                        .where((item) => item.seller == _owner)
+                        .toList(),
+                    lostFoundItems: _lostFound
+                        .where((item) => item.poster == _owner)
+                        .toList(),
+                    onListItem: _goToPostTab,
+                  ),
+                  const DocumentationScreen(),
+                ],
+              ),
+              bottomNavigationBar: NavigationBar(
+                selectedIndex: _tab,
+                onDestinationSelected: (index) =>
+                    setState(() => _tab = index),
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.storefront_outlined),
+                    label: 'Shop',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.search),
+                    label: 'Lost/Found',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.add_circle_outline),
+                    label: 'Post',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.inventory_2_outlined),
+                    label: 'My',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.menu_book_outlined),
+                    label: 'Docs',
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -195,7 +356,7 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _GlassAppBar({required this.email, required this.onLogout});
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 2);
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 16);
 
   @override
   Widget build(BuildContext context) {
@@ -210,13 +371,13 @@ class _GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           child: Row(
             children: [
               // Logo
               Image.asset(
                 'assets/images/whitelogo.png',
-                height: 40,
+                height: 34,
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
@@ -2000,10 +2161,67 @@ class _PostListingScreenState extends State<PostListingScreen> {
   ListingType _type = ListingType.marketplace;
   String _title = '', _desc = '', _cat = '', _cond = 'Good', _loc = '';
   double _price = 0;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
 
   List<String> get _cats => _type == ListingType.marketplace
       ? categories.where((c) => c != 'All').toList()
       : lostFoundCategories.where((c) => c != 'All').toList();
+
+  Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Take a Photo'),
+              onTap: () async {
+                Navigator.pop(context);
+                final picked = await _picker.pickImage(
+                  source: ImageSource.camera,
+                  imageQuality: 40,
+                  maxWidth: 800,
+                  maxHeight: 800,
+                );
+                if (picked != null) {
+                  final bytes = await picked.readAsBytes();
+                  setState(() {
+                    _selectedImage = picked;
+                    _selectedImageBytes = bytes;
+                  });
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () async {
+                Navigator.pop(context);
+                final picked = await _picker.pickImage(
+                  source: ImageSource.gallery,
+                  imageQuality: 40,
+                  maxWidth: 800,
+                  maxHeight: 800,
+                );
+                if (picked != null) {
+                  final bytes = await picked.readAsBytes();
+                  setState(() {
+                    _selectedImage = picked;
+                    _selectedImageBytes = bytes;
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2132,8 +2350,40 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 onChanged: (v) => _loc = v,
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Location is required' : null,
               ),
+              const SizedBox(height: 12),
+              _FormLabel(label: 'Image'),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: cBorder),
+                  ),
+                  child: _selectedImageBytes == null
+                      ? const Row(
+                          children: [
+                            Icon(Icons.add_a_photo_outlined, color: cMuted),
+                            SizedBox(width: 10),
+                            Text('Tap to add image', style: TextStyle(color: cMuted)),
+                          ],
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.memory(
+                            _selectedImageBytes!,
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                ),
+              ),
               const SizedBox(height: 24),
-              _AuthButton(loading: false, onTap: _submit, label: 'Post Item'),
+              _AuthButton(loading: _isUploading, onTap: _submit, label: 'Post Item'),
               const SizedBox(height: 20),
             ],
           ),
@@ -2142,33 +2392,71 @@ class _PostListingScreenState extends State<PostListingScreen> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    widget.onPost(NewListingInput(
-      type: _type,
-      title: _title.trim(),
-      description: _desc.trim(),
-      category: _cat,
-      condition: _cond,
-      location: _loc.trim(),
-      price: _price,
-    ));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-            SizedBox(width: 10),
-            Text('Item posted successfully!', style: TextStyle(fontWeight: FontWeight.w600)),
-          ],
+    setState(() => _isUploading = true);
+    try {
+      String imageUrl = 'https://placehold.co/400x400?text=?';
+      if (_selectedImage != null && _selectedImageBytes != null) {
+        imageUrl = await uploadImage(
+          _selectedImage!.path,
+          _selectedImageBytes!,
+        );
+      }
+
+      widget.onPost(NewListingInput(
+        type: _type,
+        title: _title.trim(),
+        description: _desc.trim(),
+        category: _cat,
+        condition: _cond,
+        location: _loc.trim(),
+        price: _price,
+        imageUrl: imageUrl,
+      ));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 10),
+              Text(
+                'Item posted successfully!',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          backgroundColor: cRed,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(12),
         ),
-        backgroundColor: cRed,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(12),
-      ),
-    );
-    setState(() { _title = ''; _desc = ''; _cat = ''; _cond = 'Good'; _loc = ''; _price = 0; _formKey.currentState?.reset(); });
+      );
+
+      setState(() {
+        _title = '';
+        _desc = '';
+        _cat = '';
+        _cond = 'Good';
+        _loc = '';
+        _price = 0;
+        _selectedImage = null;
+        _selectedImageBytes = null;
+        _formKey.currentState?.reset();
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to upload/post item: $e'),
+          backgroundColor: cRedDark,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(12),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
   }
 }
 
