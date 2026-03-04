@@ -398,6 +398,21 @@ class LandingPage extends StatelessWidget {
     ));
   }
 
+  void _openRegister(BuildContext ctx) {
+    Navigator.of(ctx).push(PageRouteBuilder(
+      transitionDuration: kPage,
+      pageBuilder: (_, a, __) => FadeTransition(
+        opacity: a,
+        child: RegistrationScreen(
+          onRegister: (email) {
+            onLogin(email);
+            Navigator.of(ctx).popUntil((r) => r.isFirst);
+          },
+        ),
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -411,13 +426,17 @@ class LandingPage extends StatelessWidget {
               onHow: () => _scrollTo(_howKey),
               onFaq: () => _scrollTo(_faqKey),
               onLogin: () => _openLogin(context),
+              onRegister: () => _openRegister(context),
             ),
-            _HeroSection(onLogin: () => _openLogin(context)),
+            _HeroSection(
+              onLogin: () => _openLogin(context),
+              onRegister: () => _openRegister(context),
+            ),
             KeyedSubtree(key: _howKey, child: const _HowItWorksSection()),
             const _FeaturesSection(),
             KeyedSubtree(key: _aboutKey, child: const _AboutSection()),
             KeyedSubtree(key: _faqKey, child: const _FaqSection()),
-            _ExclusiveBanner(onLogin: () => _openLogin(context)),
+            _ExclusiveBanner(onLogin: () => _openRegister(context)),
             const _Footer(),
           ],
         ),
@@ -428,8 +447,14 @@ class LandingPage extends StatelessWidget {
 
 // ─── LANDING NAV ─────────────────────────────────────────────────────────────
 class _LandingNav extends StatelessWidget {
-  final VoidCallback onAbout, onHow, onFaq, onLogin;
-  const _LandingNav({required this.onAbout, required this.onHow, required this.onFaq, required this.onLogin});
+  final VoidCallback onAbout, onHow, onFaq, onLogin, onRegister;
+  const _LandingNav({
+    required this.onAbout,
+    required this.onHow,
+    required this.onFaq,
+    required this.onLogin,
+    required this.onRegister,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -457,7 +482,7 @@ class _LandingNav extends StatelessWidget {
             child: const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 8),
-          _PillButton(label: 'Sign Up', icon: Icons.person_add_rounded, onTap: onLogin),
+          _PillButton(label: 'Sign Up', icon: Icons.person_add_rounded, onTap: onRegister),
         ],
       ),
     );
@@ -501,7 +526,8 @@ class _AnimatedLogoState extends State<_AnimatedLogo> {
 // ─── HERO SECTION ────────────────────────────────────────────────────────────
 class _HeroSection extends StatefulWidget {
   final VoidCallback onLogin;
-  const _HeroSection({required this.onLogin});
+  final VoidCallback onRegister;
+  const _HeroSection({required this.onLogin, required this.onRegister});
   @override
   State<_HeroSection> createState() => _HeroSectionState();
 }
@@ -616,7 +642,7 @@ class _HeroSectionState extends State<_HeroSection> with TickerProviderStateMixi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _HeroButton(label: 'Get Started', primary: true, onTap: widget.onLogin),
+                    _HeroButton(label: 'Get Started', primary: true, onTap: widget.onRegister),
                     const SizedBox(width: 14),
                     _HeroButton(label: 'Log In', primary: false, onTap: widget.onLogin),
                   ],
@@ -1310,6 +1336,127 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class RegistrationScreen extends StatefulWidget {
+  const RegistrationScreen({super.key, required this.onRegister});
+  final void Function(String email) onRegister;
+
+  @override
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
+}
+
+class _RegistrationScreenState extends State<RegistrationScreen> {
+  final _formKey = GlobalKey<FormState>();
+  String _email = '';
+  String _password = '';
+  String _confirm = '';
+  bool _isLoading = false;
+  String _errorMessage = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Create Account')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Join the MSU community',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'MSU Email',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _email = value,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email is required';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _password = value,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Password is required';
+                          }
+                          if (value.length < 6) return 'Minimum 6 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _confirm = value,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please confirm your password';
+                          }
+                          if (value != _password) return 'Passwords do not match';
+                          return null;
+                        },
+                      ),
+                      if (_errorMessage.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          _errorMessage,
+                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : FilledButton(
+                              onPressed: _submit,
+                              child: const Text('Create Account'),
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    widget.onRegister(_email.trim());
+  }
 }
 
 class _LoginScreenState extends State<LoginScreen> {
