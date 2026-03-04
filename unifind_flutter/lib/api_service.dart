@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 const String _baseUrl = 'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API';
 
+
 // LOGIN
 // Sends email and password to login.php
 // Returns a Map with user info on success, or throws an error on failure
@@ -33,6 +34,53 @@ Future<Map<String, dynamic>> loginUser(String email, String password) async {
   } else {
     throw Exception(data['error'] ?? 'Login failed.');
   }
+}
+
+// SIGNUP STEP 1: SEND VERIFICATION CODE
+// Sends a verification code to the email. Backend should NOT create
+// a permanent user record yet.
+Future<Map<String, dynamic>> sendSignupVerificationCode({
+  required String email,
+  required String password,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/send_verification_code.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'email': email,
+      'password': password,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw Exception(data['error'] ?? 'Failed to send verification code.');
+}
+
+// SIGNUP STEP 2: VERIFY CODE + CREATE ACCOUNT
+// Verifies the code and then persists user credentials in DB.
+Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
+  required String email,
+  required String password,
+  required String code,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/verify_code_register.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'email': email,
+      'password': password,
+      'code': code,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw Exception(data['error'] ?? 'Verification failed.');
 }
 
 // GET MARKETPLACE LISTINGS
