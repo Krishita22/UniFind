@@ -1356,23 +1356,26 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cardWidth = (screenWidth * 0.82).clamp(340.0, 1240.0);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE6E6E6),
+      backgroundColor: const Color(0xFFD9D9D9),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 860),
+          padding: const EdgeInsets.all(28),
+          child: SizedBox(
+            width: cardWidth.toDouble(),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 44, vertical: 36),
+              padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 54),
               decoration: BoxDecoration(
                 color: const Color(0xFFF2E8E8),
                 borderRadius: BorderRadius.circular(26),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1384,7 +1387,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     const Text(
                       'Join the MSU community',
                       style: TextStyle(
-                        fontSize: 58 / 2,
+                        fontSize: 56,
                         fontWeight: FontWeight.w800,
                         color: Color(0xFF231A1A),
                         letterSpacing: -0.5,
@@ -1393,13 +1396,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     const SizedBox(height: 24),
                     TextFormField(
                       onChanged: (value) => _email = value,
-                      style: const TextStyle(fontSize: 22 / 1.2),
+                      style: const TextStyle(fontSize: 22),
                       decoration: InputDecoration(
                         hintText: 'MSU Email',
                         hintStyle: const TextStyle(color: Color(0xFF5A5050)),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 24,
-                          vertical: 22,
+                          vertical: 24,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -1428,13 +1431,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     TextFormField(
                       obscureText: true,
                       onChanged: (value) => _password = value,
-                      style: const TextStyle(fontSize: 22 / 1.2),
+                      style: const TextStyle(fontSize: 22),
                       decoration: InputDecoration(
                         labelText: 'Password',
-                        labelStyle: const TextStyle(color: cRed, fontSize: 18),
+                        labelStyle: const TextStyle(color: cRed, fontSize: 24),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 24,
-                          vertical: 22,
+                          vertical: 24,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -1463,13 +1466,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     TextFormField(
                       obscureText: true,
                       onChanged: (value) => _confirm = value,
-                      style: const TextStyle(fontSize: 22 / 1.2),
+                      style: const TextStyle(fontSize: 22),
                       decoration: InputDecoration(
                         hintText: 'Confirm Password',
                         hintStyle: const TextStyle(color: Color(0xFF5A5050)),
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 24,
-                          vertical: 22,
+                          vertical: 24,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -1502,15 +1505,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                     ],
                     const SizedBox(height: 24),
                     SizedBox(
-                      height: 64,
+                      height: 92,
                       child: FilledButton(
                         onPressed: _isLoading ? null : _submit,
                         style: FilledButton.styleFrom(
                           backgroundColor: cRed,
                           shape: const StadiumBorder(),
                           textStyle: const TextStyle(
-                            fontSize: 44 / 2,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 50 / 2,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         child: _isLoading
