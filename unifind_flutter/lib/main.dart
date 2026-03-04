@@ -1553,6 +1553,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
+  String _loginErrorMessage(ApiException e) {
+    switch (e.code) {
+      case 'INVALID_CREDENTIALS':
+        return 'Invalid email or password.';
+      case 'EMAIL_NOT_FOUND':
+        return 'No account found for this email. Please sign up first.';
+      case 'ACCOUNT_UNVERIFIED':
+        return 'Your account is not verified yet. Please complete verification.';
+      default:
+        return e.message;
+    }
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -1566,6 +1579,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       final loggedInEmail = (user?['email'] as String?) ?? _email.trim();
       if (!mounted) return;
       widget.onLogin(loggedInEmail);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = _loginErrorMessage(e);
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1657,6 +1675,17 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               ],
                               const SizedBox(height: 24),
                               _AuthButton(loading: _loading, onTap: _submit, label: 'Sign In'),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const ForgotPasswordScreen(),
+                                    ),
+                                  );
+                                },
+                                child: const Text('Forgot Password?'),
+                              ),
                             ],
                           ),
                         ),
@@ -1665,6 +1694,366 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       TextButton(
                         onPressed: () => Navigator.of(context).maybePop(),
                         child: const Text('← Back to homepage', style: TextStyle(color: cMuted, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── FORGOT PASSWORD SCREEN ─────────────────────────────────────────────────
+class ForgotPasswordScreen extends StatefulWidget {
+  final String? initialEmail;
+  const ForgotPasswordScreen({super.key, this.initialEmail});
+
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
+    with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  String _email = '';
+  String _code = '';
+  String _newPassword = '';
+  bool _loading = false;
+  bool _codeSent = false;
+  bool _emailNotFound = false;
+  String? _errorMessage;
+  late AnimationController _c;
+  late Animation<double> _fade, _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _email = (widget.initialEmail ?? '').trim().toLowerCase();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fade = Tween(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeOut),
+    );
+    _slide = Tween(begin: 24.0, end: 0.0).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic),
+    );
+    _c.forward();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  String _forgotPasswordErrorMessage(ApiException e) {
+    switch (e.code) {
+      case 'EMAIL_NOT_FOUND':
+        return 'No account found with this email. Please sign up first.';
+      case 'INVALID_CODE':
+        return 'That reset code is invalid. Please check and try again.';
+      case 'CODE_EXPIRED':
+        return 'Your reset code expired. Request a new code.';
+      case 'WEAK_PASSWORD':
+        return 'Use a stronger password (at least 8 characters).';
+      case 'TOO_MANY_REQUESTS':
+        return 'Too many attempts. Please wait a bit and try again.';
+      default:
+        return e.message;
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+      _emailNotFound = false;
+    });
+
+    try {
+      if (!_codeSent) {
+        final response = await requestPasswordReset(_email.trim().toLowerCase());
+        if (!mounted) return;
+        setState(() => _codeSent = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              response['message']?.toString() ?? 'Reset code sent to your email.',
+            ),
+          ),
+        );
+      } else {
+        await resetPassword(
+          email: _email.trim().toLowerCase(),
+          code: _code.trim(),
+          newPassword: _newPassword,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password reset successful. Please log in.')),
+        );
+        Navigator.pop(context);
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = _forgotPasswordErrorMessage(e);
+        _emailNotFound = e.code == 'EMAIL_NOT_FOUND';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _emailNotFound = false;
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: cBg,
+      body: Stack(
+        children: [
+          Positioned(
+            right: -80,
+            top: -80,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [cRed.withValues(alpha: 0.08), Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: -60,
+            bottom: -60,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [cRed.withValues(alpha: 0.05), Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, child) => Opacity(
+                opacity: _fade.value,
+                child: Transform.translate(offset: Offset(0, _slide.value), child: child),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    children: [
+                      Image.asset('assets/images/logo.jpg', height: 90, fit: BoxFit.contain),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Forgot Password',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w900,
+                          color: cText,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _codeSent
+                            ? 'Enter the code sent to your email and set a new password'
+                            : 'Enter your MSU email to receive a reset code',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, color: cMuted),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: cSurface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: cBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _StyledField(
+                                label: 'MSU Email address',
+                                hint: 'you@montclair.edu',
+                                icon: Icons.mail_outline_rounded,
+                                initialValue: _email,
+                                onChanged: (v) => _email = v,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Email is required';
+                                  if (!v.toLowerCase().trim().endsWith('@montclair.edu')) {
+                                    return 'Must use an @montclair.edu email';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              if (_codeSent) ...[
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'Reset Code',
+                                  hint: 'Enter code from your email',
+                                  icon: Icons.verified_outlined,
+                                  onChanged: (v) => _code = v,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'Reset code is required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'New Password',
+                                  hint: '••••••••',
+                                  icon: Icons.lock_outline_rounded,
+                                  obscure: true,
+                                  onChanged: (v) => _newPassword = v,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.isEmpty) return 'New password is required';
+                                    if (v.length < 8) return 'Minimum 8 characters';
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'Confirm New Password',
+                                  hint: '••••••••',
+                                  icon: Icons.lock_outline_rounded,
+                                  obscure: true,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.isEmpty) return 'Please confirm your password';
+                                    if (v != _newPassword) return 'Passwords do not match';
+                                    return null;
+                                  },
+                                ),
+                              ],
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cRedLight,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: cRed.withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.error_outline_rounded,
+                                        color: cRedDark,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: const TextStyle(
+                                            color: cRedDark,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (_emailNotFound) ...[
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                          builder: (_) => RegistrationScreen(
+                                            onRegister: (_) {
+                                              Navigator.of(context).popUntil((r) => r.isFirst);
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                                    label: const Text('Go To Sign Up'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: cRedDark,
+                                      side: BorderSide(
+                                        color: cRed.withValues(alpha: 0.45),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 10,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                              const SizedBox(height: 24),
+                              _AuthButton(
+                                loading: _loading,
+                                onTap: _submit,
+                                label: _codeSent ? 'Reset Password' : 'Send Reset Code',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, size: 14, color: cMuted),
+                              SizedBox(width: 6),
+                              Text('Back to login', style: TextStyle(color: cMuted, fontSize: 13)),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1721,13 +2110,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
       if (!_codeSent) {
         await sendSignupVerificationCode(
           email: _email.trim().toLowerCase(),
-          password: _password,
+          // Some backend versions still require a password at code-send time.
+          // Use a temporary strong value in step 1; real password is collected in step 2.
+          password: _password.isEmpty ? 'TempPass123!' : _password,
         );
         if (!mounted) return;
         setState(() => _codeSent = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification code sent to your Montclair email.'),
+            content: Text('Verification code sent. Now set your password and enter the code.'),
           ),
         );
       } else {
@@ -1739,6 +2130,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         if (!mounted) return;
         widget.onRegister(_email.trim().toLowerCase());
       }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+
+      if (e.code == 'USER_EXISTS') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email already registered. Please log in.'),
+          ),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => LoginScreen(
+              onLogin: widget.onRegister,
+            ),
+          ),
+        );
+        return;
+      }
+
+      setState(() {
+        if (!_codeSent && e.message.toLowerCase().contains('password')) {
+          _errorMessage = 'Unable to start sign up. Please try again.';
+        } else {
+          _errorMessage = e.message;
+        }
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -1774,7 +2191,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                       const SizedBox(height: 24),
                       const Text('Create Account', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
                       const SizedBox(height: 6),
-                      const Text('Join the MSU community', style: TextStyle(fontSize: 14, color: cMuted)),
+                      Text(
+                        _codeSent
+                            ? 'Set your password and verify your email'
+                            : 'Enter your MSU email to begin sign up',
+                        style: const TextStyle(fontSize: 14, color: cMuted),
+                      ),
                       const SizedBox(height: 32),
                       Container(
                         padding: const EdgeInsets.all(28),
@@ -1802,36 +2224,38 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   return null;
                                 },
                               ),
-                              const SizedBox(height: 16),
-                              _StyledField(
-                                label: 'Password',
-                                hint: '••••••••',
-                                icon: Icons.lock_outline_rounded,
-                                obscure: true,
-                                onChanged: (v) => _password = v,
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) return 'Password is required';
-                                  if (v.length < 8) return 'Minimum 8 characters';
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              _StyledField(
-                                label: 'Confirm Password',
-                                hint: '••••••••',
-                                icon: Icons.lock_outline_rounded,
-                                obscure: true,
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) {
-                                    return 'Please confirm your password';
-                                  }
-                                  if (v != _password) {
-                                    return 'Passwords do not match';
-                                  }
-                                  return null;
-                                },
-                              ),
                               if (_codeSent) ...[
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'Password',
+                                  hint: '••••••••',
+                                  icon: Icons.lock_outline_rounded,
+                                  obscure: true,
+                                  onChanged: (v) => _password = v,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.isEmpty) return 'Password is required';
+                                    if (v.length < 8) return 'Minimum 8 characters';
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'Confirm Password',
+                                  hint: '••••••••',
+                                  icon: Icons.lock_outline_rounded,
+                                  obscure: true,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.isEmpty) {
+                                      return 'Please confirm your password';
+                                    }
+                                    if (v != _password) {
+                                      return 'Passwords do not match';
+                                    }
+                                    return null;
+                                  },
+                                ),
                                 const SizedBox(height: 16),
                                 _StyledField(
                                   label: 'Verification Code',
@@ -1863,7 +2287,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 loading: _loading,
                                 onTap: _submit,
                                 label: _codeSent
-                                    ? 'Verify Code & Create Account'
+                                    ? 'Verify & Create Account'
                                     : 'Send Verification Code',
                               ),
                             ],
@@ -1871,9 +2295,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                         ),
                       ),
                       const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        child: const Text('← Back to login', style: TextStyle(color: cMuted, fontSize: 13)),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, size: 14, color: cMuted),
+                              SizedBox(width: 6),
+                              Text('Back to login', style: TextStyle(color: cMuted, fontSize: 13)),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -1942,6 +2375,7 @@ class _StyledField extends StatelessWidget {
   final String label, hint;
   final IconData icon;
   final bool obscure;
+  final String? initialValue;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
 
@@ -1950,6 +2384,7 @@ class _StyledField extends StatelessWidget {
     required this.hint,
     required this.icon,
     this.obscure = false,
+    this.initialValue,
     this.validator,
     this.onChanged,
   });
@@ -1962,6 +2397,7 @@ class _StyledField extends StatelessWidget {
         Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
         const SizedBox(height: 6),
         TextFormField(
+          initialValue: initialValue,
           obscureText: obscure,
           onChanged: onChanged,
           validator: validator,

@@ -8,6 +8,16 @@ import 'dart:typed_data';
 
 const String _baseUrl = 'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API';
 
+class ApiException implements Exception {
+  final String message;
+  final String? code;
+
+  const ApiException(this.message, {this.code});
+
+  @override
+  String toString() => message;
+}
+
 
 // LOGIN
 // Sends email and password to login.php
@@ -32,7 +42,10 @@ Future<Map<String, dynamic>> loginUser(String email, String password) async {
   if (response.statusCode == 200 && data['success'] == true) {
     return data;
   } else {
-    throw Exception(data['error'] ?? 'Login failed.');
+    throw ApiException(
+      data['error']?.toString() ?? 'Login failed.',
+      code: data['error_code']?.toString(),
+    );
   }
 }
 
@@ -41,22 +54,29 @@ Future<Map<String, dynamic>> loginUser(String email, String password) async {
 // a permanent user record yet.
 Future<Map<String, dynamic>> sendSignupVerificationCode({
   required String email,
-  required String password,
+  String? password,
 }) async {
+  final body = <String, dynamic>{
+    'email': email,
+  };
+  if (password != null && password.isNotEmpty) {
+    body['password'] = password;
+  }
+
   final response = await http.post(
     Uri.parse('$_baseUrl/send_verification_code.php'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'email': email,
-      'password': password,
-    }),
+    body: jsonEncode(body),
   );
 
   final data = jsonDecode(response.body);
   if (response.statusCode == 200 && data['success'] == true) {
     return Map<String, dynamic>.from(data);
   }
-  throw Exception(data['error'] ?? 'Failed to send verification code.');
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to send verification code.',
+    code: data['error_code']?.toString(),
+  );
 }
 
 // SIGNUP STEP 2: VERIFY CODE + CREATE ACCOUNT
@@ -80,7 +100,60 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
   if (response.statusCode == 200 && data['success'] == true) {
     return Map<String, dynamic>.from(data);
   }
-  throw Exception(data['error'] ?? 'Verification failed.');
+  throw ApiException(
+    data['error']?.toString() ?? 'Verification failed.',
+    code: data['error_code']?.toString(),
+  );
+}
+
+// PASSWORD RESET STEP 1: REQUEST RESET CODE
+Future<Map<String, dynamic>> requestPasswordReset(String email) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/request_password_reset.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 &&
+      data['success'] == true &&
+      data['email_exists'] == false) {
+    throw const ApiException(
+      'This is not a verified UniFind email.',
+      code: 'EMAIL_NOT_FOUND',
+    );
+  }
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to request password reset.',
+    code: data['error_code']?.toString(),
+  );
+}
+
+// PASSWORD RESET STEP 2: VERIFY CODE + UPDATE PASSWORD
+Future<Map<String, dynamic>> resetPassword({
+  required String email,
+  required String code,
+  required String newPassword,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/reset_password.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'email': email,
+      'code': code,
+      'new_password': newPassword,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(
+    data['error']?.toString() ?? 'Reset failed',
+    code: data['error_code']?.toString(),
+  );
 }
 
 // GET MARKETPLACE LISTINGS
@@ -101,7 +174,10 @@ Future<List<Map<String, dynamic>>> getListings({String category = ''}) async {
   if (response.statusCode == 200 && data['success'] == true) {
     return List<Map<String, dynamic>>.from(data['data']);
   } else {
-    throw Exception(data['error'] ?? 'Unable to load listings.');
+    throw ApiException(
+      data['error']?.toString() ?? 'Unable to load listings.',
+      code: data['error_code']?.toString(),
+    );
   }
 }
 
@@ -136,7 +212,10 @@ Future<List<Map<String, dynamic>>> getLostFoundItems({
   if (response.statusCode == 200 && data['success'] == true) {
     return List<Map<String, dynamic>>.from(data['data']);
   } else {
-    throw Exception(data['error'] ?? 'Unable to load lost & found items.');
+    throw ApiException(
+      data['error']?.toString() ?? 'Unable to load lost & found items.',
+      code: data['error_code']?.toString(),
+    );
   }
 }
 
@@ -174,7 +253,10 @@ Future<Map<String, dynamic>> createListing({
   if (response.statusCode == 200 && data['success'] == true) {
     return data;
   } else {
-    throw Exception(data['error'] ?? 'Failed to post listing.');
+    throw ApiException(
+      data['error']?.toString() ?? 'Failed to post listing.',
+      code: data['error_code']?.toString(),
+    );
   }
 }
 
@@ -210,7 +292,10 @@ Future<Map<String, dynamic>> createLostFoundItem({
   if (response.statusCode == 200 && data['success'] == true) {
     return data;
   } else {
-    throw Exception(data['error'] ?? 'Failed to post lost & found item.');
+    throw ApiException(
+      data['error']?.toString() ?? 'Failed to post lost & found item.',
+      code: data['error_code']?.toString(),
+    );
   }
 }
 
