@@ -326,7 +326,18 @@ class LandingPage extends StatelessWidget {
       ),
     );
   }
-
+  void _openRegister(BuildContext context) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => RegistrationScreen(
+        onRegister: (email) {
+          onLogin(email);
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        },
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -336,18 +347,17 @@ class LandingPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _LandingNavbar(
-              onAboutTap: () => _scrollTo(aboutKey),
-              onHowItWorksTap: () => _scrollTo(howItWorksKey),
-              onFaqTap: () => _scrollTo(faqKey),
-              onLoginTap: () => _openLogin(context),
-            ),
-            _HeroSection(onLoginTap: () => _openLogin(context)),
-            Container(key: howItWorksKey, child: const _HowItWorksSection()),
-            const _FeaturesSection(),
-            Container(key: aboutKey, child: const _AboutSection()),
-            Container(key: faqKey, child: const _FaqSection()),
-            _ExclusiveBanner(onLoginTap: () => _openLogin(context)),
-            const _Footer(),
+                onAboutTap: () => _scrollTo(aboutKey),
+                onHowItWorksTap: () => _scrollTo(howItWorksKey),
+                onFaqTap: () => _scrollTo(faqKey),
+                onLoginTap: () => _openLogin(context),
+                onRegisterTap: () => _openRegister(context),
+              ),
+              _HeroSection(
+                onLoginTap: () => _openLogin(context),
+                onRegisterTap: () => _openRegister(context),
+              ),
+              _ExclusiveBanner(onLoginTap: () => _openRegister(context)),
           ],
         ),
       ),
@@ -361,17 +371,19 @@ class LandingPage extends StatelessWidget {
 // --------------------
 
 class _LandingNavbar extends StatelessWidget {
-  final VoidCallback onAboutTap;
-  final VoidCallback onHowItWorksTap;
-  final VoidCallback onFaqTap;
-  final VoidCallback onLoginTap;
+final VoidCallback onAboutTap;
+final VoidCallback onHowItWorksTap;
+final VoidCallback onFaqTap;
+final VoidCallback onLoginTap;
+final VoidCallback onRegisterTap;
 
-  const _LandingNavbar({
-    required this.onAboutTap,
-    required this.onHowItWorksTap,
-    required this.onFaqTap,
-    required this.onLoginTap,
-  });
+const _LandingNavbar({
+  required this.onAboutTap,
+  required this.onHowItWorksTap,
+  required this.onFaqTap,
+  required this.onLoginTap,
+  required this.onRegisterTap,
+});
 
   @override
   Widget build(BuildContext context) {
@@ -451,7 +463,7 @@ class _LandingNavbar extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               ElevatedButton(
-                onPressed: onLoginTap,
+                onPressed: onRegisterTap,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF8B1A1A),
@@ -463,7 +475,7 @@ class _LandingNavbar extends StatelessWidget {
                       fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 child: const Text('Sign Up'),
-              ),
+                ),
             ],
           ),
         ],
@@ -479,7 +491,8 @@ class _LandingNavbar extends StatelessWidget {
 
 class _HeroSection extends StatelessWidget {
   final VoidCallback onLoginTap;
-  const _HeroSection({required this.onLoginTap});
+  final VoidCallback onRegisterTap;
+  const _HeroSection({required this.onLoginTap, required this.onRegisterTap});
 
   @override
   Widget build(BuildContext context) {
@@ -511,7 +524,7 @@ class _HeroSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton(
-                onPressed: onLoginTap,
+                 onPressed: onLoginTap,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8B1A1A),
                   foregroundColor: Colors.white,
@@ -522,11 +535,11 @@ class _HeroSection extends StatelessWidget {
                   textStyle: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                child: const Text('Log In'),
-              ),
-              const SizedBox(width: 16),
-              OutlinedButton(
-                onPressed: onLoginTap,
+               child: const Text('Log In'),
+                ),
+                const SizedBox(width: 16),
+                OutlinedButton(
+                onPressed: onRegisterTap,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF8B1A1A),
                   side: const BorderSide(color: Color(0xFF8B1A1A), width: 2),
@@ -538,7 +551,7 @@ class _HeroSection extends StatelessWidget {
                       fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 child: const Text('Sign Up'),
-              ),
+                ),
             ],
           ),
         ],
@@ -1133,6 +1146,123 @@ class LoginScreen extends StatefulWidget {
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class RegistrationScreen extends StatefulWidget {
+  const RegistrationScreen({super.key, required this.onRegister});
+  final void Function(String email) onRegister;
+
+  @override
+  State<RegistrationScreen> createState() => _RegistrationScreenState();
+}
+
+class _RegistrationScreenState extends State<RegistrationScreen> {
+  final _formKey = GlobalKey<FormState>();
+  String _email = '';
+  String _password = '';
+  String _confirm = '';
+  bool _isLoading = false;
+  String _errorMessage = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Create Account')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Join the MSU community',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'MSU Email',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _email = value,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Email is required';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _password = value,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Password is required';
+                          if (value.length < 6) return 'Minimum 6 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm Password',
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) => _confirm = value,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Please confirm your password';
+                          if (value != _password) return 'Passwords do not match';
+                          return null;
+                        },
+                      ),
+                      if (_errorMessage.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          _errorMessage,
+                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : FilledButton(
+                              onPressed: _submit,
+                              child: const Text('Create Account'),
+                            ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _submit() {
+  if (!_formKey.currentState!.validate()) return;
+  widget.onRegister(_email.trim());
+}
 }
 
 class _LoginScreenState extends State<LoginScreen> {
