@@ -889,8 +889,75 @@ class _AboutStrip extends StatelessWidget {
                         height: 1.6)),
               ],
             ),
-          ),
-        ],
+          ],
+        ),
+
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+
+              width: 54,
+              height: 54,
+
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [cRed, cRedDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+
+                borderRadius: BorderRadius.circular(14),
+
+                boxShadow: [
+                  BoxShadow(
+                    color: cRed.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+
+              child: Icon(
+                widget.icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+
+            const SizedBox(width: 22),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+
+                children: [
+                  Text(
+                    widget.title,
+
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: cRed,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Text(
+                    widget.desc,
+
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: cMuted,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
