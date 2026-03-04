@@ -1490,7 +1490,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please confirm your password';
                         }
-                        if (value != _password) return 'Passwords do not match';
                         return null;
                       },
                     ),
@@ -1536,8 +1535,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  void _submit() {
+  void _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
     widget.onRegister(_email.trim());
   }
 }
