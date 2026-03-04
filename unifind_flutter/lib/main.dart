@@ -204,14 +204,23 @@ class _UniFindAppState extends State<UniFindApp> {
           ? LandingPage(onLogin: _login)
           : Scaffold(
               appBar: AppBar(
+                centerTitle: true,
                 title: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, // keeps it centered vertically
                   children: [
-                    const Text(
-                      'UniFind',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Image.asset(
+                      'assets/images/whitelogo.png',
+                      height: 32,
+                      fit: BoxFit.contain,
                     ),
-                    Text(_email, style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 2), // small spacing
+                    Text(
+                      _email,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white, // 👈 pure white
+                      ),
+                    ),
                   ],
                 ),
                 actions: [
@@ -259,7 +268,7 @@ class _UniFindAppState extends State<UniFindApp> {
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.inventory_2_outlined),
-                    label: 'My',
+                    label: 'My Listings',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.menu_book_outlined),
@@ -482,7 +491,8 @@ class _AnimatedNavBar extends StatelessWidget {
     _NavItemData(Icons.storefront_rounded, Icons.storefront_outlined, 'Shop'),
     _NavItemData(Icons.search_rounded, Icons.search_outlined, 'Lost & Found'),
     _NavItemData(Icons.add_circle_rounded, Icons.add_circle_outline_rounded, 'Post'),
-    _NavItemData(Icons.inventory_2_rounded, Icons.inventory_2_outlined, 'My'),
+    // FIX 5: Changed label from 'My' to 'My List' so it's readable and not cut off
+    _NavItemData(Icons.inventory_2_rounded, Icons.inventory_2_outlined, 'My List'),
     _NavItemData(Icons.menu_book_rounded, Icons.menu_book_outlined, 'Docs'),
   ];
 
@@ -580,8 +590,9 @@ class _NavItemState extends State<_NavItem> with SingleTickerProviderStateMixin 
 
     return GestureDetector(
       onTap: widget.onTap,
+      // FIX 5: Widened from 64 to 72 to prevent label text from being cut off
       child: SizedBox(
-        width: 64,
+        width: 72,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1676,7 +1687,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                         fit: BoxFit.contain,
                       ),
                       const SizedBox(height: 24),
-                      const Text('Welcome back', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
+                      const Text('Welcome back!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
                       const SizedBox(height: 6),
                       const Text('Sign in to your UniFind account', style: TextStyle(fontSize: 14, color: cMuted)),
                       const SizedBox(height: 32),
@@ -1694,7 +1705,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _StyledField(
-                                label: 'Email address',
+                                label: 'Email Address',
                                 hint: 'you@montclair.edu',
                                 icon: Icons.mail_outline_rounded,
                                 onChanged: (v) => _email = v,
@@ -1957,7 +1968,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _StyledField(
-                                label: 'MSU Email address',
+                                label: 'MSU Email Address',
                                 hint: 'you@montclair.edu',
                                 icon: Icons.mail_outline_rounded,
                                 initialValue: _email,
@@ -2161,8 +2172,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
       if (!_codeSent) {
         await sendSignupVerificationCode(
           email: _email.trim().toLowerCase(),
-          // Some backend versions still require a password at code-send time.
-          // Use a temporary strong value in step 1; real password is collected in step 2.
           password: _password.isEmpty ? 'TempPass123!' : _password,
         );
         if (!mounted) return;
@@ -2263,7 +2272,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _StyledField(
-                                label: 'MSU Email address',
+                                label: 'MSU Email Address',
                                 hint: 'you@montclair.edu',
                                 icon: Icons.mail_outline_rounded,
                                 onChanged: (v) => _email = v,
@@ -2502,12 +2511,18 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Marketplace', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
-                    Text('Find great deals on campus', style: TextStyle(fontSize: 12, color: cMuted)),
+                    Text('Marketplace', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cText, letterSpacing: -0.5)),
+                    Text('Find great deals on campus!', style: TextStyle(fontSize: 12, color: cMuted)),
                   ],
                 ),
               ),
-              _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem),
+              _HoverButton(
+                child: _RedButton(
+                  label: 'List Item',
+                  icon: Icons.add_rounded,
+                  onTap: widget.onListItem,
+                ),
+              ),
             ],
           ),
         ),
@@ -2516,9 +2531,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
           padding: const EdgeInsets.all(12),
           child: _SearchField(hint: 'Search marketplace...', onChanged: (v) => setState(() => _q = v)),
         ),
-        // Categories
+        // FIX 2 & 3: Category chips with fixed gap and hover animation
         SizedBox(
-          height: 44,
+          height: 28,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -2536,8 +2551,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   padding: const EdgeInsets.all(12),
                   itemCount: filtered.length,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.68,
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.7,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
                   ),
@@ -2552,6 +2567,35 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 }
 
+class _HoverButton extends StatefulWidget {
+  final Widget child;
+
+  const _HoverButton({required this.child});
+
+  @override
+  State<_HoverButton> createState() => _HoverButtonState();
+}
+
+class _HoverButtonState extends State<_HoverButton> {
+  bool _hovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: AnimatedScale(
+        scale: _hovering ? 1.08 : 1.0, // 👈 zoom effect
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// ─── MARKET CARD — FIX 4: Added hover animation ───────────────────────────
 class _MarketCard extends StatefulWidget {
   final MarketplaceItem item;
   final VoidCallback onTap;
@@ -2564,7 +2608,7 @@ class _MarketCard extends StatefulWidget {
 class _MarketCardState extends State<_MarketCard> with SingleTickerProviderStateMixin {
   late AnimationController _c;
   late Animation<double> _scale;
-  bool _pressed = false;
+  bool _hovered = false;
 
   @override
   void initState() {
@@ -2578,71 +2622,81 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _c.forward(),
-      onTapUp: (_) { _c.reverse(); widget.onTap(); },
-      onTapCancel: () => _c.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          decoration: BoxDecoration(
-            color: cSurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: cBorder),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    Image.network(
-                      widget.item.image,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted))),
-                    ),
-                    // Category badge
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: cRed,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => _c.forward(),
+        onTapUp: (_) { _c.reverse(); widget.onTap(); },
+        onTapCancel: () => _c.reverse(),
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedContainer(
+            duration: kMid,
+            decoration: BoxDecoration(
+              color: cSurface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: _hovered ? cRed.withValues(alpha: 0.35) : cBorder),
+              boxShadow: [BoxShadow(
+                color: _hovered ? cRed.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06),
+                blurRadius: _hovered ? 18 : 10,
+                offset: const Offset(0, 3),
+              )],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Image.network(
+                        widget.item.image,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted))),
                       ),
-                    ),
-                  ],
+                      // Category badge
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: cRed,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('\$${widget.item.price.toStringAsFixed(0)}', style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.5)),
-                    const SizedBox(height: 3),
-                    Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cText)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on_outlined, size: 11, color: cMuted),
-                        const SizedBox(width: 3),
-                        Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 11, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(widget.item.condition, style: const TextStyle(fontSize: 11, color: cMuted)),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('\$${widget.item.price.toStringAsFixed(0)}', style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: -0.5)),
+                      const SizedBox(height: 3),
+                      Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cText)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on_outlined, size: 11, color: cMuted),
+                          const SizedBox(width: 3),
+                          Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 11, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(widget.item.condition, style: const TextStyle(fontSize: 11, color: cMuted)),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -2676,13 +2730,14 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
     return Column(
       children: [
         Container(
+          width: double.infinity,
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Lost & Found', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
               SizedBox(height: 2),
-              Text('Help reunite students with their belongings', style: TextStyle(fontSize: 12, color: cMuted)),
+              Text('Help reunite students with their belongings!', style: TextStyle(fontSize: 12, color: cMuted)),
             ],
           ),
         ),
@@ -2703,7 +2758,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
           child: _SearchField(hint: 'Search lost & found...', onChanged: (v) => setState(() => _q = v)),
         ),
         SizedBox(
-          height: 44,
+          height: 28,
           child: ListView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -3513,28 +3568,63 @@ class _SearchField extends StatelessWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
+// FIX 2 & 3: _Chip is now StatefulWidget with hover animation + fixed text gap
+class _Chip extends StatefulWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
   const _Chip({required this.label, required this.selected, required this.onTap});
 
   @override
+  State<_Chip> createState() => _ChipState();
+}
+
+class _ChipState extends State<_Chip> with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale;
+  bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: kFast);
+    _scale = Tween(begin: 1.0, end: 1.08).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: kFast,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? cRed : cSurface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: selected ? cRed : cBorder),
-          boxShadow: selected ? [BoxShadow(color: cRed.withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 2))] : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: selected ? Colors.white : cMuted),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) { setState(() => _hovered = true); _c.forward(); },
+      onExit: (_) { setState(() => _hovered = false); _c.reverse(); },
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedContainer(
+            duration: kFast,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: widget.selected ? cRed : (_hovered ? cRedLight : cSurface),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: widget.selected ? cRed : (_hovered ? cRed.withValues(alpha: 0.5) : cBorder)),
+              boxShadow: widget.selected
+                  ? [BoxShadow(color: cRed.withValues(alpha: 0.28), blurRadius: 8, offset: const Offset(0, 2))]
+                  : (_hovered ? [BoxShadow(color: cRed.withValues(alpha: 0.12), blurRadius: 6, offset: const Offset(0, 2))] : null),
+            ),
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: widget.selected ? Colors.white : (_hovered ? cRed : cMuted),
+                height: 1.0,  // Removes the extra font descender space gap
+              ),
+            ),
+          ),
         ),
       ),
     );
