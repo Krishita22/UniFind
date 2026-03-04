@@ -701,16 +701,7 @@ class _LandingNav extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
       child: Row(
         children: [
-          // Brand
-          Row(
-            children: [
-              Image.asset(
-                'assets/images/whitelogo.png',
-                height: 44,
-                fit: BoxFit.contain,
-              ),
-            ],
-          ),
+          _AnimatedLogo(),
           const Spacer(),
           ...(<String, VoidCallback>{'About': onAbout, 'How It Works': onHow, 'FAQ': onFaq}).entries.map((e) => Padding(
                 padding: const EdgeInsets.only(right: 4),
@@ -727,6 +718,37 @@ class _LandingNav extends StatelessWidget {
           const SizedBox(width: 8),
           _PillButton(label: 'Sign Up', icon: Icons.person_add_rounded, onTap: onRegister),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedLogo extends StatefulWidget {
+  @override
+  State<_AnimatedLogo> createState() => _AnimatedLogoState();
+}
+
+class _AnimatedLogoState extends State<_AnimatedLogo> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.08 : 1.0,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          child: Image.asset(
+            'assets/images/whitelogo.png',
+            height: 44,
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }
@@ -1227,47 +1249,99 @@ class _AboutSection extends StatelessWidget {
   }
 }
 
-class _AboutRow extends StatelessWidget {
+class _AboutRow extends StatefulWidget {
   final IconData icon;
   final String title, desc;
   final bool shaded;
   const _AboutRow({required this.icon, required this.title, required this.desc, required this.shaded});
 
   @override
+  State<_AboutRow> createState() => _AboutRowState();
+}
+
+class _AboutRowState extends State<_AboutRow> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: shaded ? cRedLight : cSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cBorder),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
-            ),
-            child: Icon(icon, color: Colors.white, size: 22),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: _hovered
+            ? Matrix4.translationValues(0, -8, 0)
+            : Matrix4.identity(),
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: widget.shaded ? cRedLight : cSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _hovered ? cRed.withValues(alpha: 0.4) : cBorder,
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cRed)),
-                const SizedBox(height: 6),
-                Text(desc, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.6)),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: _hovered
+                  ? cRed.withValues(alpha: 0.18)
+                  : Colors.black.withValues(alpha: 0.06),
+              blurRadius: _hovered ? 24 : 10,
+              offset: const Offset(0, 6),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [cRed, cRedDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: cRed.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(widget.icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: cRed,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    widget.desc,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: cMuted,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
