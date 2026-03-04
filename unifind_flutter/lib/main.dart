@@ -693,31 +693,82 @@ class _LandingNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final navItems = <MapEntry<String, VoidCallback>>[
+      MapEntry('About', onAbout),
+      MapEntry('How It Works', onHow),
+      MapEntry('FAQ', onFaq),
+    ];
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(colors: [cNavBg, cNavBgDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
         boxShadow: [BoxShadow(color: Color(0x33A12727), blurRadius: 12, offset: Offset(0, 4))],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-      child: Row(
-        children: [
-          _AnimatedLogo(),
-          const Spacer(),
-          ...(<String, VoidCallback>{'About': onAbout, 'How It Works': onHow, 'FAQ': onFaq}).entries.map((e) => Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: TextButton(
-                  onPressed: e.value,
-                  child: Text(e.key, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13, fontWeight: FontWeight.w500)),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 920;
+
+          if (isCompact) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _AnimatedLogo(),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ...navItems.map((e) => Padding(
+                              padding: const EdgeInsets.only(right: 4),
+                              child: TextButton(
+                                onPressed: e.value,
+                                child: Text(
+                                  e.key,
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            )),
+                        Container(width: 1, height: 20, color: Colors.white.withValues(alpha: 0.3), margin: const EdgeInsets.symmetric(horizontal: 8)),
+                        TextButton(
+                          onPressed: onLogin,
+                          child: const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                        ),
+                        const SizedBox(width: 8),
+                        _PillButton(label: 'Sign Up', icon: Icons.person_add_rounded, onTap: onRegister),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+            child: Row(
+              children: [
+                _AnimatedLogo(),
+                const Spacer(),
+                ...navItems.map((e) => Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: TextButton(
+                        onPressed: e.value,
+                        child: Text(e.key, style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13, fontWeight: FontWeight.w500)),
+                      ),
+                    )),
+                Container(width: 1, height: 20, color: Colors.white.withValues(alpha: 0.3), margin: const EdgeInsets.symmetric(horizontal: 8)),
+                TextButton(
+                  onPressed: onLogin,
+                  child: const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                 ),
-              )),
-          Container(width: 1, height: 20, color: Colors.white.withValues(alpha: 0.3), margin: const EdgeInsets.symmetric(horizontal: 8)),
-          TextButton(
-            onPressed: onLogin,
-            child: const Text('Log In', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-          ),
-          const SizedBox(width: 8),
-          _PillButton(label: 'Sign Up', icon: Icons.person_add_rounded, onTap: onRegister),
-        ],
+                const SizedBox(width: 8),
+                _PillButton(label: 'Sign Up', icon: Icons.person_add_rounded, onTap: onRegister),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
