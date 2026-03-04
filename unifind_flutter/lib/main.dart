@@ -297,6 +297,7 @@ const Color cRed = Color(0xFFA12727);
 const Color cRedDark = Color(0xFF7A1A1A);
 const Color cRedLight = Color(0xFFFFEEEE);
 const Color cSurface = Color(0xFFFFFFFF);
+const Color cBg = Color(0xFFFCF8F8);
 const Color cMuted = Color(0xFF9C7070);
 const Color cBorder = Color(0xFFEDD8D8);
 const Color cText = Color(0xFF1A1010);
@@ -1321,83 +1322,144 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('UniFind Login'),
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Sign in to browse listings',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) => _email = value,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Email is required';
-                          }
-                          if (!value.contains('@')) {
-                            return 'Enter a valid email';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged: (value) => _password = value,
-                        validator: (value) =>
-                            (value == null || value.isEmpty)
-                                ? 'Password is required'
-                                : null,
-                      ),
-                      // Show error message from API if login fails
-                      if (_errorMessage.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          _errorMessage,
-                          style: const TextStyle(color: Colors.red, fontSize: 13),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      // Show loading indicator while API call is in progress
-                      _isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : FilledButton(
-                              onPressed: _submit,
-                              child: const Text('Log In'),
-                            ),
-                    ],
-                  ),
+      backgroundColor: cBg,
+      body: Stack(
+        children: [
+          Positioned(
+            right: -80,
+            top: -80,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [cRed.withValues(alpha: 0.08), Colors.transparent],
                 ),
               ),
             ),
           ),
-        ),
+          Positioned(
+            left: -60,
+            bottom: -60,
+            child: Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [cRed.withValues(alpha: 0.05), Colors.transparent],
+                ),
+              ),
+            ),
+          ),
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  children: [
+                    Image.asset(
+                      'assets/images/logo.jpg',
+                      height: 90,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Welcome back',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color: cText,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Sign in to your UniFind account',
+                      style: TextStyle(fontSize: 14, color: cMuted),
+                    ),
+                    const SizedBox(height: 32),
+                    Container(
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        color: cSurface,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: cBorder),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _StyledField(
+                              label: 'Email address',
+                              hint: 'you@montclair.edu',
+                              icon: Icons.mail_outline_rounded,
+                              onChanged: (v) => _email = v,
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Email is required';
+                                }
+                                if (!v.contains('@')) {
+                                  return 'Enter a valid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            _StyledField(
+                              label: 'Password',
+                              hint: '••••••••',
+                              icon: Icons.lock_outline_rounded,
+                              obscure: true,
+                              onChanged: (v) => _password = v,
+                              validator: (v) =>
+                                  (v == null || v.isEmpty)
+                                      ? 'Password is required'
+                                      : null,
+                            ),
+                            if (_errorMessage.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                _errorMessage,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            _LoadingButton(
+                              loading: _isLoading,
+                              onTap: _submit,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      child: const Text(
+                        '← Back to homepage',
+                        style: TextStyle(color: cMuted, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1427,6 +1489,153 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+}
+
+class _StyledField extends StatelessWidget {
+  final String label, hint;
+  final IconData icon;
+  final bool obscure;
+  final String? Function(String?)? validator;
+  final ValueChanged<String>? onChanged;
+
+  const _StyledField({
+    required this.label,
+    required this.hint,
+    required this.icon,
+    this.obscure = false,
+    this.validator,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: cText,
+            letterSpacing: 0.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          obscureText: obscure,
+          onChanged: onChanged,
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: Icon(icon, size: 18, color: cMuted),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: cBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: cBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: cRed, width: 2),
+            ),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoadingButton extends StatefulWidget {
+  final bool loading;
+  final VoidCallback onTap;
+  const _LoadingButton({required this.loading, required this.onTap});
+
+  @override
+  State<_LoadingButton> createState() => _LoadingButtonState();
+}
+
+class _LoadingButtonState extends State<_LoadingButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: kFast);
+    _scale = Tween(begin: 1.0, end: 0.97).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _c.forward(),
+      onTapUp: (_) {
+        _c.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _c.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [cRed, cRedDark],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: cRed.withValues(alpha: 0.4),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Center(
+            child: widget.loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Sign In',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
