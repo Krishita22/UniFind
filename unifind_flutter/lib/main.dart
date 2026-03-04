@@ -1535,7 +1535,9 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
+  String _password = '';
   bool _loading = false;
+  String? _errorMessage;
   late AnimationController _c;
   late Animation<double> _fade, _slide;
 
@@ -1551,11 +1553,29 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
-  void _submit() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    widget.onLogin(_email.trim());
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final data = await loginUser(_email.trim(), _password);
+      final user = data['user'] as Map<String, dynamic>?;
+      final loggedInEmail = (user?['email'] as String?) ?? _email.trim();
+      if (!mounted) return;
+      widget.onLogin(loggedInEmail);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override
@@ -1621,8 +1641,20 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 hint: '••••••••',
                                 icon: Icons.lock_outline_rounded,
                                 obscure: true,
+                                onChanged: (v) => _password = v,
                                 validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
                               ),
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(
+                                    color: cRedDark,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 24),
                               _AuthButton(loading: _loading, onTap: _submit, label: 'Sign In'),
                             ],
@@ -1658,7 +1690,11 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
+  String _password = '';
+  String _code = '';
   bool _loading = false;
+  bool _codeSent = false;
+  String? _errorMessage;
   late AnimationController _c;
   late Animation<double> _fade, _slide;
 
@@ -1674,11 +1710,43 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
-  void _submit() async {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-    widget.onRegister(_email.trim());
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      if (!_codeSent) {
+        await sendSignupVerificationCode(
+          email: _email.trim().toLowerCase(),
+          password: _password,
+        );
+        if (!mounted) return;
+        setState(() => _codeSent = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Verification code sent to your Montclair email.'),
+          ),
+        );
+      } else {
+        await verifyCodeAndCreateAccount(
+          email: _email.trim().toLowerCase(),
+          password: _password,
+          code: _code.trim(),
+        );
+        if (!mounted) return;
+        widget.onRegister(_email.trim().toLowerCase());
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -1728,7 +1796,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 onChanged: (v) => _email = v,
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) return 'Email is required';
-                                  if (!v.contains('@')) return 'Enter a valid email';
+                                  if (!v.toLowerCase().trim().endsWith('@montclair.edu')) {
+                                    return 'Must use an @montclair.edu email';
+                                  }
                                   return null;
                                 },
                               ),
@@ -1738,9 +1808,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 hint: '••••••••',
                                 icon: Icons.lock_outline_rounded,
                                 obscure: true,
+                                onChanged: (v) => _password = v,
                                 validator: (v) {
                                   if (v == null || v.isEmpty) return 'Password is required';
-                                  if (v.length < 6) return 'Minimum 6 characters';
+                                  if (v.length < 8) return 'Minimum 8 characters';
                                   return null;
                                 },
                               ),
@@ -1750,10 +1821,51 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 hint: '••••••••',
                                 icon: Icons.lock_outline_rounded,
                                 obscure: true,
-                                validator: (v) => (v == null || v.isEmpty) ? 'Please confirm your password' : null,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Please confirm your password';
+                                  }
+                                  if (v != _password) {
+                                    return 'Passwords do not match';
+                                  }
+                                  return null;
+                                },
                               ),
+                              if (_codeSent) ...[
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'Verification Code',
+                                  hint: 'Enter code from your email',
+                                  icon: Icons.verified_outlined,
+                                  onChanged: (v) => _code = v,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.trim().isEmpty) {
+                                      return 'Verification code is required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(
+                                    color: cRedDark,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 24),
-                              _AuthButton(loading: _loading, onTap: _submit, label: 'Create Account'),
+                              _AuthButton(
+                                loading: _loading,
+                                onTap: _submit,
+                                label: _codeSent
+                                    ? 'Verify Code & Create Account'
+                                    : 'Send Verification Code',
+                              ),
                             ],
                           ),
                         ),
