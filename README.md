@@ -38,7 +38,7 @@ Examples:
 - `flutter run -d macos`
 - `flutter run -d ios`
 
-## Repository Structure (Beginner Friendly)
+## Repository Structure 
 
 Think of this repo as two big parts:
 - `unifind_flutter/` = the app your users see and use
@@ -131,7 +131,7 @@ Other:
 
 ## Git Command Guide
 
-### Set your local repo to your new owner remote
+### Set your local repo
 
 ```bash
 cd <repo>
@@ -177,7 +177,7 @@ git switch -f Steph
 - `git merge origin/main`: merge latest remote `main` into current branch.
 - `git switch -f Steph`: force switch to `Steph`, discarding conflicting local changes if needed.
 
-### Basic Git commands (everyday use)
+### Basic Git commands 
 
 ```bash
 git status
