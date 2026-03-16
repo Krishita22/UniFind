@@ -2,7 +2,9 @@
 
 Marketplace app with lost and found — CSIT 415 Project.
 
-This repository contains a React + Vite web app and a native Flutter app.
+This repository contains:
+- a native Flutter app (`unifind_flutter/`)
+- a PHP backend (`unifind_backend/`)
 
 ## Run Locally
 
@@ -34,14 +36,22 @@ Examples:
 - `flutter run -d macos`
 - `flutter run -d ios` (open iOS Simulator first)
 
-### Run web app
+### Flutter code layout
 
-```bash
-npm install
-npm run dev
-```
+The Flutter UI was split out of one large file to make it easier to read and maintain.
 
-Open `http://localhost:5173`.
+- `unifind_flutter/lib/main.dart` → app bootstrap, theme, and root app state
+- `unifind_flutter/lib/src/landing_page.dart` → landing page
+- `unifind_flutter/lib/src/auth_screens.dart` → login/register/forgot password
+- `unifind_flutter/lib/src/marketplace_screen.dart` → marketplace feed
+- `unifind_flutter/lib/src/lost_found_screen.dart` → lost & found feed
+- `unifind_flutter/lib/src/post_listing_screen.dart` → post listing form
+- `unifind_flutter/lib/src/my_listings_screen.dart` → user listings
+- `unifind_flutter/lib/src/documentation_screen.dart` → in-app docs
+- `unifind_flutter/lib/src/item_detail_screen.dart` → listing details
+- `unifind_flutter/lib/src/ui_controls.dart` → shared form/filter controls
+- `unifind_flutter/lib/src/ui_feedback.dart` → buttons/empty-state/feedback widgets
+- `unifind_flutter/lib/src/data.dart` → models, enums, and categories
 
 Ryisha Heusner, Stephania Ivanov, Sumaya Rahman, Nick Seminerio, Krishita Vaghani
 
