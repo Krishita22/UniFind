@@ -38,115 +38,91 @@ Examples:
 - `flutter run -d macos`
 - `flutter run -d ios`
 
-## Repository Structure (Detailed)
+## Repository Structure (Beginner Friendly)
 
-### Root
-- `README.md`: this file.
-- `unifind_flutter/`: Flutter client app.
-- `unifind_backend/`: PHP/MySQL backend used by the Flutter app.
+Think of this repo as two big parts:
+- `unifind_flutter/` = the app your users see and use
+- `unifind_backend/` = the server/API that saves and returns data
 
----
+### Root folder
+- `README.md`: project guide and setup instructions.
+- `unifind_flutter/`: Flutter app folder.
+- `unifind_backend/`: PHP backend folder.
 
-## `unifind_flutter/` (Client App)
+### `unifind_flutter/` (the app)
 
-### Project and tooling files
-- `unifind_flutter/pubspec.yaml`: Flutter package manifest (dependencies, assets, app metadata).
-- `unifind_flutter/pubspec.lock`: locked package versions.
-- `unifind_flutter/analysis_options.yaml`: Dart/Flutter lint and analyzer rules.
-- `unifind_flutter/.metadata`: Flutter project metadata.
-- `unifind_flutter/.gitignore`: Flutter-specific ignore rules.
-- `unifind_flutter/README.md`: Flutter module README.
+Important setup files:
+- `pubspec.yaml`: where Flutter dependencies and assets are defined.
+- `pubspec.lock`: exact dependency versions currently used.
+- `analysis_options.yaml`: code quality/lint rules for Dart.
 
-### App source (`lib/`)
-- `unifind_flutter/lib/main.dart`: app entry point, theme constants, root app state, and part wiring.
-- `unifind_flutter/lib/api_service.dart`: HTTP calls to backend endpoints (`login.php`, `post_listing.php`, etc.).
-- `unifind_flutter/lib/api/auth_screens.dart`: auth API constants/helpers.
+Main app code (`lib/`):
+- `lib/main.dart`: app starts here.
+- `lib/api_service.dart`: calls backend endpoints (login, listings, posting).
+- `lib/api/auth_screens.dart`: auth-related API helpers/constants.
+- `lib/src/landing_page.dart`: first page users see.
+- `lib/src/auth_screens.dart`: login, register, forgot password screens.
+- `lib/src/marketplace_screen.dart`: marketplace page.
+- `lib/src/lost_found_screen.dart`: lost and found page.
+- `lib/src/post_listing_screen.dart`: create a new post/listing form.
+- `lib/src/my_listings_screen.dart`: shows user’s own listings.
+- `lib/src/item_detail_screen.dart`: item details page.
+- `lib/src/documentation_screen.dart`: in-app docs/help page.
+- `lib/src/ui_controls.dart`: shared controls (search/chips/buttons).
+- `lib/src/ui_feedback.dart`: shared empty-state and feedback UI.
+- `lib/src/data.dart`: common models/enums/category lists.
 
-- `unifind_flutter/lib/src/landing_page.dart`: landing page UI sections and navigation to auth screens.
-- `unifind_flutter/lib/src/auth_screens.dart`: login/register/forgot-password UI and auth workflows.
-- `unifind_flutter/lib/src/marketplace_screen.dart`: marketplace listing browse/filter UI.
-- `unifind_flutter/lib/src/lost_found_screen.dart`: lost-and-found browse/filter UI.
-- `unifind_flutter/lib/src/post_listing_screen.dart`: create listing form and image pick/upload flow.
-- `unifind_flutter/lib/src/my_listings_screen.dart`: user-owned listings page.
-- `unifind_flutter/lib/src/item_detail_screen.dart`: item detail page.
-- `unifind_flutter/lib/src/documentation_screen.dart`: in-app docs/help page.
-- `unifind_flutter/lib/src/ui_controls.dart`: shared controls (search/chips/buttons).
-- `unifind_flutter/lib/src/ui_feedback.dart`: shared empty-state and feedback widgets.
-- `unifind_flutter/lib/src/data.dart`: models/enums/date helpers/category lists.
+Assets:
+- `assets/images/logo.jpg`: main logo.
+- `assets/images/whitelogo.png`: white logo variant.
 
-### Assets
-- `unifind_flutter/assets/images/logo.jpg`: main logo.
-- `unifind_flutter/assets/images/whitelogo.png`: white logo variant for dark headers.
+Testing:
+- `test/widget_test.dart`: automated UI tests.
 
-### Tests
-- `unifind_flutter/test/widget_test.dart`: widget tests for main UI flows.
+Platform folders:
+- `android/`, `ios/`, `linux/`, `macos/`, `web/`: platform-specific runner/config files.
 
-### Web runner files
-- `unifind_flutter/web/index.html`: Flutter web host page.
-- `unifind_flutter/web/manifest.json`: PWA manifest.
-- `unifind_flutter/web/favicon.png`: favicon.
-- `unifind_flutter/web/icons/Icon-192.png`: web app icon (192).
-- `unifind_flutter/web/icons/Icon-512.png`: web app icon (512).
-- `unifind_flutter/web/icons/Icon-maskable-192.png`: maskable icon (192).
-- `unifind_flutter/web/icons/Icon-maskable-512.png`: maskable icon (512).
+Generated folders/files (safe to regenerate):
+- `.dart_tool/`
+- `build/`
+- `ios/Flutter/ephemeral/`
+- `macos/Flutter/ephemeral/`
+- `.flutter-plugins-dependencies`
 
-### Platform runner folders
-- `unifind_flutter/android/`: Android Gradle project, manifests, and runner config.
-- `unifind_flutter/ios/`: iOS Xcode project, plist, Podfile, runner sources.
-- `unifind_flutter/linux/`: Linux desktop runner and generated plugin registrants.
-- `unifind_flutter/macos/`: macOS Xcode runner project and configs.
+### `unifind_backend/` (the server/API)
 
-### Generated/local build folders (not source of truth)
-- `unifind_flutter/.dart_tool/`: generated Dart/Flutter tooling cache.
-- `unifind_flutter/build/`: generated build artifacts.
-- `unifind_flutter/ios/Flutter/ephemeral/`: generated iOS ephemeral files.
-- `unifind_flutter/macos/Flutter/ephemeral/`: generated macOS ephemeral files.
-- `unifind_flutter/.flutter-plugins-dependencies`: generated plugin dependency map.
+Top-level files:
+- `index.php`: backend home/entry page.
+- `schema.sql`: database tables/schema.
+- `composer.json`: PHP package dependencies.
+- `CPANEL_DEPLOYMENT.md`: deployment steps.
+- `README.md`: backend-specific notes.
+- `.htaccess`: Apache server/security rules.
 
----
+Config:
+- `config/config.example.php`: template for DB/mail/app settings.
 
-## `unifind_backend/` (PHP Backend)
+Core shared backend logic (`includes/`):
+- `bootstrap.php`: startup/setup.
+- `db.php`: database connection.
+- `functions.php`: helper functions.
+- `csrf.php`: CSRF protection.
+- `auth_guard.php`: route/session protection.
+- `flash.php`: flash messages.
+- `mailer.php`: email sending logic.
+- `header.php` and `footer.php`: shared layout.
 
-### Top-level backend files
-- `unifind_backend/.htaccess`: Apache rules for backend routing/security.
-- `unifind_backend/.gitignore`: backend-specific ignore rules.
-- `unifind_backend/composer.json`: PHP dependency manifest.
-- `unifind_backend/schema.sql`: MySQL schema.
-- `unifind_backend/index.php`: backend landing/home page for authenticated users.
-- `unifind_backend/README.md`: backend-specific setup and scope.
-- `unifind_backend/CPANEL_DEPLOYMENT.md`: cPanel deployment instructions.
+Auth endpoints (`auth/`):
+- `login.php`, `logout.php`, `register.php`, `verify.php`, `resend_verification.php`
 
-### Configuration
-- `unifind_backend/config/config.example.php`: app/db/mail/security config template.
+Listing endpoints/pages (`listings/`):
+- `create.php`: create listing
+- `view.php`: view listing
 
-### Shared includes (`includes/`)
-- `unifind_backend/includes/bootstrap.php`: app bootstrap and common setup.
-- `unifind_backend/includes/db.php`: database connection logic.
-- `unifind_backend/includes/functions.php`: utility functions.
-- `unifind_backend/includes/csrf.php`: CSRF helpers.
-- `unifind_backend/includes/auth_guard.php`: auth/session access guard.
-- `unifind_backend/includes/flash.php`: flash message helpers.
-- `unifind_backend/includes/mailer.php`: email sending logic (verification/reset).
-- `unifind_backend/includes/header.php`: shared page header template.
-- `unifind_backend/includes/footer.php`: shared page footer template.
-
-### Authentication endpoints/pages (`auth/`)
-- `unifind_backend/auth/login.php`: user login.
-- `unifind_backend/auth/logout.php`: logout/session clear.
-- `unifind_backend/auth/register.php`: registration flow.
-- `unifind_backend/auth/verify.php`: email verification handler.
-- `unifind_backend/auth/resend_verification.php`: resend verification flow.
-
-### Listing pages (`listings/`)
-- `unifind_backend/listings/create.php`: create/list item endpoint/page.
-- `unifind_backend/listings/view.php`: view listing details.
-
-### Frontend assets
-- `unifind_backend/assets/css/style.css`: backend web styling.
-
-### Uploads
-- `unifind_backend/uploads/.htaccess`: blocks script execution in uploads.
-- `unifind_backend/uploads/listings/index.html`: placeholder/index guard file.
+Other:
+- `assets/css/style.css`: backend styles.
+- `uploads/`: uploaded images/files.
+- `uploads/.htaccess`: blocks script execution in uploads.
 
 ## Notes
 - Flutter app is the main client UI.
