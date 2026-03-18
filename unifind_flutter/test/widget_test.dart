@@ -48,6 +48,7 @@ void main() {
       condition: 'Good',
       image: 'https://example.com/image.png',
       seller: 'tester',
+      sellerEmail: 'tester@montclair.edu',
       createdAt: DateTime(2026, 2, 26),
       location: 'Blanton Hall',
     );
@@ -98,6 +99,8 @@ void main() {
             onListItem: () {
               tapped = true;
             },
+            onEditMarketplace: (_, __) async {},
+            onEditLostFound: (_, __) async {},
           ),
         ),
       ),
