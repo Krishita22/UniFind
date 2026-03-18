@@ -231,7 +231,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       case 'CODE_EXPIRED':
         return 'Your reset code expired. Request a new code.';
       case 'WEAK_PASSWORD':
-        return 'Use a stronger password (at least 8 characters).';
+        return 'Use a stronger password (at least 6 characters).';
       case 'TOO_MANY_REQUESTS':
         return 'Too many attempts. Please wait a bit and try again.';
       default:
@@ -414,7 +414,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   validator: (v) {
                                     if (!_codeSent) return null;
                                     if (v == null || v.isEmpty) return 'New password is required';
-                                    if (v.length < 8) return 'Minimum 8 characters';
+                                    if (v.length < 6) return 'Minimum 6 characters';
+                                    if (v.length > 14) return 'Maximum 14 characters';
                                     return null;
                                   },
                                 ),
@@ -734,15 +735,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
 
                               if (_codeSent) ...[
                                 // ── Step 2: password + verification code ──
-                                _StyledField(
-                                  label: 'Password',
-                                  hint: '••••••••',
-                                  icon: Icons.lock_outline_rounded,
-                                  obscure: true,
-                                  onChanged: (v) => _password = v,
+                                _PasswordField(
+                                  onChanged: (v) => setState(() => _password = v),
                                   validator: (v) {
                                     if (v == null || v.isEmpty) return 'Password is required';
-                                    if (v.length < 8) return 'Minimum 8 characters';
+                                    if (v.length < 6) return 'Minimum 6 characters';
+                                    if (v.length > 14) return 'Maximum 14 characters';
+                                    if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
+                                    if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
+                                    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
                                     return null;
                                   },
                                 ),
@@ -810,6 +811,168 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                   ),
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── PASSWORD FIELD WITH STRENGTH INDICATOR ───────────────────────────────────
+class _PasswordField extends StatefulWidget {
+  final ValueChanged<String> onChanged;
+  final String? Function(String?)? validator;
+
+  const _PasswordField({required this.onChanged, this.validator});
+
+  @override
+  State<_PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<_PasswordField> {
+  String _value = '';
+  bool _obscure = true;
+
+  // ── Rule checkers ──────────────────────────────────────────────────────────
+  bool get _hasMinLength   => _value.length >= 6;
+  bool get _hasMaxLength   => _value.length <= 14;
+  bool get _hasUppercase   => RegExp(r'[A-Z]').hasMatch(_value);
+  bool get _hasNumber      => RegExp(r'[0-9]').hasMatch(_value);
+  bool get _hasSpecial     => RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_value);
+
+  int get _score {
+    int s = 0;
+    if (_hasMinLength) s++;
+    if (_hasMaxLength && _value.isNotEmpty) s++;
+    if (_hasUppercase) s++;
+    if (_hasNumber)    s++;
+    if (_hasSpecial)   s++;
+    return s;
+  }
+
+  Color get _barColor {
+    if (_value.isEmpty) return cBorder;
+    if (_score <= 2) return const Color(0xFFE53935); // red
+    if (_score <= 3) return const Color(0xFFFB8C00); // orange
+    if (_score == 4) return const Color(0xFFFDD835); // yellow
+    return const Color(0xFF43A047);                  // green
+  }
+
+  String get _strengthLabel {
+    if (_value.isEmpty) return '';
+    if (_score <= 2) return 'Weak';
+    if (_score <= 3) return 'Fair';
+    if (_score == 4) return 'Good';
+    return 'Strong';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Field label ───────────────────────────────────────────────────
+        const Text(
+          'Password',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
+        ),
+        const SizedBox(height: 6),
+
+        // ── Text input ────────────────────────────────────────────────────
+        TextFormField(
+          obscureText: _obscure,
+          onChanged: (v) {
+            setState(() => _value = v);
+            widget.onChanged(v);
+          },
+          validator: widget.validator,
+          decoration: InputDecoration(
+            hintText: '••••••••',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: cMuted),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                size: 18,
+                color: cMuted,
+              ),
+              onPressed: () => setState(() => _obscure = !_obscure),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+
+        // ── Strength bar for password ───────────────────────
+        if (true) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _score / 5,
+                    minHeight: 6,
+                    backgroundColor: cBorder,
+                    valueColor: AlwaysStoppedAnimation<Color>(_barColor),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                _strengthLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _barColor,
+                ),
+              ),
+            ],
+          ),
+
+          // ── Rules checklist ───────────────────────────────────────────
+          const SizedBox(height: 10),
+          _PasswordRule(met: _hasMinLength,  text: '6–14 characters'),
+          _PasswordRule(met: _hasUppercase,  text: 'At least one uppercase letter'),
+          _PasswordRule(met: _hasNumber,     text: 'At least one number'),
+          _PasswordRule(met: _hasSpecial,    text: 'At least one special character (!@#\$%^&*...)'),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── SINGLE RULE ROW ──────────────────────────────────────────────────────────
+class _PasswordRule extends StatelessWidget {
+  final bool met;
+  final String text;
+
+  const _PasswordRule({required this.met, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            met ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 14,
+            color: met ? const Color(0xFF43A047) : cMuted,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: met ? const Color(0xFF43A047) : cMuted,
+              fontWeight: met ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
         ],
