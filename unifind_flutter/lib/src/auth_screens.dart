@@ -517,6 +517,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
+  bool get _passwordStrong {
+  return _password.length >= 6 &&
+      _password.length <= 14 &&
+      RegExp(r'[A-Z]').hasMatch(_password) &&
+      RegExp(r'[0-9]').hasMatch(_password) &&
+      RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_password);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -786,8 +794,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: _submit,
-                                label: _codeSent ? 'Verify & Create Account' : 'Send Verification Code',
+                                onTap: _passwordStrong ? _submit : () {},
+                                label: 'Verify & Create Account',
+                                disabled: !_passwordStrong,
                               ),
                             ],
                           ),
@@ -986,7 +995,8 @@ class _AuthButton extends StatefulWidget {
   final bool loading;
   final VoidCallback onTap;
   final String label;
-  const _AuthButton({required this.loading, required this.onTap, required this.label});
+  final bool disabled;
+  const _AuthButton({required this.loading, required this.onTap, required this.label, this.disabled = false});
 
   @override
   State<_AuthButton> createState() => _AuthButtonState();
@@ -1014,19 +1024,22 @@ class _AuthButtonState extends State<_AuthButton> with SingleTickerProviderState
       onTapCancel: () => _c.reverse(),
       child: ScaleTransition(
         scale: _scale,
-        child: Container(
-          height: 50,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
-          ),
+        child: Opacity(
+          opacity: widget.disabled ? 0.4 : 1.0,
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
+            ),
           child: Center(
             child: widget.loading
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
           ),
         ),
+      ),
       ),
     );
   }
