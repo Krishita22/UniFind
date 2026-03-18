@@ -1,7 +1,7 @@
 part of '../main.dart';
 
 class LoginScreen extends StatefulWidget {
-  final AuthSuccessCallback onLogin;
+  final void Function(String) onLogin;
   const LoginScreen({super.key, required this.onLogin});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -57,17 +57,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       final data = await loginUser(_email.trim(), _password);
       final user = data['user'] as Map<String, dynamic>?;
       final loggedInEmail = (user?['email'] as String?) ?? _email.trim();
-      final loggedInUserId = int.tryParse(
-        (user?['id'] ??
-                user?['user_id'] ??
-                data['user_id'] ??
-                data['id'] ??
-                data['data']?['id'] ??
-                '')
-            .toString(),
-      );
       if (!mounted) return;
-      widget.onLogin(loggedInEmail, loggedInUserId);
+      widget.onLogin(loggedInEmail);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -136,7 +127,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 hint: 'you@montclair.edu',
                                 icon: Icons.mail_outline_rounded,
                                 onChanged: (v) => _email = v,
-                                textInputAction: TextInputAction.next,
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) return 'Email is required';
                                   if (!v.contains('@')) return 'Enter a valid email';
@@ -150,8 +140,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 icon: Icons.lock_outline_rounded,
                                 obscure: true,
                                 onChanged: (v) => _password = v,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _submit(),
                                 validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
                               ),
                               if (_errorMessage != null) ...[
@@ -503,7 +491,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
 // ─── REGISTRATION SCREEN ─────────────────────────────────────────────────────
 class RegistrationScreen extends StatefulWidget {
-  final AuthSuccessCallback onRegister;
+  final void Function(String email) onRegister;
   const RegistrationScreen({super.key, required this.onRegister});
 
   @override
@@ -560,7 +548,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           code: _code.trim(),
         );
         if (!mounted) return;
-        widget.onRegister(_email.trim().toLowerCase(), null);
+        widget.onRegister(_email.trim().toLowerCase());
       }
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -574,7 +562,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => LoginScreen(
-              onLogin: (email, [userId]) => widget.onRegister(email, userId),
+              onLogin: widget.onRegister,
             ),
           ),
         );
@@ -810,8 +798,6 @@ class _StyledField extends StatelessWidget {
   final String? initialValue;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
-  final ValueChanged<String>? onFieldSubmitted;
-  final TextInputAction? textInputAction;
 
   const _StyledField({
     required this.label,
@@ -821,8 +807,6 @@ class _StyledField extends StatelessWidget {
     this.initialValue,
     this.validator,
     this.onChanged,
-    this.onFieldSubmitted,
-    this.textInputAction,
   });
 
   @override
@@ -836,8 +820,6 @@ class _StyledField extends StatelessWidget {
           initialValue: initialValue,
           obscureText: obscure,
           onChanged: onChanged,
-          onFieldSubmitted: onFieldSubmitted,
-          textInputAction: textInputAction,
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
