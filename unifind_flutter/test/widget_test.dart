@@ -3,41 +3,38 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:unifind_flutter/main.dart';
 
 void main() {
-  testWidgets('browsing is restricted until user logs in',
+  testWidgets('app opens on landing page before login',
       (WidgetTester tester) async {
     await tester.pumpWidget(const UniFindApp());
 
-    expect(find.text('UniFind Login'), findsOneWidget);
-    expect(find.text('Sign in to browse listings'), findsOneWidget);
-    expect(find.text('List an Item'), findsNothing);
+    expect(find.text('Your Campus.\nYour Marketplace.'), findsOneWidget);
+    expect(find.text('Welcome back!'), findsNothing);
   });
 
-  testWidgets('login with valid credentials opens marketplace listings',
+  testWidgets('landing login button opens sign in screen',
       (WidgetTester tester) async {
     await tester.pumpWidget(const UniFindApp());
-
-    await tester.enterText(
-        find.byType(TextFormField).at(0), 'student@montclair.edu');
-    await tester.enterText(find.byType(TextFormField).at(1), 'password123');
-    await tester.tap(find.text('Log In'));
+    await tester.tap(find.text('Log In').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Search marketplace...'), findsOneWidget);
-    expect(find.text('List an Item'), findsOneWidget);
-    expect(find.text('Chemistry Textbook - 11th Edition'), findsOneWidget);
+    expect(find.text('Welcome back!'), findsOneWidget);
+    expect(find.text('Sign in to your UniFind account'), findsOneWidget);
   });
 
   testWidgets('invalid login input keeps user on login screen',
       (WidgetTester tester) async {
     await tester.pumpWidget(const UniFindApp());
 
+    await tester.tap(find.text('Log In').first);
+    await tester.pumpAndSettle();
+
     await tester.enterText(find.byType(TextFormField).at(0), 'invalid-email');
     await tester.enterText(find.byType(TextFormField).at(1), 'password123');
-    await tester.tap(find.text('Log In'));
+    await tester.tap(find.text('Sign In'));
     await tester.pumpAndSettle();
 
     expect(find.text('Enter a valid email'), findsOneWidget);
-    expect(find.text('Sign in to browse listings'), findsOneWidget);
+    expect(find.text('Welcome back!'), findsOneWidget);
   });
 
   testWidgets('marketplace cards show name, price, category, and image',
@@ -85,11 +82,11 @@ void main() {
       ),
     );
 
-    expect(find.text('No listings yet'), findsOneWidget);
-    expect(find.text('List an Item'), findsNWidgets(2));
+    expect(find.text('No items found'), findsOneWidget);
+    expect(find.text('List an Item'), findsOneWidget);
   });
 
-  testWidgets('my listings view includes List an Item action',
+  testWidgets('my listings view includes New Post action',
       (WidgetTester tester) async {
     var tapped = false;
     await tester.pumpWidget(
@@ -106,7 +103,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('List an Item'));
+    await tester.tap(find.text('New Post'));
     await tester.pump();
 
     expect(tapped, isTrue);

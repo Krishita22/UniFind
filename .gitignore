@@ -1,3 +1,18 @@
 node_modules
-.vercel
 .env*.local
+.DS_Store
+*.iml
+
+# Web build output
+build/
+
+# Flutter / Dart generated files
+unifind_flutter/.dart_tool/
+unifind_flutter/.idea/
+unifind_flutter/build/
+unifind_flutter/android/build/
+unifind_flutter/ios/Pods/
+unifind_flutter/ios/.symlinks/
+unifind_flutter/ios/Flutter/ephemeral/
+unifind_flutter/macos/Flutter/ephemeral/
+unifind_flutter/linux/flutter/ephemeral/

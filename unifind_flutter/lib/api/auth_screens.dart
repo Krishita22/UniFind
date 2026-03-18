@@ -167,7 +167,7 @@ class _LoginTabState extends State<LoginTab> {
           _showResend = data['can_resend'] == true;
         });
       }
-    } on Exception catch (e) {
+    } on Exception {
       setState(() {
         _errorMessage = 'Could not connect to server. '
             'Make sure the Django backend is running.';
@@ -403,7 +403,7 @@ class _SignUpTabState extends State<SignUpTab> {
           _errorMessage = data['error'] as String? ?? 'Registration failed.';
         });
       }
-    } on Exception catch (e) {
+    } on Exception {
       setState(() {
         _errorMessage = 'Could not connect to server. '
             'Make sure the Django backend is running.';
