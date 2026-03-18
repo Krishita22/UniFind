@@ -9,7 +9,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  String _username = '';
+  String _email = '';
   String _password = '';
   bool _loading = false;
   String? _errorMessage;
@@ -31,11 +31,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   String _loginErrorMessage(ApiException e) {
     switch (e.code) {
       case 'INVALID_CREDENTIALS':
-        return 'Invalid username or password.';
-      case 'USER_NOT_FOUND':
-        return 'No account found for this username. Please sign up first.';
+        return 'Invalid email or password.';
       case 'EMAIL_NOT_FOUND':
-        return 'No account found for this username. Please sign up first.';
+        return 'No account found for this email. Please sign up first.';
       case 'ACCOUNT_UNVERIFIED':
         return 'Your account is not verified yet. Please complete verification.';
       default:
@@ -51,9 +49,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     });
 
     try {
-      final data = await loginUser(_username.trim(), _password);
+      final data = await loginUser(_email.trim(), _password);
       final user = data['user'] as Map<String, dynamic>?;
-      final loggedInEmail = (user?['email'] as String?) ?? _username.trim();
+      final loggedInEmail = (user?['email'] as String?) ?? _email.trim();
       final loggedInUserId = int.tryParse(
         (user?['id'] ??
                 user?['user_id'] ??
@@ -123,13 +121,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _StyledField(
-                                label: 'Username',
-                                hint: 'janedoe123',
-                                icon: Icons.alternate_email_rounded,
-                                onChanged: (v) => _username = v,
+                                label: 'Email Address',
+                                hint: 'you@montclair.edu',
+                                icon: Icons.mail_outline_rounded,
+                                onChanged: (v) => _email = v,
                                 textInputAction: TextInputAction.next,
                                 validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return 'Username is required';
+                                  if (v == null || v.trim().isEmpty) return 'Email is required';
+                                  if (!v.contains('@')) return 'Enter a valid email';
                                   return null;
                                 },
                               ),
