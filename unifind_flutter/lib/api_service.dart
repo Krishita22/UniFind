@@ -21,18 +21,24 @@ class ApiException implements Exception {
 
 
 // LOGIN
-// Sends email and password to login.php
-// Returns a Map with user info on success, or throws an error on failure
+// Sends login identifier and password to login.php.
+// We send both `email` and `username` keys for backend compatibility.
+// Returns a Map with user info on success, or throws an error on failure.
 
-Future<Map<String, dynamic>> loginUser(String email, String password) async {
+Future<Map<String, dynamic>> loginUser(String identifier, String password) async {
   final url = Uri.parse('$_baseUrl/login.php');
 
   print('DEBUG: Attempting login to $url');
 
+  final normalized = identifier.trim();
   final response = await http.post(
     url,
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'email': email, 'password': password}),
+    body: jsonEncode({
+      'email': normalized,
+      'username': normalized,
+      'password': password,
+    }),
   );
 
   print('DEBUG: Status code = ${response.statusCode}');
