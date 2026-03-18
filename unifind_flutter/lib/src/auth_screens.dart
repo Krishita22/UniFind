@@ -86,7 +86,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       backgroundColor: cBg,
       body: Stack(
         children: [
-          // Background decoration
           Positioned(right: -80, top: -80, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
           Positioned(left: -60, bottom: -60, child: Container(width: 220, height: 220, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.05), Colors.transparent])))),
           Center(
@@ -102,12 +101,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Column(
                     children: [
-                      // Logo
-                      Image.asset(
-                        'assets/images/logo.jpg',
-                        height: 90,
-                        fit: BoxFit.contain,
-                      ),
+                      Image.asset('assets/images/logo.jpg', height: 90, fit: BoxFit.contain),
                       const SizedBox(height: 24),
                       const Text('Welcome back!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
                       const SizedBox(height: 6),
@@ -508,7 +502,12 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   String _email = '';
+  String _firstName = '';
+  String _lastName = '';
+  String _username = '';
   String _password = '';
+  String _age = '';
+  String _role = 'student';
   String _code = '';
   bool _loading = false;
   bool _codeSent = false;
@@ -539,13 +538,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
       if (!_codeSent) {
         await sendSignupVerificationCode(
           email: _email.trim().toLowerCase(),
-          password: _password.isEmpty ? 'TempPass123!' : _password,
+          password: 'TempPass123!',
         );
         if (!mounted) return;
         setState(() => _codeSent = true);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Verification code sent. Now set your password and enter the code.'),
+            content: Text('Verification code sent. Set your password and enter the code.'),
           ),
         );
       } else {
@@ -553,6 +552,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           email: _email.trim().toLowerCase(),
           password: _password,
           code: _code.trim(),
+          firstName: _firstName.trim(),
+          lastName: _lastName.trim(),
+          username: _username.trim(),
+          role: _role,
+          age: int.tryParse(_age.trim()) ?? 0,
         );
         if (!mounted) return;
         widget.onRegister(_email.trim().toLowerCase(), null);
@@ -621,7 +625,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                       Text(
                         _codeSent
                             ? 'Set your password and verify your email'
-                            : 'Enter your MSU email to begin sign up',
+                            : 'Enter your details to get started',
+                        textAlign: TextAlign.center,
                         style: const TextStyle(fontSize: 14, color: cMuted),
                       ),
                       const SizedBox(height: 32),
@@ -638,21 +643,110 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _StyledField(
-                                label: 'MSU Email Address',
-                                hint: 'you@montclair.edu',
-                                icon: Icons.mail_outline_rounded,
-                                onChanged: (v) => _email = v,
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return 'Email is required';
-                                  if (!v.toLowerCase().trim().endsWith('@montclair.edu')) {
-                                    return 'Must use an @montclair.edu email';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              if (_codeSent) ...[
+
+                              if (!_codeSent) ...[
+                                // ── Step 1: profile info ──────────────────
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _StyledField(
+                                        label: 'First Name',
+                                        hint: 'Jane',
+                                        icon: Icons.person_outline_rounded,
+                                        onChanged: (v) => _firstName = v,
+                                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _StyledField(
+                                        label: 'Last Name',
+                                        hint: 'Doe',
+                                        icon: Icons.person_outline_rounded,
+                                        onChanged: (v) => _lastName = v,
+                                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'MSU Email Address',
+                                  hint: 'you@montclair.edu',
+                                  icon: Icons.mail_outline_rounded,
+                                  onChanged: (v) => _email = v,
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                                    if (!v.toLowerCase().trim().endsWith('@montclair.edu')) {
+                                      return 'Must use an @montclair.edu email';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'Username',
+                                  hint: 'janedoe123',
+                                  icon: Icons.alternate_email_rounded,
+                                  onChanged: (v) => _username = v,
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) return 'Username is required';
+                                    if (v.trim().length < 3) return 'At least 3 characters';
+                                    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v.trim())) {
+                                      return 'Letters, numbers, and underscores only';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                // Role picker
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'I am a...',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        _RoleChip(
+                                          label: 'Student',
+                                          icon: Icons.school_outlined,
+                                          selected: _role == 'student',
+                                          onTap: () => setState(() => _role = 'student'),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        _RoleChip(
+                                          label: 'Faculty',
+                                          icon: Icons.work_outline_rounded,
+                                          selected: _role == 'faculty',
+                                          onTap: () => setState(() => _role = 'faculty'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  label: 'Age',
+                                  hint: '20',
+                                  icon: Icons.cake_outlined,
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (v) => _age = v,
+                                  validator: (v) {
+                                    if (v == null || v.trim().isEmpty) return 'Age is required';
+                                    final parsed = int.tryParse(v.trim());
+                                    if (parsed == null) return 'Enter a valid age';
+                                    if (parsed < 16 || parsed > 120) return 'Enter a realistic age';
+                                    return null;
+                                  },
+                                ),
+                              ],
+
+                              if (_codeSent) ...[
+                                // ── Step 2: password + verification code ──
                                 _StyledField(
                                   label: 'Password',
                                   hint: '••••••••',
@@ -660,7 +754,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   obscure: true,
                                   onChanged: (v) => _password = v,
                                   validator: (v) {
-                                    if (!_codeSent) return null;
                                     if (v == null || v.isEmpty) return 'Password is required';
                                     if (v.length < 8) return 'Minimum 8 characters';
                                     return null;
@@ -673,13 +766,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   icon: Icons.lock_outline_rounded,
                                   obscure: true,
                                   validator: (v) {
-                                    if (!_codeSent) return null;
-                                    if (v == null || v.isEmpty) {
-                                      return 'Please confirm your password';
-                                    }
-                                    if (v != _password) {
-                                      return 'Passwords do not match';
-                                    }
+                                    if (v == null || v.isEmpty) return 'Please confirm your password';
+                                    if (v != _password) return 'Passwords do not match';
                                     return null;
                                   },
                                 ),
@@ -690,14 +778,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   icon: Icons.verified_outlined,
                                   onChanged: (v) => _code = v,
                                   validator: (v) {
-                                    if (!_codeSent) return null;
-                                    if (v == null || v.trim().isEmpty) {
-                                      return 'Verification code is required';
-                                    }
+                                    if (v == null || v.trim().isEmpty) return 'Verification code is required';
                                     return null;
                                   },
                                 ),
                               ],
+
                               if (_errorMessage != null) ...[
                                 const SizedBox(height: 10),
                                 Text(
@@ -713,9 +799,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               _AuthButton(
                                 loading: _loading,
                                 onTap: _submit,
-                                label: _codeSent
-                                    ? 'Verify & Create Account'
-                                    : 'Send Verification Code',
+                                label: _codeSent ? 'Verify & Create Account' : 'Send Verification Code',
                               ),
                             ],
                           ),
@@ -798,11 +882,13 @@ class _AuthButtonState extends State<_AuthButton> with SingleTickerProviderState
   }
 }
 
+// ─── STYLED FIELD ─────────────────────────────────────────────────────────────
 class _StyledField extends StatelessWidget {
   final String label, hint;
   final IconData icon;
   final bool obscure;
   final String? initialValue;
+  final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
@@ -814,6 +900,7 @@ class _StyledField extends StatelessWidget {
     required this.icon,
     this.obscure = false,
     this.initialValue,
+    this.keyboardType,
     this.validator,
     this.onChanged,
     this.onFieldSubmitted,
@@ -830,6 +917,7 @@ class _StyledField extends StatelessWidget {
         TextFormField(
           initialValue: initialValue,
           obscureText: obscure,
+          keyboardType: keyboardType,
           onChanged: onChanged,
           onFieldSubmitted: onFieldSubmitted,
           textInputAction: textInputAction,
@@ -847,6 +935,57 @@ class _StyledField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── ROLE CHIP ────────────────────────────────────────────────────────────────
+class _RoleChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RoleChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? cRed.withValues(alpha: 0.08) : cBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? cRed : cBorder,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 16, color: selected ? cRed : cMuted),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? cRed : cMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
