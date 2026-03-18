@@ -29,14 +29,19 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   void dispose() { _c.dispose(); super.dispose(); }
 
   String _loginErrorMessage(ApiException e) {
+    final raw = e.message.toLowerCase();
     switch (e.code) {
       case 'INVALID_CREDENTIALS':
         return 'Invalid email or password.';
+      case 'USER_NOT_FOUND':
       case 'EMAIL_NOT_FOUND':
         return 'No account found for this email. Please sign up first.';
       case 'ACCOUNT_UNVERIFIED':
         return 'Your account is not verified yet. Please complete verification.';
       default:
+        if (raw.contains('username')) {
+          return 'No account found for this email. Please sign up first.';
+        }
         return e.message;
     }
   }
