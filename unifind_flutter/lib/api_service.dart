@@ -279,20 +279,27 @@ Future<Map<String, dynamic>> updateListing({
   required String condition,
   required String location,
   required String email,
+  String? imageUrl,
 }) async {
+  final payload = <String, dynamic>{
+    'id': id,
+    'title': title,
+    'description': description,
+    'price': price,
+    'category': category,
+    'condition': condition,
+    'location': location,
+    'email': email,
+  };
+  if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+    payload['image'] = imageUrl.trim();
+    payload['image_url'] = imageUrl.trim();
+  }
+
   final response = await http.post(
     Uri.parse('$_baseUrl/update_listing.php'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'id': id,
-      'title': title,
-      'description': description,
-      'price': price,
-      'category': category,
-      'condition': condition,
-      'location': location,
-      'email': email,
-    }),
+    body: jsonEncode(payload),
   );
 
   final data = jsonDecode(response.body);
@@ -351,18 +358,25 @@ Future<Map<String, dynamic>> updateLostFoundItem({
   required String category,
   required String location,
   required String email,
+  String? imageUrl,
 }) async {
+  final payload = <String, dynamic>{
+    'id': id,
+    'title': title,
+    'description': description,
+    'category': category,
+    'location': location,
+    'email': email,
+  };
+  if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+    payload['image'] = imageUrl.trim();
+    payload['image_url'] = imageUrl.trim();
+  }
+
   final response = await http.post(
     Uri.parse('$_baseUrl/update_lostfound.php'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'id': id,
-      'title': title,
-      'description': description,
-      'category': category,
-      'location': location,
-      'email': email,
-    }),
+    body: jsonEncode(payload),
   );
 
   final data = jsonDecode(response.body);

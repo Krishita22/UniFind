@@ -17,7 +17,11 @@ part 'src/ui_controls.dart';
 part 'src/ui_feedback.dart';
 part 'src/data.dart';
 
-typedef AuthSuccessCallback = void Function(String email, [int? userId]);
+typedef AuthSuccessCallback = void Function(
+  String email, [
+  int? userId,
+  String? username,
+]);
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const Color cRed = Color(0xFFA12727);
@@ -52,6 +56,7 @@ class _UniFindAppState extends State<UniFindApp> {
   bool _loggedIn = false;
   bool _sessionLoaded = false;
   String _email = '';
+  String _username = '';
   int? _userId;
   ListingType _postDefaultType = ListingType.marketplace;
 
@@ -67,6 +72,30 @@ class _UniFindAppState extends State<UniFindApp> {
   String _normalizeEmail(String input) => input.trim().toLowerCase();
   int? _toInt(dynamic value) => value == null ? null : int.tryParse(value.toString());
   String _asString(dynamic value) => value?.toString() ?? '';
+  String _emailToHandle(String input) {
+    final normalized = _normalizeEmail(input);
+    if (normalized.isEmpty) return '';
+    return normalized.contains('@') ? normalized.split('@').first : normalized;
+  }
+  String _preferredUserLabel(
+    List<dynamic> rawCandidates, {
+    String email = '',
+  }) {
+    for (final raw in rawCandidates) {
+      final value = _asString(raw).trim();
+      if (value.isEmpty) continue;
+      final lowered = value.toLowerCase();
+      if (lowered == 'msu student' ||
+          lowered == 'student' ||
+          lowered == 'anonymous') {
+        continue;
+      }
+      if (value.contains('@')) return _emailToHandle(value);
+      return value;
+    }
+    final handle = _emailToHandle(email);
+    return handle.isEmpty ? 'Student' : handle;
+  }
   String _claimsKeyForEmail(String email) =>
       'submitted_claim_ids_${_normalizeEmail(email)}';
   String _matchesKeyForEmail(String email) =>
@@ -204,13 +233,22 @@ class _UniFindAppState extends State<UniFindApp> {
               image: _asString(item['image']).isEmpty
                   ? _asString(item['image_url'])
                   : _asString(item['image']),
-              seller: _asString(item['seller']).isEmpty
-                  ? (_asString(item['seller_name']).isEmpty
-                        ? _asString(item['email'])
-                        : _asString(item['seller_name']))
-                  : _asString(item['seller']),
               sellerEmail: _normalizeEmail(
                 _asString(
+                  item['sellerEmail'] ?? item['seller_email'] ?? item['email'],
+                ),
+              ),
+              seller: _preferredUserLabel(
+                [
+                  item['username'],
+                  item['seller_username'],
+                  item['sellerName'],
+                  item['seller_name'],
+                  item['display_name'],
+                  item['seller'],
+                  item['email'],
+                ],
+                email: _asString(
                   item['sellerEmail'] ?? item['seller_email'] ?? item['email'],
                 ),
               ),
@@ -269,13 +307,22 @@ class _UniFindAppState extends State<UniFindApp> {
               image: _asString(item['image']).isEmpty
                   ? _asString(item['image_url'])
                   : _asString(item['image']),
-              poster: _asString(item['poster']).isEmpty
-                  ? (_asString(item['poster_name']).isEmpty
-                        ? _asString(item['email'])
-                        : _asString(item['poster_name']))
-                  : _asString(item['poster']),
               posterEmail: _normalizeEmail(
                 _asString(
+                  item['posterEmail'] ?? item['poster_email'] ?? item['email'],
+                ),
+              ),
+              poster: _preferredUserLabel(
+                [
+                  item['username'],
+                  item['poster_username'],
+                  item['posterName'],
+                  item['poster_name'],
+                  item['display_name'],
+                  item['poster'],
+                  item['email'],
+                ],
+                email: _asString(
                   item['posterEmail'] ?? item['poster_email'] ?? item['email'],
                 ),
               ),
@@ -328,12 +375,14 @@ class _UniFindAppState extends State<UniFindApp> {
     final prefs = await SharedPreferences.getInstance();
     final loggedIn = prefs.getBool('logged_in') ?? false;
     final email = prefs.getString('logged_in_email') ?? '';
+    final username = prefs.getString('logged_in_username') ?? '';
     final userId = prefs.getInt('logged_in_user_id');
 
     if (!mounted) return;
     setState(() {
       _loggedIn = loggedIn;
       _email = email;
+      _username = username;
       _userId = userId;
       _sessionLoaded = true;
     });
@@ -478,6 +527,7 @@ class _UniFindAppState extends State<UniFindApp> {
         condition: update.condition,
         location: update.location,
         email: _email,
+        imageUrl: update.imageUrl,
       );
       await _loadListings();
     } catch (_) {
@@ -492,7 +542,7 @@ class _UniFindAppState extends State<UniFindApp> {
           description: update.description,
           category: update.category,
           condition: update.condition,
-          image: old.image,
+          image: update.imageUrl ?? old.image,
           seller: old.seller,
           sellerEmail: old.sellerEmail,
           sellerId: old.sellerId,
@@ -515,6 +565,7 @@ class _UniFindAppState extends State<UniFindApp> {
         category: update.category,
         location: update.location,
         email: _email,
+        imageUrl: update.imageUrl,
       );
       await _loadLostFound();
     } catch (_) {
@@ -528,7 +579,7 @@ class _UniFindAppState extends State<UniFindApp> {
           description: update.description,
           category: update.category,
           type: old.type,
-          image: old.image,
+          image: update.imageUrl ?? old.image,
           poster: old.poster,
           posterEmail: old.posterEmail,
           posterId: old.posterId,
@@ -540,16 +591,18 @@ class _UniFindAppState extends State<UniFindApp> {
     }
   }
 
-  void _login(String email, [int? userId]) {
+  void _login(String email, [int? userId, String? username]) {
     setState(() {
       _loggedIn = true;
       _email = email;
+      _username = (username ?? '').trim();
       _userId = userId;
       _tab = 0;
     });
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
       prefs.setString('logged_in_email', email);
+      prefs.setString('logged_in_username', (username ?? '').trim());
       if (userId != null) {
         prefs.setInt('logged_in_user_id', userId);
       } else {
@@ -564,6 +617,7 @@ class _UniFindAppState extends State<UniFindApp> {
   void _logout() => setState(() {
         _loggedIn = false;
         _email = '';
+        _username = '';
         _userId = null;
         _tab = 0;
         _submittedClaimItemIds.clear();
@@ -574,6 +628,7 @@ class _UniFindAppState extends State<UniFindApp> {
     SharedPreferences.getInstance().then((prefs) {
       prefs.remove('logged_in');
       prefs.remove('logged_in_email');
+      prefs.remove('logged_in_username');
       prefs.remove('logged_in_user_id');
     });
   }
@@ -609,7 +664,7 @@ class _UniFindAppState extends State<UniFindApp> {
                     ),
                     const SizedBox(height: 2), // small spacing
                     Text(
-                      _email,
+                      _username.isNotEmpty ? _username : _emailToHandle(_email),
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.white, // 👈 pure white
