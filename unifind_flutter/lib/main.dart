@@ -90,11 +90,10 @@ class _UniFindAppState extends State<UniFindApp> {
           lowered == 'anonymous') {
         continue;
       }
-      if (value.contains('@')) return _emailToHandle(value);
+      if (value.contains('@')) continue;
       return value;
     }
-    final handle = _emailToHandle(email);
-    return handle.isEmpty ? 'Student' : handle;
+    return 'Student';
   }
   String _claimsKeyForEmail(String email) =>
       'submitted_claim_ids_${_normalizeEmail(email)}';
