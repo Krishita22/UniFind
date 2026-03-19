@@ -4,6 +4,14 @@ class ItemDetailScreen extends StatelessWidget {
   final MarketplaceItem item;
   const ItemDetailScreen({super.key, required this.item});
 
+  String _asSellerUsername() {
+    final raw = item.seller.trim();
+    if (raw.isEmpty) return 'Student';
+    if (raw.contains('@')) return 'Student';
+    if (raw.contains(' ')) return 'Student';
+    return raw;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,7 +65,12 @@ class ItemDetailScreen extends StatelessWidget {
                         _DetailRow(icon: Icons.stars_rounded, label: 'Condition', value: item.condition),
                         _DetailRow(icon: Icons.location_on_outlined, label: 'Location', value: item.location),
                         _DetailRow(icon: Icons.calendar_today_outlined, label: 'Posted', value: formatDate(item.createdAt)),
-                        _DetailRow(icon: Icons.person_outline_rounded, label: 'Seller', value: item.seller, isLast: true),
+                        _DetailRow(
+                          icon: Icons.person_outline_rounded,
+                          label: 'Seller',
+                          value: _asSellerUsername(),
+                          isLast: true,
+                        ),
                       ],
                     ),
                   ),

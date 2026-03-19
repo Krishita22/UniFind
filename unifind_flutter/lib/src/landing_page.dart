@@ -19,8 +19,8 @@ class LandingPage extends StatelessWidget {
       pageBuilder: (_, a, __) => FadeTransition(
         opacity: a,
         child: LoginScreen(
-          onLogin: (email) {
-            onLogin(email);
+          onLogin: (email, [userId, username]) {
+            onLogin(email, userId, username);
             Navigator.of(ctx).popUntil((r) => r.isFirst);
           },
         ),
@@ -33,8 +33,8 @@ void _openRegister(BuildContext ctx) {
     pageBuilder: (_, a, __) => FadeTransition(
       opacity: a,
       child: RegistrationScreen(
-        onRegister: (email) {
-          onLogin(email);
+        onRegister: (email, [userId, username]) {
+          onLogin(email, userId, username);
           Navigator.of(ctx).popUntil((r) => r.isFirst);
         },
       ),
