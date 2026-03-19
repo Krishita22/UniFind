@@ -2,6 +2,7 @@ library unifind_app;
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
 import 'api_service.dart';
 part 'src/landing_page.dart';
@@ -51,7 +52,9 @@ class UniFindApp extends StatefulWidget {
 
 class _UniFindAppState extends State<UniFindApp> {
   int _tab = 0;
+  int _postFormNonce = 0;
   bool _loggedIn = false;
+  bool _sessionLoaded = false;
   String _email = '';
   String _username = '';
   int? _userId;
@@ -139,7 +142,74 @@ class _UniFindAppState extends State<UniFindApp> {
     return rawId?.toString() ?? '';
   }
 
-  String get _owner => _email.isEmpty ? 'You' : _email;
+  bool _looksLikeCurrentUser(String value) {
+    final normalizedValue = _normalizeEmail(value);
+    final normalizedUser = _normalizeEmail(_email);
+    if (normalizedValue.isEmpty || normalizedUser.isEmpty) return false;
+    if (normalizedValue == normalizedUser) return true;
+    final userLocal = normalizedUser.split('@').first;
+    return normalizedValue.contains(userLocal);
+  }
+
+  bool _isMyMarketplaceItem(MarketplaceItem item) {
+    if (_userId != null && item.sellerId != null) {
+      return item.sellerId == _userId;
+    }
+    return item.sellerEmail == _normalizeEmail(_email) ||
+        _looksLikeCurrentUser(item.seller) ||
+        _myMarketIds.contains(item.id) ||
+        _myMarketFingerprints.contains(_marketFingerprintFromItem(item));
+  }
+
+  bool _isMyLostFoundItem(LostFoundItem item) {
+    if (_userId != null && item.posterId != null) {
+      return item.posterId == _userId;
+    }
+    return item.posterEmail == _normalizeEmail(_email) ||
+        _looksLikeCurrentUser(item.poster) ||
+        _myLostFoundIds.contains(item.id) ||
+        _myLostFoundFingerprints.contains(_lostFingerprintFromItem(item));
+  }
+
+  String _marketFingerprintFromInput(NewListingInput in_) {
+    return [
+      _normalizeText(in_.title),
+      _normalizeText(_short(in_.description)),
+      _normalizeText(in_.category),
+      _normalizeText(in_.location),
+      in_.price.toStringAsFixed(0),
+    ].join('|');
+  }
+
+  String _lostFingerprintFromInput(NewListingInput in_) {
+    return [
+      _normalizeText(in_.title),
+      _normalizeText(_short(in_.description)),
+      _normalizeText(in_.category),
+      _normalizeText(in_.location),
+      in_.type.name,
+    ].join('|');
+  }
+
+  String _marketFingerprintFromItem(MarketplaceItem item) {
+    return [
+      _normalizeText(item.title),
+      _normalizeText(_short(item.description)),
+      _normalizeText(item.category),
+      _normalizeText(item.location),
+      item.price.toStringAsFixed(0),
+    ].join('|');
+  }
+
+  String _lostFingerprintFromItem(LostFoundItem item) {
+    return [
+      _normalizeText(item.title),
+      _normalizeText(_short(item.description)),
+      _normalizeText(item.category),
+      _normalizeText(item.location),
+      item.type.name,
+    ].join('|');
+  }
 
   Future<void> _loadListings() async {
     try {
@@ -200,6 +270,20 @@ class _UniFindAppState extends State<UniFindApp> {
           continue;
         }
       }
+      setState(() {
+        _market
+          ..clear()
+          ..addAll(parsed);
+        if (_userId == null) {
+          for (final listing in _market) {
+            if (listing.sellerId != null &&
+                listing.sellerEmail == _normalizeEmail(_email)) {
+              _userId = listing.sellerId;
+              break;
+            }
+          }
+        }
+      });
     } catch (_) {}
   }
 
@@ -263,6 +347,20 @@ class _UniFindAppState extends State<UniFindApp> {
           continue;
         }
       }
+      setState(() {
+        _lostFound
+          ..clear()
+          ..addAll(parsed);
+        if (_userId == null) {
+          for (final post in _lostFound) {
+            if (post.posterId != null &&
+                post.posterEmail == _normalizeEmail(_email)) {
+              _userId = post.posterId;
+              break;
+            }
+          }
+        }
+      });
     } catch (_) {}
   }
 
@@ -296,12 +394,19 @@ class _UniFindAppState extends State<UniFindApp> {
     _loadLostFound();
   }
 
-  void _goToPostTab() => setState(() => _tab = 2);
+  void _goToPostTab([ListingType type = ListingType.marketplace]) {
+    setState(() {
+      _postDefaultType = type;
+      _postFormNonce++;
+      _tab = 2;
+    });
+  }
 
   Future<void> _addListing(NewListingInput in_) async {
     try {
       if (in_.type == ListingType.marketplace) {
-        await createListing(
+        _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
+        final res = await createListing(
           title: in_.title,
           description: in_.description,
           price: in_.price,
@@ -311,8 +416,11 @@ class _UniFindAppState extends State<UniFindApp> {
           email: _email,
           image: in_.imageUrl,
         );
+        final id = _extractIdFromResponse(res);
+        if (id.isNotEmpty) _myMarketIds.add(id);
       } else {
-        await createLostFoundItem(
+        _myLostFoundFingerprints.add(_lostFingerprintFromInput(in_));
+        final res = await createLostFoundItem(
           title: in_.title,
           description: in_.description,
           category: in_.category,
@@ -321,47 +429,20 @@ class _UniFindAppState extends State<UniFindApp> {
           email: _email,
           image: in_.imageUrl,
         );
+        final id = _extractIdFromResponse(res);
+        if (id.isNotEmpty) _myLostFoundIds.add(id);
       }
       await _loadListings();
       await _loadLostFound();
     } catch (_) {
-      setState(() {
-        if (in_.type == ListingType.marketplace) {
-          _market.insert(
-            0,
-            MarketplaceItem(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              title: in_.title,
-              price: in_.price,
-              description: in_.description,
-              category: in_.category,
-              condition: in_.condition,
-              image: in_.imageUrl,
-              seller: _owner,
-              createdAt: DateTime.now(),
-              location: in_.location,
-            ),
-          );
-        } else {
-          _lostFound.insert(
-            0,
-            LostFoundItem(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              title: in_.title,
-              description: in_.description,
-              category: in_.category,
-              type: in_.type == ListingType.lost
-                  ? LostFoundType.lost
-                  : LostFoundType.found,
-              image: in_.imageUrl,
-              poster: _owner,
-              createdAt: DateTime.now(),
-              location: in_.location,
-              status: 'active',
-            ),
-          );
-        }
-      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not sync with database. Please try again.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
     }
 
     setState(() {
@@ -538,6 +619,8 @@ class _UniFindAppState extends State<UniFindApp> {
         _username = '';
         _userId = null;
         _tab = 0;
+        _submittedClaimItemIds.clear();
+        _submittedMatchItemIds.clear();
       });
   
   void _clearSession() {
@@ -551,6 +634,16 @@ class _UniFindAppState extends State<UniFindApp> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_sessionLoaded) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: cBg,
+          body: const Center(child: CircularProgressIndicator(color: cRed)),
+        ),
+      );
+    }
+
     return MaterialApp(
       title: 'UniFind',
       debugShowCheckedModeBanner: false,
@@ -581,7 +674,10 @@ class _UniFindAppState extends State<UniFindApp> {
                 actions: [
                   IconButton(
                     tooltip: 'Log out',
-                    onPressed: _logout,
+                    onPressed: () {
+                      _logout();
+                      _clearSession();
+                    },
                     icon: const Icon(Icons.logout),
                   ),
                 ],
@@ -590,24 +686,43 @@ class _UniFindAppState extends State<UniFindApp> {
                 index: _tab,
                 children: [
                   MarketplaceScreen(items: _market, onListItem: _goToPostTab),
-                  LostFoundScreen(items: _lostFound),
-                  PostListingScreen(onPost: _addListing),
+                  LostFoundScreen(
+                    items: _lostFound,
+                    onCreateLost: () => _goToPostTab(ListingType.lost),
+                    onCreateFound: () => _goToPostTab(ListingType.found),
+                    onClaimLost: _claimLostItem,
+                    onPostFoundMatch: _postFoundMatch,
+                    submittedClaimItemIds: _submittedClaimItemIds,
+                    submittedMatchItemIds: _submittedMatchItemIds,
+                  ),
+                  PostListingScreen(
+                    key: ValueKey(_postFormNonce),
+                    onPost: _addListing,
+                    initialType: _postDefaultType,
+                  ),
                   MyListingsScreen(
                     marketplaceItems: _market
-                        .where((item) => item.seller == _owner)
+                        .where(_isMyMarketplaceItem)
                         .toList(),
                     lostFoundItems: _lostFound
-                        .where((item) => item.poster == _owner)
+                        .where(_isMyLostFoundItem)
                         .toList(),
                     onListItem: _goToPostTab,
+                    onEditMarketplace: _editMarketplaceItem,
+                    onEditLostFound: _editLostFoundItem,
                   ),
                   const DocumentationScreen(),
                 ],
               ),
               bottomNavigationBar: NavigationBar(
                 selectedIndex: _tab,
-                onDestinationSelected: (index) =>
-                    setState(() => _tab = index),
+                onDestinationSelected: (index) {
+                  setState(() => _tab = index);
+                  if (index == 3 || index == 0 || index == 1) {
+                    _loadListings();
+                    _loadLostFound();
+                  }
+                },
                 destinations: const [
                   NavigationDestination(
                     icon: Icon(Icons.storefront_outlined),

@@ -4,7 +4,16 @@ class MyListingsScreen extends StatefulWidget {
   final List<MarketplaceItem> marketplaceItems;
   final List<LostFoundItem> lostFoundItems;
   final VoidCallback onListItem;
-  const MyListingsScreen({super.key, required this.marketplaceItems, required this.lostFoundItems, required this.onListItem});
+  final Future<void> Function(MarketplaceItem item, MarketplaceUpdateInput update) onEditMarketplace;
+  final Future<void> Function(LostFoundItem item, LostFoundUpdateInput update) onEditLostFound;
+  const MyListingsScreen({
+    super.key,
+    required this.marketplaceItems,
+    required this.lostFoundItems,
+    required this.onListItem,
+    required this.onEditMarketplace,
+    required this.onEditLostFound,
+  });
 
   @override
   State<MyListingsScreen> createState() => _MyListingsScreenState();
@@ -408,12 +417,16 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               subtitle: '${i.category} · ${i.location}',
                               trailing: '\$${i.price.toStringAsFixed(0)}',
                               icon: Icons.storefront_rounded,
+                              onTap: () => _editMarketplace(i),
                             )).toList()
                         : widget.lostFoundItems.map((i) => _MyListingTile(
                               title: i.title,
                               subtitle: '${i.category} · ${i.location}',
                               trailing: i.type == LostFoundType.lost ? 'Lost' : 'Found',
                               icon: i.type == LostFoundType.lost ? Icons.report_problem_outlined : Icons.check_circle_outline_rounded,
+                              trailingColor: i.type == LostFoundType.lost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60),
+                              trailingBgColor: i.type == LostFoundType.lost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0),
+                              onTap: () => _editLostFound(i),
                             )).toList(),
                   ),
           ),
@@ -426,44 +439,64 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 class _MyListingTile extends StatelessWidget {
   final String title, subtitle, trailing;
   final IconData icon;
-  const _MyListingTile({required this.title, required this.subtitle, required this.trailing, required this.icon});
+  final Color trailingColor;
+  final Color trailingBgColor;
+  final VoidCallback? onTap;
+  const _MyListingTile({
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    required this.icon,
+    this.trailingColor = cRed,
+    this.trailingBgColor = cRedLight,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cBorder),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: cRed, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: cMuted)),
-              ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: cRed, size: 20),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
-            child: Text(trailing, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: cRed)),
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: cMuted)),
+                ],
+              ),
+            ),
+            const Icon(Icons.edit_outlined, size: 16, color: cMuted),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(color: trailingBgColor, borderRadius: BorderRadius.circular(8)),
+              child: Text(
+                trailing,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: trailingColor),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
