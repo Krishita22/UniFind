@@ -22,14 +22,29 @@ class NewListingInput {
 }
 
 class MarketplaceItem {
-  final String id, title, description, category, condition, image, seller, location;
+  final String id, title, description, category, condition, image, seller, sellerEmail, location;
+  final int? sellerId;
   final double price;
   final DateTime createdAt;
-  const MarketplaceItem({required this.id, required this.title, required this.price, required this.description, required this.category, required this.condition, required this.image, required this.seller, required this.createdAt, required this.location});
+  const MarketplaceItem({
+    required this.id,
+    required this.title,
+    required this.price,
+    required this.description,
+    required this.category,
+    required this.condition,
+    required this.image,
+    required this.seller,
+    required this.sellerEmail,
+    this.sellerId,
+    required this.createdAt,
+    required this.location,
+  });
 }
 
 class LostFoundItem {
-  final String id, title, description, category, image, poster, location, status;
+  final String id, title, description, category, image, poster, posterEmail, location, status;
+  final int? posterId;
   final LostFoundType type;
   final DateTime createdAt;
   const LostFoundItem({
@@ -110,5 +125,36 @@ class LostFoundUpdateInput {
 
 String formatDate(DateTime d) => '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';
 
-const List<String> categories = ['All', 'Textbooks', 'Electronics', 'Furniture', 'Clothing', 'Other'];
-const List<String> lostFoundCategories = ['All', 'Electronics', 'Bags', 'Keys', 'ID/Cards', 'Clothing', 'Other'];
+const List<String> categories = [
+  'Beauty & Personal Care',
+  'Clothing',
+  'Dorm Essentials',
+  'Electronics',
+  'Instruments',
+  'Kitchen & Appliances',
+  'Lab Equipment',
+  'School Supplies',
+  'Sports & Fitness',
+  'Textbooks',
+  'Tickets',
+  'Other',
+];
+
+const List<String> otherMarketplaceSubcategories = [
+  'Bundles',
+  'Collectibles',
+  'Event Supplies',
+  'Storage',
+  'Misc',
+];
+const List<String> lostFoundCategories = [
+  'Electronics',
+  'Bags',
+  'Keys',
+  'ID/Cards',
+  'Wallets',
+  'Water Bottles',
+  'Clothing',
+  'Accessories',
+  'Other',
+];
