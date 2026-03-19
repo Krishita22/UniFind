@@ -32,7 +32,80 @@ class LostFoundItem {
   final String id, title, description, category, image, poster, location, status;
   final LostFoundType type;
   final DateTime createdAt;
-  const LostFoundItem({required this.id, required this.title, required this.description, required this.category, required this.type, required this.image, required this.poster, required this.createdAt, required this.location, required this.status});
+  const LostFoundItem({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.category,
+    required this.type,
+    required this.image,
+    required this.poster,
+    required this.posterEmail,
+    this.posterId,
+    required this.createdAt,
+    required this.location,
+    required this.status,
+  });
+}
+
+class ClaimEvidence {
+  final String proofDetails;
+  final String identifyingDetails;
+  final String lastSeenContext;
+  final String contactNote;
+  const ClaimEvidence({
+    required this.proofDetails,
+    this.identifyingDetails = '',
+    this.lastSeenContext = '',
+    this.contactNote = '',
+  });
+}
+
+class FoundMatchInput {
+  final String foundLocation;
+  final String foundWhen;
+  final String matchDetails;
+  final String contactNote;
+  const FoundMatchInput({
+    required this.foundLocation,
+    required this.foundWhen,
+    required this.matchDetails,
+    this.contactNote = '',
+  });
+}
+
+class MarketplaceUpdateInput {
+  final String title;
+  final String description;
+  final String category;
+  final String condition;
+  final String location;
+  final double price;
+  final String? imageUrl;
+  const MarketplaceUpdateInput({
+    required this.title,
+    required this.description,
+    required this.category,
+    required this.condition,
+    required this.location,
+    required this.price,
+    this.imageUrl,
+  });
+}
+
+class LostFoundUpdateInput {
+  final String title;
+  final String description;
+  final String category;
+  final String location;
+  final String? imageUrl;
+  const LostFoundUpdateInput({
+    required this.title,
+    required this.description,
+    required this.category,
+    required this.location,
+    this.imageUrl,
+  });
 }
 
 String formatDate(DateTime d) => '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${d.year}';

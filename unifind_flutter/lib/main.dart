@@ -16,6 +16,12 @@ part 'src/ui_controls.dart';
 part 'src/ui_feedback.dart';
 part 'src/data.dart';
 
+typedef AuthSuccessCallback = void Function(
+  String email, [
+  int? userId,
+  String? username,
+]);
+
 // ─── THEME ───────────────────────────────────────────────────────────────────
 const Color cRed = Color(0xFFA12727);
 const Color cRedDark = Color(0xFF7A1A1A);
@@ -47,38 +53,152 @@ class _UniFindAppState extends State<UniFindApp> {
   int _tab = 0;
   bool _loggedIn = false;
   String _email = '';
+  String _username = '';
+  int? _userId;
+  ListingType _postDefaultType = ListingType.marketplace;
 
   final List<MarketplaceItem> _market = [];
   final List<LostFoundItem> _lostFound = [];
+  final Set<String> _myMarketIds = <String>{};
+  final Set<String> _myLostFoundIds = <String>{};
+  final Set<String> _myMarketFingerprints = <String>{};
+  final Set<String> _myLostFoundFingerprints = <String>{};
+  final Set<String> _submittedClaimItemIds = <String>{};
+  final Set<String> _submittedMatchItemIds = <String>{};
+
+  String _normalizeEmail(String input) => input.trim().toLowerCase();
+  int? _toInt(dynamic value) => value == null ? null : int.tryParse(value.toString());
+  String _asString(dynamic value) => value?.toString() ?? '';
+  String _emailToHandle(String input) {
+    final normalized = _normalizeEmail(input);
+    if (normalized.isEmpty) return '';
+    return normalized.contains('@') ? normalized.split('@').first : normalized;
+  }
+  String _preferredUserLabel(
+    List<dynamic> rawCandidates, {
+    String email = '',
+  }) {
+    for (final raw in rawCandidates) {
+      final value = _asString(raw).trim();
+      if (value.isEmpty) continue;
+      final lowered = value.toLowerCase();
+      if (lowered == 'msu student' ||
+          lowered == 'student' ||
+          lowered == 'anonymous') {
+        continue;
+      }
+      if (value.contains('@')) continue;
+      return value;
+    }
+    return 'Student';
+  }
+  String _claimsKeyForEmail(String email) =>
+      'submitted_claim_ids_${_normalizeEmail(email)}';
+  String _matchesKeyForEmail(String email) =>
+      'submitted_match_ids_${_normalizeEmail(email)}';
+  Future<void> _restoreSubmissionState(String email) async {
+    if (email.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final claims = prefs.getStringList(_claimsKeyForEmail(email)) ?? const [];
+    final matches = prefs.getStringList(_matchesKeyForEmail(email)) ?? const [];
+    if (!mounted) return;
+    setState(() {
+      _submittedClaimItemIds
+        ..clear()
+        ..addAll(claims);
+      _submittedMatchItemIds
+        ..clear()
+        ..addAll(matches);
+    });
+  }
+
+  Future<void> _persistSubmissionState() async {
+    if (_email.trim().isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      _claimsKeyForEmail(_email),
+      _submittedClaimItemIds.toList(),
+    );
+    await prefs.setStringList(
+      _matchesKeyForEmail(_email),
+      _submittedMatchItemIds.toList(),
+    );
+  }
+  String _normalizeText(String input) =>
+      input.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+  String _short(String value, [int n = 50]) =>
+      value.length <= n ? value : value.substring(0, n);
+  String _extractIdFromResponse(Map<String, dynamic> response) {
+    final dynamic rawId =
+        response['id'] ??
+        response['listingId'] ??
+        response['listing_id'] ??
+        response['itemId'] ??
+        response['item_id'] ??
+        response['data']?['id'];
+    return rawId?.toString() ?? '';
+  }
 
   String get _owner => _email.isEmpty ? 'You' : _email;
 
   Future<void> _loadListings() async {
     try {
       final apiItems = await getListings();
-      if (apiItems.isNotEmpty) {
-        setState(() {
-          _market
-            ..clear()
-            ..addAll(
-              apiItems.map(
-                (item) => MarketplaceItem(
-                  id: item['id'].toString(),
-                  title: item['title'],
-                  price: (item['price'] as num).toDouble(),
-                  description: item['description'],
-                  category: item['category'],
-                  condition: item['condition'],
-                  image: item['image'] ?? '',
-                  seller: item['seller'] ?? '',
-                  createdAt:
-                      DateTime.tryParse(item['createdAt'] ?? '') ??
-                      DateTime.now(),
-                  location: item['location'] ?? '',
+      final parsed = <MarketplaceItem>[];
+      for (final item in apiItems) {
+        try {
+          parsed.add(
+            MarketplaceItem(
+              id: _asString(item['id']),
+              title: _asString(item['title']),
+              price: double.tryParse(_asString(item['price'])) ?? 0,
+              description: _asString(item['description']),
+              category: _asString(item['category']).isEmpty
+                  ? 'Other'
+                  : _asString(item['category']),
+              condition: _asString(item['condition']).isEmpty
+                  ? 'Good'
+                  : _asString(item['condition']),
+              image: _asString(item['image']).isEmpty
+                  ? _asString(item['image_url'])
+                  : _asString(item['image']),
+              sellerEmail: _normalizeEmail(
+                _asString(
+                  item['sellerEmail'] ?? item['seller_email'] ?? item['email'],
                 ),
               ),
-            );
-        });
+              seller: _preferredUserLabel(
+                [
+                  item['username'],
+                  item['seller_username'],
+                  item['sellerName'],
+                  item['seller_name'],
+                  item['display_name'],
+                  item['seller'],
+                  item['email'],
+                ],
+                email: _asString(
+                  item['sellerEmail'] ?? item['seller_email'] ?? item['email'],
+                ),
+              ),
+              sellerId: _toInt(
+                item['sellerId'] ??
+                    item['seller_id'] ??
+                    item['userId'] ??
+                    item['user_id'] ??
+                    item['owner_id'],
+              ),
+              createdAt:
+                  DateTime.tryParse(
+                    _asString(item['createdAt'] ?? item['created_at']),
+                  ) ??
+                  DateTime.now(),
+              location: _asString(item['location']),
+            ),
+          );
+        } catch (_) {
+          continue;
+        }
       }
     } catch (_) {}
   }
@@ -86,31 +206,62 @@ class _UniFindAppState extends State<UniFindApp> {
   Future<void> _loadLostFound() async {
     try {
       final apiItems = await getLostFoundItems();
-      if (apiItems.isNotEmpty) {
-        setState(() {
-          _lostFound
-            ..clear()
-            ..addAll(
-              apiItems.map(
-                (item) => LostFoundItem(
-                  id: item['id'].toString(),
-                  title: item['title'],
-                  description: item['description'],
-                  category: item['category'],
-                  type: item['type'] == 'lost'
-                      ? LostFoundType.lost
-                      : LostFoundType.found,
-                  image: item['image'] ?? '',
-                  poster: item['poster'] ?? '',
-                  createdAt:
-                      DateTime.tryParse(item['createdAt'] ?? '') ??
-                      DateTime.now(),
-                  location: item['location'] ?? '',
-                  status: item['status'] ?? 'active',
+      final parsed = <LostFoundItem>[];
+      for (final item in apiItems) {
+        try {
+          final rawType = _asString(item['type']).toLowerCase();
+          parsed.add(
+            LostFoundItem(
+              id: _asString(item['id']),
+              title: _asString(item['title']),
+              description: _asString(item['description']),
+              category: _asString(item['category']).isEmpty
+                  ? 'Other'
+                  : _asString(item['category']),
+              type: rawType == 'found' ? LostFoundType.found : LostFoundType.lost,
+              image: _asString(item['image']).isEmpty
+                  ? _asString(item['image_url'])
+                  : _asString(item['image']),
+              posterEmail: _normalizeEmail(
+                _asString(
+                  item['posterEmail'] ?? item['poster_email'] ?? item['email'],
                 ),
               ),
-            );
-        });
+              poster: _preferredUserLabel(
+                [
+                  item['username'],
+                  item['poster_username'],
+                  item['posterName'],
+                  item['poster_name'],
+                  item['display_name'],
+                  item['poster'],
+                  item['email'],
+                ],
+                email: _asString(
+                  item['posterEmail'] ?? item['poster_email'] ?? item['email'],
+                ),
+              ),
+              posterId: _toInt(
+                item['posterId'] ??
+                    item['poster_id'] ??
+                    item['userId'] ??
+                    item['user_id'] ??
+                    item['owner_id'],
+              ),
+              createdAt:
+                  DateTime.tryParse(
+                    _asString(item['createdAt'] ?? item['created_at']),
+                  ) ??
+                  DateTime.now(),
+              location: _asString(item['location']),
+              status: _asString(item['status']).isEmpty
+                  ? 'active'
+                  : _asString(item['status']),
+            ),
+          );
+        } catch (_) {
+          continue;
+        }
       }
     } catch (_) {}
   }
@@ -118,6 +269,29 @@ class _UniFindAppState extends State<UniFindApp> {
   @override
   void initState() {
     super.initState();
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loggedIn = prefs.getBool('logged_in') ?? false;
+    final email = prefs.getString('logged_in_email') ?? '';
+    final username = prefs.getString('logged_in_username') ?? '';
+    final userId = prefs.getInt('logged_in_user_id');
+
+    if (!mounted) return;
+    setState(() {
+      _loggedIn = loggedIn;
+      _email = email;
+      _username = username;
+      _userId = userId;
+      _sessionLoaded = true;
+    });
+
+    if (loggedIn && email.isNotEmpty) {
+      await _restoreSubmissionState(email);
+    }
+
     _loadListings();
     _loadLostFound();
   }
@@ -195,17 +369,185 @@ class _UniFindAppState extends State<UniFindApp> {
     });
   }
 
-  void _login(String email) => setState(() {
-        _loggedIn = true;
-        _email = email;
-        _tab = 0;
+  Future<void> _claimLostItem(LostFoundItem item, ClaimEvidence evidence) async {
+    try {
+      await claimLostFoundItem(
+        itemId: item.id,
+        email: _email,
+        proofDetails: evidence.proofDetails,
+        identifyingDetails: evidence.identifyingDetails,
+        lastSeenContext: evidence.lastSeenContext,
+        contactNote: evidence.contactNote,
+      );
+      _submittedClaimItemIds.add(item.id);
+      await _persistSubmissionState();
+      await _loadLostFound();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Claim submitted for verification.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Claim failed to sync with database.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _postFoundMatch(LostFoundItem lostItem, FoundMatchInput input) async {
+    try {
+      await createLostFoundMatch(
+        lostItemId: lostItem.id,
+        email: _email,
+        foundLocation: input.foundLocation,
+        foundWhen: input.foundWhen,
+        matchDetails: input.matchDetails,
+        contactNote: input.contactNote,
+      );
+      _submittedMatchItemIds.add(lostItem.id);
+      await _persistSubmissionState();
+      await _loadLostFound();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Match submitted for review.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to post found match right now.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _editMarketplaceItem(
+    MarketplaceItem item,
+    MarketplaceUpdateInput update,
+  ) async {
+    try {
+      await updateListing(
+        id: item.id,
+        title: update.title,
+        description: update.description,
+        price: update.price,
+        category: update.category,
+        condition: update.condition,
+        location: update.location,
+        email: _email,
+        imageUrl: update.imageUrl,
+      );
+      await _loadListings();
+    } catch (_) {
+      setState(() {
+        final idx = _market.indexWhere((m) => m.id == item.id);
+        if (idx == -1) return;
+        final old = _market[idx];
+        _market[idx] = MarketplaceItem(
+          id: old.id,
+          title: update.title,
+          price: update.price,
+          description: update.description,
+          category: update.category,
+          condition: update.condition,
+          image: update.imageUrl ?? old.image,
+          seller: old.seller,
+          sellerEmail: old.sellerEmail,
+          sellerId: old.sellerId,
+          createdAt: old.createdAt,
+          location: update.location,
+        );
       });
+    }
+  }
+
+  Future<void> _editLostFoundItem(
+    LostFoundItem item,
+    LostFoundUpdateInput update,
+  ) async {
+    try {
+      await updateLostFoundItem(
+        id: item.id,
+        title: update.title,
+        description: update.description,
+        category: update.category,
+        location: update.location,
+        email: _email,
+        imageUrl: update.imageUrl,
+      );
+      await _loadLostFound();
+    } catch (_) {
+      setState(() {
+        final idx = _lostFound.indexWhere((m) => m.id == item.id);
+        if (idx == -1) return;
+        final old = _lostFound[idx];
+        _lostFound[idx] = LostFoundItem(
+          id: old.id,
+          title: update.title,
+          description: update.description,
+          category: update.category,
+          type: old.type,
+          image: update.imageUrl ?? old.image,
+          poster: old.poster,
+          posterEmail: old.posterEmail,
+          posterId: old.posterId,
+          createdAt: old.createdAt,
+          location: update.location,
+          status: old.status,
+        );
+      });
+    }
+  }
+
+  void _login(String email, [int? userId, String? username]) {
+    setState(() {
+      _loggedIn = true;
+      _email = email;
+      _username = (username ?? '').trim();
+      _userId = userId;
+      _tab = 0;
+    });
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool('logged_in', true);
+      prefs.setString('logged_in_email', email);
+      prefs.setString('logged_in_username', (username ?? '').trim());
+      if (userId != null) {
+        prefs.setInt('logged_in_user_id', userId);
+      } else {
+        prefs.remove('logged_in_user_id');
+      }
+    });
+    _restoreSubmissionState(email);
+    _loadListings();
+    _loadLostFound();
+  }
 
   void _logout() => setState(() {
         _loggedIn = false;
         _email = '';
+        _username = '';
+        _userId = null;
         _tab = 0;
       });
+  
+  void _clearSession() {
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.remove('logged_in');
+      prefs.remove('logged_in_email');
+      prefs.remove('logged_in_username');
+      prefs.remove('logged_in_user_id');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -228,7 +570,7 @@ class _UniFindAppState extends State<UniFindApp> {
                     ),
                     const SizedBox(height: 2), // small spacing
                     Text(
-                      _email,
+                      _username.isNotEmpty ? _username : _emailToHandle(_email),
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.white, // 👈 pure white
