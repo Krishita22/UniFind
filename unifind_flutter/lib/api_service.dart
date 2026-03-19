@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
@@ -86,14 +85,24 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
   required String email,
   required String password,
   required String code,
+  required String firstName,
+  required String lastName,
+  required String username,
+  required String role,
+  required int age,
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/verify_code_register.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
-      'email': email,
-      'password': password,
-      'code': code,
+      'email':      email,
+      'password':   password,
+      'code':       code,
+      'first_name': firstName,
+      'last_name':  lastName,
+      'username':   username,
+      'role':       role,
+      'age':        age,
     }),
   );
 
@@ -142,8 +151,8 @@ Future<Map<String, dynamic>> resetPassword({
     Uri.parse('$_baseUrl/reset_password.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
-      'email': email,
-      'code': code,
+      'email':        email,
+      'code':         code,
       'new_password': newPassword,
     }),
   );
