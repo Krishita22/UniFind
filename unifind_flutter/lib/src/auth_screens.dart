@@ -1,7 +1,7 @@
 part of '../main.dart';
 
 class LoginScreen extends StatefulWidget {
-  final AuthSuccessCallback onLogin;
+  final void Function(String) onLogin;
   const LoginScreen({super.key, required this.onLogin});
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   void dispose() { _c.dispose(); super.dispose(); }
 
   String _loginErrorMessage(ApiException e) {
+    final raw = e.message.toLowerCase();
     switch (e.code) {
       case 'INVALID_CREDENTIALS':
         return 'Invalid username or password.';
@@ -39,6 +40,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       case 'ACCOUNT_UNVERIFIED':
         return 'Your account is not verified yet. Please complete verification.';
       default:
+        if (raw.contains('username')) {
+          return 'No account found for this email. Please sign up first.';
+        }
         return e.message;
     }
   }
@@ -154,8 +158,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 icon: Icons.lock_outline_rounded,
                                 obscure: true,
                                 onChanged: (v) => _password = v,
-                                textInputAction: TextInputAction.done,
-                                onFieldSubmitted: (_) => _submit(),
                                 validator: (v) => (v == null || v.isEmpty) ? 'Password is required' : null,
                               ),
                               if (_errorMessage != null) ...[
@@ -522,7 +524,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
 // ─── REGISTRATION SCREEN ─────────────────────────────────────────────────────
 class RegistrationScreen extends StatefulWidget {
-  final AuthSuccessCallback onRegister;
+  final void Function(String email) onRegister;
   const RegistrationScreen({super.key, required this.onRegister});
 
   @override
@@ -1133,8 +1135,6 @@ class _StyledField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
-  final ValueChanged<String>? onFieldSubmitted;
-  final TextInputAction? textInputAction;
 
   const _StyledField({
     super.key,
@@ -1146,8 +1146,6 @@ class _StyledField extends StatelessWidget {
     this.keyboardType,
     this.validator,
     this.onChanged,
-    this.onFieldSubmitted,
-    this.textInputAction,
   });
 
   @override
@@ -1162,8 +1160,6 @@ class _StyledField extends StatelessWidget {
           obscureText: obscure,
           keyboardType: keyboardType,
           onChanged: onChanged,
-          onFieldSubmitted: onFieldSubmitted,
-          textInputAction: textInputAction,
           validator: validator,
           decoration: InputDecoration(
             hintText: hint,
