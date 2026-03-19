@@ -401,12 +401,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _StyledField(
-                                label: 'MSU Email Address',
-                                hint: 'you@montclair.edu',
-                                icon: Icons.mail_outline_rounded,
-                                initialValue: _email,
+                                _StyledField(
+                                  key: const ValueKey('forgot_email'),
+                                  label: 'MSU Email Address',
+                                  hint: 'you@montclair.edu',
+                                  icon: Icons.mail_outline_rounded,
+                                  initialValue: _email,
                                 onChanged: (v) => _email = v,
+                                textInputAction: _codeSent
+                                    ? TextInputAction.next
+                                    : TextInputAction.done,
+                                onFieldSubmitted: (_) {
+                                  if (!_codeSent) _submit();
+                                },
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) return 'Email is required';
                                   if (!v.toLowerCase().trim().endsWith('@montclair.edu')) {
@@ -418,10 +425,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                               if (_codeSent) ...[
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('forgot_code'),
                                   label: 'Reset Code',
                                   hint: 'Enter code from your email',
                                   icon: Icons.verified_outlined,
                                   onChanged: (v) => _code = v,
+                                  textInputAction: TextInputAction.next,
                                   validator: (v) {
                                     if (!_codeSent) return null;
                                     if (v == null || v.trim().isEmpty) {
@@ -432,11 +441,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('forgot_new_password'),
                                   label: 'New Password',
                                   hint: '••••••••',
                                   icon: Icons.lock_outline_rounded,
                                   obscure: true,
                                   onChanged: (v) => _newPassword = v,
+                                  textInputAction: TextInputAction.next,
                                   validator: (v) {
                                     if (!_codeSent) return null;
                                     if (v == null || v.isEmpty) return 'New password is required';
@@ -447,10 +458,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('forgot_confirm_password'),
                                   label: 'Confirm New Password',
                                   hint: '••••••••',
                                   icon: Icons.lock_outline_rounded,
                                   obscure: true,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
                                   validator: (v) {
                                     if (!_codeSent) return null;
                                     if (v == null || v.isEmpty) return 'Please confirm your password';
@@ -680,6 +694,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   children: [
                                     Expanded(
                                       child: _StyledField(
+                                        key: const ValueKey('signup_first_name'),
                                         label: 'First Name',
                                         hint: 'Jane',
                                         icon: Icons.person_outline_rounded,
@@ -690,6 +705,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: _StyledField(
+                                        key: const ValueKey('signup_last_name'),
                                         label: 'Last Name',
                                         hint: 'Doe',
                                         icon: Icons.person_outline_rounded,
@@ -701,6 +717,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('signup_email'),
                                   label: 'MSU Email Address',
                                   hint: 'you@montclair.edu',
                                   icon: Icons.mail_outline_rounded,
@@ -715,6 +732,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('signup_username'),
                                   label: 'Username',
                                   hint: 'janedoe123',
                                   icon: Icons.alternate_email_rounded,
@@ -759,11 +777,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('signup_age'),
                                   label: 'Age',
                                   hint: '20',
                                   icon: Icons.cake_outlined,
                                   keyboardType: TextInputType.number,
                                   onChanged: (v) => _age = v,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) {
+                                    if (!_codeSent) _submit();
+                                  },
                                   validator: (v) {
                                     if (v == null || v.trim().isEmpty) return 'Age is required';
                                     final parsed = int.tryParse(v.trim());
@@ -777,7 +800,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               if (_codeSent) ...[
                                 // ── Step 2: password + verification code ──
                                 _PasswordField(
+                                  key: const ValueKey('signup_password'),
                                   onChanged: (v) => setState(() => _password = v),
+                                  textInputAction: TextInputAction.next,
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).nextFocus(),
                                   validator: (v) {
                                     if (v == null || v.isEmpty) return 'Password is required';
                                     if (v.length < 6) return 'Minimum 6 characters';
@@ -790,10 +817,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('signup_confirm_password'),
                                   label: 'Confirm Password',
                                   hint: '••••••••',
                                   icon: Icons.lock_outline_rounded,
                                   obscure: true,
+                                  textInputAction: TextInputAction.next,
                                   validator: (v) {
                                     if (v == null || v.isEmpty) return 'Please confirm your password';
                                     if (v != _password) return 'Passwords do not match';
@@ -802,10 +831,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
+                                  key: const ValueKey('signup_verification_code'),
                                   label: 'Verification Code',
                                   hint: 'Enter code from your email',
                                   icon: Icons.verified_outlined,
                                   onChanged: (v) => _code = v,
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
                                   validator: (v) {
                                     if (v == null || v.trim().isEmpty) return 'Verification code is required';
                                     return null;
@@ -869,8 +901,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
 class _PasswordField extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final String? Function(String?)? validator;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextInputAction? textInputAction;
 
-  const _PasswordField({required this.onChanged, this.validator});
+  const _PasswordField({
+    super.key,
+    required this.onChanged,
+    this.validator,
+    this.onFieldSubmitted,
+    this.textInputAction,
+  });
 
   @override
   State<_PasswordField> createState() => _PasswordFieldState();
@@ -932,6 +972,8 @@ class _PasswordFieldState extends State<_PasswordField> {
             setState(() => _value = v);
             widget.onChanged(v);
           },
+          onFieldSubmitted: widget.onFieldSubmitted,
+          textInputAction: widget.textInputAction,
           validator: widget.validator,
           decoration: InputDecoration(
             hintText: '••••••••',
@@ -1095,6 +1137,7 @@ class _StyledField extends StatelessWidget {
   final TextInputAction? textInputAction;
 
   const _StyledField({
+    super.key,
     required this.label,
     required this.hint,
     required this.icon,
