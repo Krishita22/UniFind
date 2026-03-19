@@ -63,8 +63,22 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 '')
             .toString(),
       );
+      final loggedInUsername = ((user?['username'] ??
+                  user?['user_name'] ??
+                  data['username'] ??
+                  data['user_name'] ??
+                  _username)
+              as Object?)
+          ?.toString()
+          .trim();
       if (!mounted) return;
-      widget.onLogin(loggedInEmail, loggedInUserId);
+      widget.onLogin(
+        loggedInEmail,
+        loggedInUserId,
+        (loggedInUsername == null || loggedInUsername.isEmpty)
+            ? _username.trim()
+            : loggedInUsername,
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -569,7 +583,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           age: int.tryParse(_age.trim()) ?? 0,
         );
         if (!mounted) return;
-        widget.onRegister(_email.trim().toLowerCase(), null);
+        widget.onRegister(
+          _email.trim().toLowerCase(),
+          null,
+          _username.trim(),
+        );
       }
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -583,7 +601,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => LoginScreen(
-              onLogin: (email, [userId]) => widget.onRegister(email, userId),
+              onLogin: (email, [userId, username]) =>
+                  widget.onRegister(email, userId, username),
             ),
           ),
         );
@@ -808,9 +827,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: _passwordStrong ? _submit : () {},
-                                label: 'Verify & Create Account',
-                                disabled: !_passwordStrong,
+                                onTap: (!_codeSent || _passwordStrong)
+                                    ? _submit
+                                    : () {},
+                                label: _codeSent
+                                    ? 'Verify & Create Account'
+                                    : 'Send Verification Code',
+                                disabled: _codeSent && !_passwordStrong,
                               ),
                             ],
                           ),

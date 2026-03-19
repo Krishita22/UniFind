@@ -96,6 +96,7 @@ class MarketplaceUpdateInput {
   final String condition;
   final String location;
   final double price;
+  final String? imageUrl;
   const MarketplaceUpdateInput({
     required this.title,
     required this.description,
@@ -103,6 +104,7 @@ class MarketplaceUpdateInput {
     required this.condition,
     required this.location,
     required this.price,
+    this.imageUrl,
   });
 }
 
@@ -111,11 +113,13 @@ class LostFoundUpdateInput {
   final String description;
   final String category;
   final String location;
+  final String? imageUrl;
   const LostFoundUpdateInput({
     required this.title,
     required this.description,
     required this.category,
     required this.location,
+    this.imageUrl,
   });
 }
 

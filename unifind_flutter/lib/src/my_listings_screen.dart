@@ -27,8 +27,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     final descCtrl = TextEditingController(text: item.description);
     final priceCtrl = TextEditingController(text: item.price.toStringAsFixed(0));
     final locCtrl = TextEditingController(text: item.location);
+    final picker = ImagePicker();
     String category = item.category;
     String condition = item.condition;
+    XFile? selectedImage;
+    Uint8List? selectedImageBytes;
+    bool saving = false;
     String? error;
 
     await showDialog<void>(
@@ -68,6 +72,79 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Location')),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Image',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: cText.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: saving
+                      ? null
+                      : () async {
+                          final picked = await picker.pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 55,
+                            maxWidth: 1200,
+                            maxHeight: 1200,
+                          );
+                          if (picked == null) return;
+                          final bytes = await picked.readAsBytes();
+                          setDialogState(() {
+                            selectedImage = picked;
+                            selectedImageBytes = bytes;
+                          });
+                        },
+                  child: Container(
+                    width: double.infinity,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      color: cBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cBorder),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: selectedImageBytes != null
+                          ? Image.memory(
+                              selectedImageBytes!,
+                              fit: BoxFit.cover,
+                            )
+                          : (item.image.trim().isNotEmpty
+                                ? Image.network(
+                                    item.image,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Center(
+                                      child: Text(
+                                        'Current image unavailable',
+                                        style: TextStyle(color: cMuted),
+                                      ),
+                                    ),
+                                  )
+                                : const Center(
+                                    child: Text(
+                                      'Tap to add image',
+                                      style: TextStyle(color: cMuted),
+                                    ),
+                                  )),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Tap image to change',
+                    style: TextStyle(fontSize: 11, color: cMuted),
+                  ),
+                ),
                 if (error != null) ...[
                   const SizedBox(height: 8),
                   Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)),
@@ -81,6 +158,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               label: 'Save',
               icon: Icons.check_rounded,
               onTap: () async {
+                if (saving) return;
                 final title = titleCtrl.text.trim();
                 final desc = descCtrl.text.trim();
                 final price = double.tryParse(priceCtrl.text.trim()) ?? 0;
@@ -89,18 +167,38 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   setDialogState(() => error = 'Please complete all fields with a valid price.');
                   return;
                 }
-                await widget.onEditMarketplace(
-                  item,
-                  MarketplaceUpdateInput(
-                    title: title,
-                    description: desc,
-                    category: category,
-                    condition: condition,
-                    location: loc,
-                    price: price,
-                  ),
-                );
-                if (mounted) Navigator.pop(ctx);
+                setDialogState(() {
+                  saving = true;
+                  error = null;
+                });
+                try {
+                  String? imageUrl;
+                  if (selectedImage != null && selectedImageBytes != null) {
+                    imageUrl = await uploadImage(
+                      selectedImage!.path,
+                      selectedImageBytes!,
+                    );
+                  }
+
+                  await widget.onEditMarketplace(
+                    item,
+                    MarketplaceUpdateInput(
+                      title: title,
+                      description: desc,
+                      category: category,
+                      condition: condition,
+                      location: loc,
+                      price: price,
+                      imageUrl: imageUrl,
+                    ),
+                  );
+                  if (mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  setDialogState(() {
+                    error = 'Failed to save changes. ${e.toString().replaceFirst('Exception: ', '')}';
+                    saving = false;
+                  });
+                }
               },
             ),
           ],
@@ -113,7 +211,11 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     final titleCtrl = TextEditingController(text: item.title);
     final descCtrl = TextEditingController(text: item.description);
     final locCtrl = TextEditingController(text: item.location);
+    final picker = ImagePicker();
     String category = item.category;
+    XFile? selectedImage;
+    Uint8List? selectedImageBytes;
+    bool saving = false;
     String? error;
 
     await showDialog<void>(
@@ -138,6 +240,79 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 ),
                 const SizedBox(height: 8),
                 TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Location')),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Image',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: cText.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                GestureDetector(
+                  onTap: saving
+                      ? null
+                      : () async {
+                          final picked = await picker.pickImage(
+                            source: ImageSource.gallery,
+                            imageQuality: 55,
+                            maxWidth: 1200,
+                            maxHeight: 1200,
+                          );
+                          if (picked == null) return;
+                          final bytes = await picked.readAsBytes();
+                          setDialogState(() {
+                            selectedImage = picked;
+                            selectedImageBytes = bytes;
+                          });
+                        },
+                  child: Container(
+                    width: double.infinity,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      color: cBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cBorder),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: selectedImageBytes != null
+                          ? Image.memory(
+                              selectedImageBytes!,
+                              fit: BoxFit.cover,
+                            )
+                          : (item.image.trim().isNotEmpty
+                                ? Image.network(
+                                    item.image,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Center(
+                                      child: Text(
+                                        'Current image unavailable',
+                                        style: TextStyle(color: cMuted),
+                                      ),
+                                    ),
+                                  )
+                                : const Center(
+                                    child: Text(
+                                      'Tap to add image',
+                                      style: TextStyle(color: cMuted),
+                                    ),
+                                  )),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Tap image to change',
+                    style: TextStyle(fontSize: 11, color: cMuted),
+                  ),
+                ),
                 if (error != null) ...[
                   const SizedBox(height: 8),
                   Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)),
@@ -151,6 +326,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
               label: 'Save',
               icon: Icons.check_rounded,
               onTap: () async {
+                if (saving) return;
                 final title = titleCtrl.text.trim();
                 final desc = descCtrl.text.trim();
                 final loc = locCtrl.text.trim();
@@ -158,16 +334,35 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   setDialogState(() => error = 'Please complete all required fields.');
                   return;
                 }
-                await widget.onEditLostFound(
-                  item,
-                  LostFoundUpdateInput(
-                    title: title,
-                    description: desc,
-                    category: category,
-                    location: loc,
-                  ),
-                );
-                if (mounted) Navigator.pop(ctx);
+                setDialogState(() {
+                  saving = true;
+                  error = null;
+                });
+                try {
+                  String? imageUrl;
+                  if (selectedImage != null && selectedImageBytes != null) {
+                    imageUrl = await uploadImage(
+                      selectedImage!.path,
+                      selectedImageBytes!,
+                    );
+                  }
+                  await widget.onEditLostFound(
+                    item,
+                    LostFoundUpdateInput(
+                      title: title,
+                      description: desc,
+                      category: category,
+                      location: loc,
+                      imageUrl: imageUrl,
+                    ),
+                  );
+                  if (mounted) Navigator.pop(ctx);
+                } catch (e) {
+                  setDialogState(() {
+                    error = 'Failed to save changes. ${e.toString().replaceFirst('Exception: ', '')}';
+                    saving = false;
+                  });
+                }
               },
             ),
           ],
