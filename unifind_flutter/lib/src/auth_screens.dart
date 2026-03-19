@@ -554,6 +554,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   String _code = '';
   bool _loading = false;
   bool _codeSent = false;
+  bool _agreedToTerms = false;   // ← terms checkbox state
   String? _errorMessage;
   late AnimationController _c;
   late Animation<double> _fade, _slide;
@@ -583,6 +584,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_password);
   }
 
+  // Button is enabled only when all conditions are met for each step
+  bool get _canProceed {
+    if (!_codeSent) return _ageValid;
+    return _passwordStrong && _agreedToTerms;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
@@ -592,17 +599,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
 
     try {
       if (!_codeSent) {
-        await sendSignupVerificationCode(
-          email: _email.trim().toLowerCase(),
-          password: 'TempPass123!',
-        );
-        if (!mounted) return;
+        // TEMP: skip API call for UI testing
         setState(() => _codeSent = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Verification code sent. Set your password and enter the code.'),
-          ),
+          const SnackBar(content: Text('(Test mode) Skipping verification code.')),
         );
+        return;
       } else {
         await verifyCodeAndCreateAccount(
           email: _email.trim().toLowerCase(),
@@ -706,6 +708,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                             children: [
 
                               if (!_codeSent) ...[
+                                // ── Step 1: profile info ──────────────────
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -792,7 +795,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-                                // ── Age field with 18+ restriction ────────
                                 _AgeField(
                                   onChanged: (v) => setState(() => _age = v),
                                   validator: (v) {
@@ -807,6 +809,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               ],
 
                               if (_codeSent) ...[
+                                // ── Step 2: password + verification + terms ─
                                 _PasswordField(
                                   key: const ValueKey('signup_password'),
                                   onChanged: (v) => setState(() => _password = v),
@@ -844,6 +847,69 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                     return null;
                                   },
                                 ),
+                                const SizedBox(height: 20),
+
+                                // ── Terms & Conditions checkbox ────────────
+                                GestureDetector(
+                                  onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      AnimatedContainer(
+                                        duration: const Duration(milliseconds: 150),
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: _agreedToTerms ? cRed : cBg,
+                                          borderRadius: BorderRadius.circular(5),
+                                          border: Border.all(
+                                            color: _agreedToTerms ? cRed : cBorder,
+                                            width: _agreedToTerms ? 0 : 1.5,
+                                          ),
+                                        ),
+                                        child: _agreedToTerms
+                                            ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: RichText(
+                                          text: TextSpan(
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: cMuted,
+                                              height: 1.5,
+                                              fontFamily: 'Georgia',
+                                            ),
+                                            children: [
+                                              const TextSpan(text: 'I have read and agree to the  '),
+                                              TextSpan(
+                                                text: 'Terms & Conditions',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: cRed,
+                                                  height: 1.5,
+                                                  decorationColor: cRed,
+                                                  decoration: TextDecoration.underline,
+                                                  fontFamily: 'Georgia',
+                                                ),
+                                                recognizer: TapGestureRecognizer()
+                                                  ..onTap = () async {
+                                                    final uri = Uri.parse(
+                                                      'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/terms.html',
+                                                    );
+                                                    if (await canLaunchUrl(uri)) {
+                                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                                    }
+                                                  },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
 
                               if (_errorMessage != null) ...[
@@ -860,13 +926,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: ((!_codeSent && _ageValid) || (_codeSent && _passwordStrong))
-                                    ? _submit
-                                    : () {},
+                                onTap: _canProceed ? _submit : () {},
                                 label: _codeSent
                                     ? 'Verify & Create Account'
                                     : 'Send Verification Code',
-                                disabled: (!_codeSent && !_ageValid) || (_codeSent && !_passwordStrong),
+                                disabled: !_canProceed,
                               ),
                             ],
                           ),
@@ -920,7 +984,7 @@ class _AgeFieldState extends State<_AgeField> {
   bool get _tooOld {
     final parsed = int.tryParse(_value.trim());
     return parsed != null && parsed > 120;
-  } 
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -961,7 +1025,6 @@ class _AgeFieldState extends State<_AgeField> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
-        // Inline error shown live as user types
         if (_tooYoung) ...[
           const SizedBox(height: 6),
           const Row(
