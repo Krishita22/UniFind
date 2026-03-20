@@ -1,7 +1,7 @@
 part of '../main.dart';
 
 class LandingPage extends StatelessWidget {
-  final void Function(String) onLogin;
+  final AuthSuccessCallback onLogin;
   const LandingPage({super.key, required this.onLogin});
 
   static final _aboutKey = GlobalKey();
@@ -19,8 +19,8 @@ class LandingPage extends StatelessWidget {
       pageBuilder: (_, a, __) => FadeTransition(
         opacity: a,
         child: LoginScreen(
-          onLogin: (email) {
-            onLogin(email);
+          onLogin: (email, [userId, username]) {
+            onLogin(email, userId, username);
             Navigator.of(ctx).popUntil((r) => r.isFirst);
           },
         ),
@@ -33,8 +33,8 @@ void _openRegister(BuildContext ctx) {
     pageBuilder: (_, a, __) => FadeTransition(
       opacity: a,
       child: RegistrationScreen(
-        onRegister: (email) {
-          onLogin(email);
+        onRegister: (email, [userId, username]) {
+          onLogin(email, userId, username);
           Navigator.of(ctx).popUntil((r) => r.isFirst);
         },
       ),
@@ -874,7 +874,7 @@ class _FaqSection extends StatelessWidget {
       _FaqData('Who can use UniFind?', 'UniFind is exclusively for Montclair State University students, faculty, and staff. You must sign up with a valid MSU email address to access the platform.'),
       _FaqData('Is UniFind safe?', 'Yes! UniFind will have administrators monitoring listings and users to ensure listings are legitimate and all users are verified MSU students and faculty.'),
       _FaqData('How do I post an item for sale?', 'After signing in, tap the "Post" tab at the bottom of the app. Fill in the title, description, price, category, and location. It takes less than a minute!'),
-      _FaqData('What categories are available?', 'You can list items under Textbooks, Electronics, Furniture, Clothing, and Other. The Lost & Found board supports Electronics, Bags, Keys, ID/Cards, Clothing, and Other.'),
+      _FaqData('What categories are available?', 'Marketplace includes Beauty & Personal Care, Clothing, Dorm Essentials, Electronics, Instruments, Kitchen & Appliances, Lab Equipment, Other, School Supplies, Sports & Fitness, Textbooks, and Tickets. Lost & Found includes Electronics, Bags, Keys, ID/Cards, Wallets, Water Bottles, Clothing, Accessories, and Other.'),
       _FaqData('How does Lost & Found work?', 'Students can post items they\'ve lost or found on campus. Browse the feed, filter by category, and reach out to reunite items with their owners.'),
       _FaqData('How do I contact a seller?', 'Once signed in and viewing a listing, you can message the seller directly through the app to arrange a meetup or ask questions.'),
     ];
