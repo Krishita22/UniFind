@@ -1,5 +1,5 @@
-
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 
@@ -85,14 +85,24 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
   required String email,
   required String password,
   required String code,
+  required String firstName,
+  required String lastName,
+  required String username,
+  required String role,
+  required int age,
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/verify_code_register.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
-      'email': email,
-      'password': password,
-      'code': code,
+      'email':      email,
+      'password':   password,
+      'code':       code,
+      'first_name': firstName,
+      'last_name':  lastName,
+      'username':   username,
+      'role':       role,
+      'age':        age,
     }),
   );
 
@@ -141,8 +151,8 @@ Future<Map<String, dynamic>> resetPassword({
     Uri.parse('$_baseUrl/reset_password.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
-      'email': email,
-      'code': code,
+      'email':        email,
+      'code':         code,
       'new_password': newPassword,
     }),
   );
@@ -260,6 +270,48 @@ Future<Map<String, dynamic>> createListing({
   }
 }
 
+Future<Map<String, dynamic>> updateListing({
+  required String id,
+  required String title,
+  required String description,
+  required double price,
+  required String category,
+  required String condition,
+  required String location,
+  required String email,
+  String? imageUrl,
+}) async {
+  final payload = <String, dynamic>{
+    'id': id,
+    'title': title,
+    'description': description,
+    'price': price,
+    'category': category,
+    'condition': condition,
+    'location': location,
+    'email': email,
+  };
+  if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+    payload['image'] = imageUrl.trim();
+    payload['image_url'] = imageUrl.trim();
+  }
+
+  final response = await http.post(
+    Uri.parse('$_baseUrl/update_listing.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode(payload),
+  );
+
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to update listing.',
+    code: data['error_code']?.toString(),
+  );
+}
+
 // POST LOST & FOUND ITEM
 // Sends a new lost or found item to post_lostfound.php
 // Returns a Map with success and the new item's ID
@@ -294,6 +346,117 @@ Future<Map<String, dynamic>> createLostFoundItem({
   } else {
     throw ApiException(
       data['error']?.toString() ?? 'Failed to post lost & found item.',
+      code: data['error_code']?.toString(),
+    );
+  }
+}
+
+Future<Map<String, dynamic>> updateLostFoundItem({
+  required String id,
+  required String title,
+  required String description,
+  required String category,
+  required String location,
+  required String email,
+  String? imageUrl,
+}) async {
+  final payload = <String, dynamic>{
+    'id': id,
+    'title': title,
+    'description': description,
+    'category': category,
+    'location': location,
+    'email': email,
+  };
+  if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+    payload['image'] = imageUrl.trim();
+    payload['image_url'] = imageUrl.trim();
+  }
+
+  final response = await http.post(
+    Uri.parse('$_baseUrl/update_lostfound.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode(payload),
+  );
+
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to update lost/found item.',
+    code: data['error_code']?.toString(),
+  );
+}
+
+Future<Map<String, dynamic>> createLostFoundMatch({
+  required String lostItemId,
+  required String email,
+  required String foundLocation,
+  required String foundWhen,
+  required String matchDetails,
+  String contactNote = '',
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/post_lostfound_match.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'lost_item_id': lostItemId,
+      'email': email,
+      'found_location': foundLocation,
+      'found_when': foundWhen,
+      'match_details': matchDetails,
+      'contact_note': contactNote,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  } else {
+    throw ApiException(
+      data['error']?.toString() ?? 'Failed to submit found match.',
+      code: data['error_code']?.toString(),
+    );
+  }
+}
+
+Future<Map<String, dynamic>> claimLostFoundItem({
+  required String itemId,
+  required String email,
+  required String proofDetails,
+  String identifyingDetails = '',
+  String lastSeenContext = '',
+  String contactNote = '',
+}) async {
+  http.Response response;
+  try {
+    response = await http
+        .post(
+          Uri.parse('$_baseUrl/claim_lostfound.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'item_id': itemId,
+            'email': email,
+            'proof_details': proofDetails,
+            'identifying_details': identifyingDetails,
+            'last_seen_context': lastSeenContext,
+            'contact_note': contactNote,
+          }),
+        )
+        .timeout(const Duration(seconds: 12));
+  } on TimeoutException {
+    throw const ApiException('Claim request timed out.');
+  }
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  } else {
+    throw ApiException(
+      data['error']?.toString() ?? 'Failed to claim item.',
       code: data['error_code']?.toString(),
     );
   }
