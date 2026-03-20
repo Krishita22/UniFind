@@ -2,7 +2,12 @@ part of '../main.dart';
 
 class PostListingScreen extends StatefulWidget {
   final void Function(NewListingInput) onPost;
-  const PostListingScreen({super.key, required this.onPost});
+  final ListingType initialType;
+  const PostListingScreen({
+    super.key,
+    required this.onPost,
+    this.initialType = ListingType.marketplace,
+  });
 
   @override
   State<PostListingScreen> createState() => _PostListingScreenState();
@@ -10,7 +15,7 @@ class PostListingScreen extends StatefulWidget {
 
 class _PostListingScreenState extends State<PostListingScreen> {
   final _formKey = GlobalKey<FormState>();
-  ListingType _type = ListingType.marketplace;
+  late ListingType _type;
   String _title = '', _desc = '', _cat = '', _cond = 'Good', _loc = '';
   double _price = 0;
   XFile? _selectedImage;
@@ -21,6 +26,12 @@ class _PostListingScreenState extends State<PostListingScreen> {
   List<String> get _cats => _type == ListingType.marketplace
       ? categories.where((c) => c != 'All').toList()
       : lostFoundCategories.where((c) => c != 'All').toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _type = widget.initialType;
+  }
 
   Future<void> _pickImage() async {
     showModalBottomSheet(
