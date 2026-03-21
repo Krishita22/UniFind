@@ -5,11 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
 import 'api_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
 part 'src/lost_found_screen.dart';
 part 'src/post_listing_screen.dart';
+part 'src/profile_screen.dart';
 part 'src/my_listings_screen.dart';
 part 'src/documentation_screen.dart';
 part 'src/item_detail_screen.dart';
@@ -40,6 +42,72 @@ const Duration kFast = Duration(milliseconds: 180);
 const Duration kMid = Duration(milliseconds: 320);
 const Duration kSlow = Duration(milliseconds: 520);
 const Duration kPage = Duration(milliseconds: 420);
+
+// ─── BREADCRUMB LABELS ───────────────────────────────────────────────────────
+const List<List<String>> _tabBreadcrumbs = [
+  ['Home', 'Marketplace'],
+  ['Home', 'Lost & Found'],
+  ['Home', 'Post Item'],
+  ['Home', 'My Listings'],
+  ['Home', 'Docs'],
+  ['Home', 'Profile'],
+];
+
+// ─── BREADCRUMB BAR ──────────────────────────────────────────────────────────
+class _BreadcrumbBar extends StatelessWidget {
+  final int tab;
+  final VoidCallback? onHome;
+  const _BreadcrumbBar({required this.tab, this.onHome});
+
+  @override
+  Widget build(BuildContext context) {
+    final crumbs = _tabBreadcrumbs[tab.clamp(0, _tabBreadcrumbs.length - 1)];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: cRedLight,
+        border: Border(bottom: BorderSide(color: cBorder, width: 1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.home_outlined, size: 12, color: cMuted),
+          const SizedBox(width: 4),
+          for (int i = 0; i < crumbs.length; i++) ...[
+            if (i > 0) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, size: 13, color: cMuted),
+              const SizedBox(width: 4),
+            ],
+            if (i == crumbs.length - 1)
+              Text(
+                crumbs[i],
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: cRed,
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: i == 0 ? onHome : null,
+                child: Text(
+                  crumbs[i],
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: cMuted,
+                    decoration: i == 0 ? TextDecoration.underline : null,
+                    decorationColor: cMuted,
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 void main() => runApp(const UniFindApp());
 
@@ -682,36 +750,47 @@ class _UniFindAppState extends State<UniFindApp> {
                   ),
                 ],
               ),
-              body: IndexedStack(
-                index: _tab,
+              body: Column(
                 children: [
-                  MarketplaceScreen(items: _market, onListItem: _goToPostTab),
-                  LostFoundScreen(
-                    items: _lostFound,
-                    onCreateLost: () => _goToPostTab(ListingType.lost),
-                    onCreateFound: () => _goToPostTab(ListingType.found),
-                    onClaimLost: _claimLostItem,
-                    onPostFoundMatch: _postFoundMatch,
-                    submittedClaimItemIds: _submittedClaimItemIds,
-                    submittedMatchItemIds: _submittedMatchItemIds,
+                  _BreadcrumbBar(
+                    tab: _tab,
+                    onHome: () => setState(() => _tab = 0),
                   ),
-                  PostListingScreen(
-                    key: ValueKey(_postFormNonce),
-                    onPost: _addListing,
-                    initialType: _postDefaultType,
+                  Expanded(
+                    child: IndexedStack(
+                      index: _tab,
+                      children: [
+                        MarketplaceScreen(items: _market, onListItem: _goToPostTab),
+                        LostFoundScreen(
+                          items: _lostFound,
+                          onCreateLost: () => _goToPostTab(ListingType.lost),
+                          onCreateFound: () => _goToPostTab(ListingType.found),
+                          onClaimLost: _claimLostItem,
+                          onPostFoundMatch: _postFoundMatch,
+                          submittedClaimItemIds: _submittedClaimItemIds,
+                          submittedMatchItemIds: _submittedMatchItemIds,
+                        ),
+                        PostListingScreen(
+                          key: ValueKey(_postFormNonce),
+                          onPost: _addListing,
+                          initialType: _postDefaultType,
+                        ),
+                        MyListingsScreen(
+                          marketplaceItems: _market.where(_isMyMarketplaceItem).toList(),
+                          lostFoundItems: _lostFound.where(_isMyLostFoundItem).toList(),
+                          onListItem: _goToPostTab,
+                          onEditMarketplace: _editMarketplaceItem,
+                          onEditLostFound: _editLostFoundItem,
+                        ),
+                        const DocumentationScreen(),
+                        ProfileScreen(
+                          email: _email,
+                          username: _username,
+                          onLogout: () { _logout(); _clearSession(); },
+                        ),
+                      ],
+                    ),
                   ),
-                  MyListingsScreen(
-                    marketplaceItems: _market
-                        .where(_isMyMarketplaceItem)
-                        .toList(),
-                    lostFoundItems: _lostFound
-                        .where(_isMyLostFoundItem)
-                        .toList(),
-                    onListItem: _goToPostTab,
-                    onEditMarketplace: _editMarketplaceItem,
-                    onEditLostFound: _editLostFoundItem,
-                  ),
-                  const DocumentationScreen(),
                 ],
               ),
               bottomNavigationBar: NavigationBar(
@@ -743,6 +822,10 @@ class _UniFindAppState extends State<UniFindApp> {
                   NavigationDestination(
                     icon: Icon(Icons.menu_book_outlined),
                     label: 'Docs',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.person_outline_rounded),
+                    label: 'Profile',
                   ),
                 ],
               ),
