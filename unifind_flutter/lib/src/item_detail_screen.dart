@@ -2,7 +2,8 @@ part of '../main.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final MarketplaceItem item;
-  const ItemDetailScreen({super.key, required this.item});
+  final String currentUserEmail;
+  const ItemDetailScreen({super.key, required this.item, required this.currentUserEmail});
 
   String _asSellerUsername() {
     final raw = item.seller.trim();
@@ -22,6 +23,19 @@ class ItemDetailScreen extends StatelessWidget {
             expandedHeight: 280,
             pinned: true,
             backgroundColor: cNavBg,
+            actions: [
+            IconButton(
+              icon: const Icon(Icons.flag_outlined),
+              tooltip: 'Report listing',
+              onPressed: () => showReportDialog(
+                context: context,
+                targetId: item.id,
+                targetType: 'listing',
+                targetTitle: item.title,
+                reporterEmail: currentUserEmail,
+              ),
+            ),
+          ],
             flexibleSpace: FlexibleSpaceBar(
               background: Image.network(
                 item.image,

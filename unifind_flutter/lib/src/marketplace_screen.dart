@@ -3,7 +3,8 @@ part of '../main.dart';
 class MarketplaceScreen extends StatefulWidget {
   final List<MarketplaceItem> items;
   final VoidCallback onListItem;
-  const MarketplaceScreen({super.key, required this.items, required this.onListItem});
+  final String currentUserEmail;
+  const MarketplaceScreen({super.key, required this.items, required this.onListItem, required this.currentUserEmail});
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -226,7 +227,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   ),
                   itemBuilder: (ctx, i) => _MarketCard(
                     item: filtered[i],
-                    onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: filtered[i]))),
+                    onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: filtered[i], currentUserEmail: widget.currentUserEmail))),
                   ),
                 ),
         ),

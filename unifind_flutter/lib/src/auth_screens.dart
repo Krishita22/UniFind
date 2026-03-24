@@ -38,6 +38,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         return 'No account found for this username. Please sign up first.';
       case 'ACCOUNT_UNVERIFIED':
         return 'Your account is not verified yet. Please complete verification.';
+      case 'ACCOUNT_BANNED':
+        return 'Your account has been permanently banned from UniFind.';
       default:
         return e.message;
     }
@@ -53,6 +55,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     try {
       final data = await loginUser(_username.trim(), _password);
       final user = data['user'] as Map<String, dynamic>?;
+
+      print('DEBUG full response: $data');
+      print('DEBUG user map: $user');
+      print('DEBUG role value: ${user?['role']}');
+
       final loggedInEmail = (user?['email'] as String?) ?? _username.trim();
       final loggedInUserId = int.tryParse(
         (user?['id'] ??
@@ -71,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               as Object?)
           ?.toString()
           .trim();
+      final loggedInRole = (user?['role'] ?? data['role'] ?? '').toString().trim();
       if (!mounted) return;
       widget.onLogin(
         loggedInEmail,
@@ -78,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         (loggedInUsername == null || loggedInUsername.isEmpty)
             ? _username.trim()
             : loggedInUsername,
+        loggedInRole,
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -615,8 +624,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => LoginScreen(
-              onLogin: (email, [userId, username]) =>
-                  widget.onRegister(email, userId, username),
+              onLogin: (email, [userId, username, role]) =>
+                widget.onRegister(email, userId, username, role),
             ),
           ),
         );
