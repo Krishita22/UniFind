@@ -101,7 +101,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                   onTap: () => setState(() => _cat = 'All'),
                 ),
               ),
-              ...lostFoundCategories.map((c) => Padding(
+              ...categories.map((c) => Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: _Chip(label: c, selected: _cat == c, onTap: () => setState(() => _cat = c)),
               )),
