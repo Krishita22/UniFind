@@ -8,7 +8,6 @@ class LostFoundScreen extends StatefulWidget {
   final Future<void> Function(LostFoundItem item, FoundMatchInput input) onPostFoundMatch;
   final Set<String> submittedClaimItemIds;
   final Set<String> submittedMatchItemIds;
-  final String currentUserEmail;
   const LostFoundScreen({
     super.key,
     required this.items,
@@ -18,7 +17,6 @@ class LostFoundScreen extends StatefulWidget {
     required this.onPostFoundMatch,
     required this.submittedClaimItemIds,
     required this.submittedMatchItemIds,
-    required this.currentUserEmail,
   });
 
   @override
@@ -123,7 +121,6 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                     onPostFoundMatch: (input) => widget.onPostFoundMatch(filtered[i], input),
                     claimSubmittedByMe: widget.submittedClaimItemIds.contains(filtered[i].id),
                     matchSubmittedByMe: widget.submittedMatchItemIds.contains(filtered[i].id),
-                    currentUserEmail: widget.currentUserEmail,
                   ),
                 ),
         ),
@@ -138,14 +135,12 @@ class _LostFoundCard extends StatefulWidget {
   final Future<void> Function(FoundMatchInput input) onPostFoundMatch;
   final bool claimSubmittedByMe;
   final bool matchSubmittedByMe;
-  final String currentUserEmail;
   const _LostFoundCard({
     required this.item,
     required this.onClaim,
     required this.onPostFoundMatch,
     required this.claimSubmittedByMe,
     required this.matchSubmittedByMe,
-    required this.currentUserEmail,
   });
 
   @override
@@ -578,27 +573,6 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
                         ),
                       ),
                     ],
-                    // ── Report button ──
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.flag_outlined, size: 13),
-                        label: const Text('Report'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: cMuted,
-                          textStyle: const TextStyle(fontSize: 11),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        ),
-                        onPressed: () => showReportDialog(
-                          context: context,
-                          targetId: widget.item.id,
-                          targetType: 'lostfound',
-                          targetTitle: widget.item.title,
-                          reporterEmail: widget.currentUserEmail,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
