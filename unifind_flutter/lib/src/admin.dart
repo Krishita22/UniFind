@@ -292,29 +292,44 @@ class _StandardUserShell extends StatelessWidget {
         ),
         actions: [IconButton(tooltip: 'Log out', onPressed: onLogout, icon: const Icon(Icons.logout))],
       ),
-      body: IndexedStack(
-        index: tab,
+      body: Column(
         children: [
-          MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email),
-          LostFoundScreen(
-            items: lostFound,
-            onCreateLost: () => goToPostTab(ListingType.lost),
-            onCreateFound: () => goToPostTab(ListingType.found),
-            onClaimLost: claimLostItem,
-            onPostFoundMatch: postFoundMatch,
-            submittedClaimItemIds: submittedClaimItemIds,
-            submittedMatchItemIds: submittedMatchItemIds,
-            currentUserEmail: email,
+          _BreadcrumbBar(
+            tab: tab,
+            onHome: () => onTabChanged(0),
           ),
-          PostListingScreen(key: ValueKey(postFormNonce), onPost: addListing, initialType: postDefaultType),
-          MyListingsScreen(
-            marketplaceItems: market.where(_isMyMarketplaceItem).toList(),
-            lostFoundItems: lostFound.where(_isMyLostFoundItem).toList(),
-            onListItem: () => goToPostTab(),
-            onEditMarketplace: editMarketplace,
-            onEditLostFound: editLostFound,
+          Expanded(
+            child: IndexedStack(
+              index: tab,
+              children: [
+                MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email),
+                LostFoundScreen(
+                  items: lostFound,
+                  onCreateLost: () => goToPostTab(ListingType.lost),
+                  onCreateFound: () => goToPostTab(ListingType.found),
+                  onClaimLost: claimLostItem,
+                  onPostFoundMatch: postFoundMatch,
+                  submittedClaimItemIds: submittedClaimItemIds,
+                  submittedMatchItemIds: submittedMatchItemIds,
+                  currentUserEmail: email,
+                ),
+                PostListingScreen(key: ValueKey(postFormNonce), onPost: addListing, initialType: postDefaultType),
+                MyListingsScreen(
+                  marketplaceItems: market.where(_isMyMarketplaceItem).toList(),
+                  lostFoundItems: lostFound.where(_isMyLostFoundItem).toList(),
+                  onListItem: () => goToPostTab(),
+                  onEditMarketplace: editMarketplace,
+                  onEditLostFound: editLostFound,
+                ),
+                const DocumentationScreen(),
+                ProfileScreen(
+                  email: email,
+                  username: username,
+                  onLogout: onLogout,
+                ),
+              ],
+            ),
           ),
-          const DocumentationScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -326,6 +341,7 @@ class _StandardUserShell extends StatelessWidget {
           NavigationDestination(icon: Icon(Icons.add_circle_outline), label: 'Post'),
           NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'My Listings'),
           NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Docs'),
+          NavigationDestination(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
         ],
       ),
     );
