@@ -808,3 +808,21 @@ Future<Map<String, dynamic>> adminRemoveListing({
 
 
 
+Future<List<Map<String, dynamic>>> getUserMarketListings(int userId) async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_user_listings.php?user_id=$userId'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load listings.');
+}
+
+Future<List<Map<String, dynamic>>> getUserLostFoundListings(int userId) async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_user_lostfound.php?user_id=$userId'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load lost & found.');
+}
+

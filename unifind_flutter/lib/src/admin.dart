@@ -1,4 +1,3 @@
-
 part of '../main.dart';
 
 // ─── ADMIN DATA MODELS ────────────────────────────────────────────────────────
@@ -29,6 +28,7 @@ extension UserRoleExt on UserRole {
 }
 
 enum DenialReason {
+  na,
   inappropriateContent,
   prohibitedItem,
   insufficientDescription,
@@ -40,6 +40,7 @@ enum DenialReason {
 extension DenialReasonLabel on DenialReason {
   String get label {
     switch (this) {
+      case DenialReason.na:                      return 'N/A';
       case DenialReason.inappropriateContent:    return 'Inappropriate Content';
       case DenialReason.prohibitedItem:          return 'Prohibited Item';
       case DenialReason.insufficientDescription: return 'Insufficient Description';
@@ -163,8 +164,6 @@ class MatchSummary {
 
 // ═════════════════════════════════════════════════════════════════════════════
 // AUTH WRAPPER
-// Place this widget in main.dart's build() instead of the inline Scaffold.
-// The wrapper reads the role and routes to the correct view.
 // ═════════════════════════════════════════════════════════════════════════════
 
 class RoleAuthWrapper extends StatelessWidget {
@@ -172,8 +171,6 @@ class RoleAuthWrapper extends StatelessWidget {
   final String email, username;
   final int? userId;
   final VoidCallback onLogout;
-
-  // Standard app dependencies
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
   final int tab, postFormNonce;
@@ -218,7 +215,6 @@ class RoleAuthWrapper extends StatelessWidget {
   }
 }
 
-// Standard scaffold extracted from main.dart so the wrapper can render it.
 class _StandardUserShell extends StatelessWidget {
   final String email, username;
   final int? userId;
@@ -352,6 +348,7 @@ class AdminApp extends StatefulWidget {
 class _AdminAppState extends State<AdminApp> {
   AdminTab _tab = AdminTab.dashboard;
   bool _loading = true;
+  bool _listingInitialShowActive = false;
 
   AdminStats _stats = const AdminStats(totalActiveListings: 0, pendingApprovals: 0, newUsersThisWeek: 0, openReports: 0, recentActivity: []);
   final List<PendingListing>     _pending  = [];
@@ -361,7 +358,10 @@ class _AdminAppState extends State<AdminApp> {
   final List<AdminLostFoundItem> _lf       = [];
 
   @override
-  void initState() { super.initState(); _loadAll(); }
+  void initState() {
+    super.initState();
+    _loadAll();
+  }
 
   String _s(dynamic v) => v?.toString() ?? '';
   DateTime _d(dynamic v) => DateTime.tryParse(v?.toString() ?? '') ?? DateTime.now();
@@ -370,16 +370,23 @@ class _AdminAppState extends State<AdminApp> {
     if (!mounted) return;
     setState(() => _loading = true);
     try {
-      final r = await Future.wait([getAdminStats(), getAdminPendingListings(), getAdminActiveListings(), getAdminUsers(), getAdminReports(), getAdminLostFoundItems()]);
+      final r = await Future.wait([
+        getAdminStats(), getAdminPendingListings(), getAdminActiveListings(),
+        getAdminUsers(), getAdminReports(), getAdminLostFoundItems()
+      ]);
       final rawStats   = r[0] as Map<String, dynamic>;
       final rawPending = r[1] as List<Map<String, dynamic>>;
-      final rawActive  = r[2] as List<Map<String, dynamic>>; 
+      final rawActive  = r[2] as List<Map<String, dynamic>>;
       final rawUsers   = r[3] as List<Map<String, dynamic>>;
       final rawReports = r[4] as List<Map<String, dynamic>>;
       final rawLF      = r[5] as List<Map<String, dynamic>>;
 
       final activity = (rawStats['recent_activity'] as List? ?? [])
-          .map((a) => ActivityEntry(description: _s(a['description']), timestamp: _d(a['timestamp']), type: _s(a['type']).isEmpty ? 'listing' : _s(a['type']))).toList();
+          .map((a) => ActivityEntry(
+            description: _s(a['description']),
+            timestamp: _d(a['timestamp']),
+            type: _s(a['type']).isEmpty ? 'listing' : _s(a['type']),
+          )).toList();
 
       final pending = rawPending.map((p) => PendingListing(
         id: _s(p['id']), title: _s(p['title']), description: _s(p['description']),
@@ -394,7 +401,7 @@ class _AdminAppState extends State<AdminApp> {
       )).toList();
 
       final active = rawActive.map((p) => PendingListing(
-      id: _s(p['id']), title: _s(p['title']), description: _s(p['description']),
+        id: _s(p['id']), title: _s(p['title']), description: _s(p['description']),
         category: _s(p['category']), condition: _s(p['condition']).isEmpty ? 'Good' : _s(p['condition']),
         location: _s(p['location']), price: double.tryParse(_s(p['price'])) ?? 0,
         image: _s(p['image']).isEmpty ? _s(p['image_url']) : _s(p['image']),
@@ -419,7 +426,11 @@ class _AdminAppState extends State<AdminApp> {
         listingCount: int.tryParse(_s(u['listing_count'])) ?? 0,
       )).toList();
 
-      final rMap = {'inappropriate': ReportReason.inappropriate, 'scamming': ReportReason.scamming, 'spam': ReportReason.spam, 'harassment': ReportReason.harassment, 'fake_item': ReportReason.fakeItem, 'other': ReportReason.other};
+      final rMap = {
+        'inappropriate': ReportReason.inappropriate, 'scamming': ReportReason.scamming,
+        'spam': ReportReason.spam, 'harassment': ReportReason.harassment,
+        'fake_item': ReportReason.fakeItem, 'other': ReportReason.other,
+      };
       final reports = rawReports.map((r) => AdminReport(
         id: _s(r['id']), reporterEmail: _s(r['reporter_email']), targetId: _s(r['target_id']),
         targetType: _s(r['target_type']).isEmpty ? 'listing' : _s(r['target_type']),
@@ -430,8 +441,16 @@ class _AdminAppState extends State<AdminApp> {
       )).toList();
 
       final lfItems = rawLF.map((l) {
-        final claims = (l['claims'] as List? ?? []).map((c) => ClaimSummary(id: _s(c['id']), claimantEmail: _s(c['claimant_email']), proofDetails: _s(c['proof_details']), status: _s(c['status']), submittedAt: _d(c['created_at']))).toList();
-        final matches = (l['matches'] as List? ?? []).map((m) => MatchSummary(id: _s(m['id']), submitterEmail: _s(m['submitter_email']), matchDetails: _s(m['match_details']), foundLocation: _s(m['found_location']), status: _s(m['status']), submittedAt: _d(m['created_at']))).toList();
+        final claims = (l['claims'] as List? ?? []).map((c) => ClaimSummary(
+          id: _s(c['id']), claimantEmail: _s(c['claimant_email']),
+          proofDetails: _s(c['proof_details']), status: _s(c['status']),
+          submittedAt: _d(c['created_at']),
+        )).toList();
+        final matches = (l['matches'] as List? ?? []).map((m) => MatchSummary(
+          id: _s(m['id']), submitterEmail: _s(m['submitter_email']),
+          matchDetails: _s(m['match_details']), foundLocation: _s(m['found_location']),
+          status: _s(m['status']), submittedAt: _d(m['created_at']),
+        )).toList();
         return AdminLostFoundItem(
           id: _s(l['id']), title: _s(l['title']), description: _s(l['description']),
           category: _s(l['category']), type: _s(l['type']),
@@ -468,7 +487,10 @@ class _AdminAppState extends State<AdminApp> {
   NavigationDestination _dest(IconData icon, String label, {String? badge}) {
     Widget w = Icon(icon, color: Colors.white70);
     Widget s = Icon(icon, color: Colors.white);
-    if (badge != null) { w = Badge(label: Text(badge, style: const TextStyle(fontSize: 10)), child: w); s = Badge(label: Text(badge, style: const TextStyle(fontSize: 10)), child: s); }
+    if (badge != null) {
+      w = Badge(label: Text(badge, style: const TextStyle(fontSize: 10)), child: w);
+      s = Badge(label: Text(badge, style: const TextStyle(fontSize: 10)), child: s);
+    }
     return NavigationDestination(icon: w, selectedIcon: s, label: label);
   }
 
@@ -481,7 +503,11 @@ class _AdminAppState extends State<AdminApp> {
         title: Row(mainAxisSize: MainAxisSize.min, children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.white.withValues(alpha: 0.3))),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+            ),
             child: const Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.admin_panel_settings_rounded, size: 14, color: Colors.white),
               SizedBox(width: 6),
@@ -499,8 +525,22 @@ class _AdminAppState extends State<AdminApp> {
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: cRed))
           : IndexedStack(index: _tab.index, children: [
-              _AdminDashboard(stats: _stats, onNavigate: (t) => setState(() => _tab = t)),
-              _AdminListingsPanel(pendingListings: _pending, activeListings: _active, onRefresh: _loadAll),
+              _AdminDashboard(
+                stats: _stats,
+                onNavigate: (t, {bool showActive = false}) {
+                  setState(() {
+                    _listingInitialShowActive = showActive;
+                    _tab = t;
+                  });
+                },
+              ),
+              _AdminListingsPanel(
+                key: ValueKey('listings_$_listingInitialShowActive'),
+                pendingListings: _pending,
+                activeListings: _active,
+                onRefresh: _loadAll,
+                initialShowActive: _listingInitialShowActive,
+              ),
               _AdminLostFoundPanel(items: _lf, onRefresh: _loadAll),
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
               _AdminReportsPanel(reports: _reports, users: _users, onRefresh: _loadAll),
@@ -529,7 +569,7 @@ class _AdminAppState extends State<AdminApp> {
 
 class _AdminDashboard extends StatelessWidget {
   final AdminStats stats;
-  final void Function(AdminTab) onNavigate;
+  final void Function(AdminTab, {bool showActive}) onNavigate;
   const _AdminDashboard({required this.stats, required this.onNavigate});
 
   String _todayLabel() {
@@ -564,10 +604,10 @@ class _AdminDashboard extends StatelessWidget {
           shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 2, childAspectRatio: 1.6, crossAxisSpacing: 10, mainAxisSpacing: 10,
           children: [
-            _StatCard(label: 'Active Listings', value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded, color: cRed, onTap: () => onNavigate(AdminTab.listings)),
-            _StatCard(label: 'Pending Approvals', value: '${stats.pendingApprovals}', icon: Icons.pending_actions_rounded, color: const Color(0xFFE67E22), onTap: () => onNavigate(AdminTab.listings)),
-            _StatCard(label: 'New Users (7d)', value: '${stats.newUsersThisWeek}', icon: Icons.person_add_rounded, color: const Color(0xFF2980B9), onTap: () => onNavigate(AdminTab.users)),
-            _StatCard(label: 'Open Reports', value: '${stats.openReports}', icon: Icons.flag_rounded, color: const Color(0xFF8E44AD), onTap: () => onNavigate(AdminTab.reports)),
+            _StatCard(label: 'Active Listings',   value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded,       color: cRed,                       onTap: () => onNavigate(AdminTab.listings, showActive: true)),
+            _StatCard(label: 'Pending Approvals', value: '${stats.pendingApprovals}',    icon: Icons.pending_actions_rounded,   color: const Color(0xFFE67E22),    onTap: () => onNavigate(AdminTab.listings, showActive: false)),
+            _StatCard(label: 'New Users (7d)',    value: '${stats.newUsersThisWeek}',    icon: Icons.person_add_rounded,        color: const Color(0xFF2980B9),    onTap: () => onNavigate(AdminTab.users, showActive: false)),
+            _StatCard(label: 'Open Reports',      value: '${stats.openReports}',         icon: Icons.flag_rounded,              color: const Color(0xFF8E44AD),    onTap: () => onNavigate(AdminTab.reports, showActive: false)),
           ],
         ),
         const SizedBox(height: 20),
@@ -595,8 +635,10 @@ class _StatCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))]),
+        decoration: BoxDecoration(
+          color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Container(width: 36, height: 36, decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: color, size: 18)),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -646,9 +688,16 @@ class _ActivityTile extends StatelessWidget {
 
 class _AdminListingsPanel extends StatefulWidget {
   final List<PendingListing> pendingListings;
-  final List<PendingListing> activeListings; 
+  final List<PendingListing> activeListings;
   final VoidCallback onRefresh;
-  const _AdminListingsPanel({required this.pendingListings, required this.activeListings, required this.onRefresh});
+  final bool initialShowActive;
+  const _AdminListingsPanel({
+    super.key,
+    required this.pendingListings,
+    required this.activeListings,
+    required this.onRefresh,
+    this.initialShowActive = false,
+  });
 
   @override
   State<_AdminListingsPanel> createState() => _AdminListingsPanelState();
@@ -656,11 +705,12 @@ class _AdminListingsPanel extends StatefulWidget {
 
 class _AdminListingsPanelState extends State<_AdminListingsPanel> {
   String _filter = 'All';
-  bool _showActive = false;  
+  late bool _showActive;
 
-  List<PendingListing> get _filtered {
-    if (_filter == 'All') return widget.pendingListings;
-    return widget.pendingListings.where((p) => p.type == _filter.toLowerCase()).toList();
+  @override
+  void initState() {
+    super.initState();
+    _showActive = widget.initialShowActive;
   }
 
   Future<void> _openReview(PendingListing listing) async {
@@ -671,7 +721,8 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
     final explainCtrl = TextEditingController();
     String category   = listing.category;
     String condition  = listing.condition;
-    DenialReason? selectedReason;
+    // Default denial reason to na so it is always set
+    DenialReason selectedReason = DenialReason.na;
     bool notifyUser   = true;
     bool loading      = false;
     String? error;
@@ -690,16 +741,22 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
               constraints: const BoxConstraints(maxWidth: 520),
               child: Container(
                 margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))]),
+                decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: cBorder),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))],
+                ),
                 child: Material(
                   color: Colors.transparent,
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
                     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(8)),
-                            child: const Text('PENDING REVIEW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFE67E22), letterSpacing: 1))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(color: const Color(0xFFFFF3E0), borderRadius: BorderRadius.circular(8)),
+                          child: const Text('PENDING REVIEW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFFE67E22), letterSpacing: 1)),
+                        ),
                         const Spacer(),
                         IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                       ]),
@@ -708,8 +765,11 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
                       Text('By ${listing.sellerUsername} · ${listing.sellerEmail}', style: const TextStyle(fontSize: 12, color: cMuted)),
                       const SizedBox(height: 14),
                       if (listing.image.isNotEmpty)
-                        ClipRRect(borderRadius: BorderRadius.circular(12),
-                            child: Image.network(listing.image, height: 150, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox.shrink())),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(listing.image, height: 150, width: double.infinity, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                        ),
                       const SizedBox(height: 14),
                       const _AdminLabel('Edit Before Approving'),
                       const SizedBox(height: 8),
@@ -728,23 +788,39 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
                         const SizedBox(height: 8),
                       ],
                       DropdownButtonFormField<String>(
-                        value: category.isEmpty ? null : category, decoration: const InputDecoration(labelText: 'Category'),
+                        value: category.isEmpty ? null : category,
+                        decoration: const InputDecoration(labelText: 'Category'),
                         items: (listing.isLostFound ? lostFoundCategories : categories).map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (v) => setS(() => category = v ?? category),
                       ),
                       const SizedBox(height: 8),
                       TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Location')),
                       const SizedBox(height: 16),
-                      const _AdminLabel('If Denying — Reason & Explanation'),
+                      // ── Denial reason — mandatory, always shown ──
+                      Row(children: [
+                        const _AdminLabel('Denial Reason'),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(6)),
+                          child: const Text('Required to deny', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: cRed)),
+                        ),
+                      ]),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<DenialReason>(
-                        value: selectedReason, hint: const Text('Select denial reason'),
+                        value: selectedReason,
                         decoration: const InputDecoration(labelText: 'Denial Reason'),
                         items: DenialReason.values.map((r) => DropdownMenuItem(value: r, child: Text(r.label))).toList(),
-                        onChanged: (v) => setS(() => selectedReason = v),
+                        onChanged: (v) => setS(() => selectedReason = v ?? DenialReason.na),
                       ),
                       const SizedBox(height: 8),
-                      TextField(controller: explainCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Explanation to user', hintText: 'Describe why this was denied or what was changed...')),
+                      TextField(
+                        controller: explainCtrl, maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Explanation to user (optional)',
+                          hintText: 'Describe why this was denied or what was changed...',
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Row(children: [
                         Checkbox(value: notifyUser, onChanged: (v) => setS(() => notifyUser = v ?? true), activeColor: cRed),
@@ -755,14 +831,22 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
                       Row(children: [
                         Expanded(
                           child: OutlinedButton.icon(
-                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.close_rounded, size: 16),
+                            icon: loading
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.close_rounded, size: 16),
                             label: const Text('Deny'),
                             style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark), padding: const EdgeInsets.symmetric(vertical: 12)),
                             onPressed: loading ? null : () async {
-                              if (selectedReason == null) { setS(() => error = 'Please select a denial reason before denying.'); return; }
                               setS(() { loading = true; error = null; });
                               try {
-                                await adminDenyListing(listingId: listing.id, isLostFound: listing.isLostFound, reason: selectedReason!.name, explanation: explainCtrl.text.trim(), notifyUser: notifyUser, userEmail: listing.sellerEmail);
+                                await adminDenyListing(
+                                  listingId: listing.id,
+                                  isLostFound: listing.isLostFound,
+                                  reason: selectedReason.name,
+                                  explanation: explainCtrl.text.trim(),
+                                  notifyUser: notifyUser,
+                                  userEmail: listing.sellerEmail,
+                                );
                                 if (ctx.mounted) Navigator.pop(ctx);
                                 widget.onRefresh();
                               } catch (e) { setS(() { loading = false; error = e.toString(); }); }
@@ -772,13 +856,26 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: ElevatedButton.icon(
-                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_rounded, size: 16),
+                            icon: loading
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Icon(Icons.check_rounded, size: 16),
                             label: const Text('Approve'),
                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                             onPressed: loading ? null : () async {
                               setS(() { loading = true; error = null; });
                               try {
-                                await adminApproveListing(listingId: listing.id, isLostFound: listing.isLostFound, title: titleCtrl.text.trim(), description: descCtrl.text.trim(), category: category, condition: condition, location: locCtrl.text.trim(), price: double.tryParse(priceCtrl.text.trim()) ?? listing.price, notifyUser: notifyUser, userEmail: listing.sellerEmail);
+                                await adminApproveListing(
+                                  listingId: listing.id,
+                                  isLostFound: listing.isLostFound,
+                                  title: titleCtrl.text.trim(),
+                                  description: descCtrl.text.trim(),
+                                  category: category,
+                                  condition: condition,
+                                  location: locCtrl.text.trim(),
+                                  price: double.tryParse(priceCtrl.text.trim()) ?? listing.price,
+                                  notifyUser: notifyUser,
+                                  userEmail: listing.sellerEmail,
+                                );
                                 if (ctx.mounted) Navigator.pop(ctx);
                                 widget.onRefresh();
                               } catch (e) { setS(() { loading = false; error = e.toString(); }); }
@@ -847,7 +944,7 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
                 itemCount: items.length,
                 itemBuilder: (_, i) => _PendingListingTile(
                   listing: items[i],
-                  onTap: _showActive ? () {} : () => _openReview(items[i]),
+                  onTap: () => _openReview(items[i]),
                 ),
               ),
       ),
@@ -867,16 +964,25 @@ class _PendingListingTile extends StatelessWidget {
       onTap: onTap, borderRadius: BorderRadius.circular(14),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))]),
+        decoration: BoxDecoration(
+          color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
         child: Row(children: [
-          ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(listing.image, width: 70, height: 70, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 70, height: 70, color: cPlaceholder, child: const Icon(Icons.image_not_supported, color: cMuted)))),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(listing.image, width: 70, height: 70, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(width: 70, height: 70, color: cPlaceholder, child: const Icon(Icons.image_not_supported, color: cMuted))),
+          ),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Expanded(child: Text(listing.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(7)),
-                  child: Text(listing.type.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(7)),
+                child: Text(listing.type.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5)),
+              ),
             ]),
             const SizedBox(height: 3),
             Text(listing.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: cMuted)),
@@ -944,24 +1050,33 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                   const SizedBox(height: 16),
                   _AdminLabel('Claims (${item.claims.length})'),
                   const SizedBox(height: 8),
-                  if (item.claims.isEmpty) const Text('No claims.', style: TextStyle(fontSize: 12, color: cMuted))
-                  else ...item.claims.map((c) => _ClaimMatchTile(email: c.claimantEmail, details: c.proofDetails, status: c.status, date: c.submittedAt)),
+                  if (item.claims.isEmpty)
+                    const Text('No claims.', style: TextStyle(fontSize: 12, color: cMuted))
+                  else
+                    ...item.claims.map((c) => _ClaimMatchTile(email: c.claimantEmail, details: c.proofDetails, status: c.status, date: c.submittedAt)),
                   const SizedBox(height: 12),
                   _AdminLabel('Matches (${item.matches.length})'),
                   const SizedBox(height: 8),
-                  if (item.matches.isEmpty) const Text('No matches.', style: TextStyle(fontSize: 12, color: cMuted))
-                  else ...item.matches.map((m) => _ClaimMatchTile(email: m.submitterEmail, details: '${m.matchDetails}\nFound at: ${m.foundLocation}', status: m.status, date: m.submittedAt)),
+                  if (item.matches.isEmpty)
+                    const Text('No matches.', style: TextStyle(fontSize: 12, color: cMuted))
+                  else
+                    ...item.matches.map((m) => _ClaimMatchTile(email: m.submitterEmail, details: '${m.matchDetails}\nFound at: ${m.foundLocation}', status: m.status, date: m.submittedAt)),
                   if (error != null) ...[const SizedBox(height: 8), Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12))],
                   if (item.status != 'resolved') ...[
                     const SizedBox(height: 16),
                     SizedBox(width: double.infinity, child: ElevatedButton.icon(
-                      icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline_rounded, size: 16),
+                      icon: loading
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.check_circle_outline_rounded, size: 16),
                       label: const Text('Mark as Resolved'),
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                       onPressed: loading ? null : () async {
                         setS(() { loading = true; error = null; });
-                        try { await adminMarkLostFoundResolved(itemId: item.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                        catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                        try {
+                          await adminMarkLostFoundResolved(itemId: item.id);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          widget.onRefresh();
+                        } catch (e) { setS(() { loading = false; error = e.toString(); }); }
                       },
                     )),
                   ],
@@ -978,11 +1093,15 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
   Widget build(BuildContext context) {
     final items = _filtered;
     return Column(children: [
-      const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Lost & Found Oversight', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-        Text('Review claims, matches, and resolve cases', style: TextStyle(fontSize: 12, color: cMuted)),
-      ]))),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Align(alignment: Alignment.centerLeft, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Lost & Found Oversight', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+          Text('Review claims, matches, and resolve cases', style: TextStyle(fontSize: 12, color: cMuted)),
+        ])),
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
           for (final f in ['All', 'Lost', 'Found', 'Resolved'])
             Padding(padding: const EdgeInsets.only(right: 8), child: _Chip(label: f, selected: _filter == f, onTap: () => setState(() => _filter = f))),
@@ -995,17 +1114,26 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                 final item = items[i];
                 final isLost = item.type == 'lost';
                 final typeColor = item.status == 'resolved' ? const Color(0xFF27AE60) : isLost ? const Color(0xFFE74C3C) : const Color(0xFF2980B9);
-                return InkWell(onTap: () => _openDetail(item), borderRadius: BorderRadius.circular(14),
-                  child: Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
+                return InkWell(
+                  onTap: () => _openDetail(item), borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
                     child: Row(children: [
-                      ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(item.image, width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: cPlaceholder, child: const Icon(Icons.image_not_supported, color: cMuted, size: 20)))),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(item.image, width: 64, height: 64, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: cPlaceholder, child: const Icon(Icons.image_not_supported, color: cMuted, size: 20))),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
                           Expanded(child: Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                          Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(7)),
-                              child: Text(item.status == 'resolved' ? 'RESOLVED' : item.type.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(7)),
+                            child: Text(item.status == 'resolved' ? 'RESOLVED' : item.type.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor)),
+                          ),
                         ]),
                         const SizedBox(height: 3),
                         Text(item.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: cMuted)),
@@ -1037,8 +1165,11 @@ class _ClaimMatchTile extends StatelessWidget {
         Row(children: [
           Text(email, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText)),
           const Spacer(),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-              child: Text(status.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: statusColor))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+            child: Text(status.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: statusColor)),
+          ),
         ]),
         const SizedBox(height: 4),
         Text(details, style: const TextStyle(fontSize: 12, color: cMuted, height: 1.5)),
@@ -1079,6 +1210,82 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
     }).toList();
   }
 
+  // ── View full listing history for a user ──────────────────────────────────
+  Future<void> _openListingHistory(BuildContext parentCtx, AdminUser user) async {
+    List<Map<String, dynamic>> marketItems = [];
+    List<Map<String, dynamic>> lfItems = [];
+    bool loading = true;
+    bool fetched = false;
+
+    await showGeneralDialog(
+      context: parentCtx, barrierDismissible: true, barrierLabel: 'History',
+      barrierColor: Colors.black.withValues(alpha: 0.4), transitionDuration: kMid,
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim, __, ___) => Opacity(
+        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
+        child: StatefulBuilder(builder: (ctx, setS) {
+          if (!fetched) {
+            fetched = true;
+            Future.microtask(() async {
+              try {
+                final market = await getUserMarketListings(user.id);
+                final lf     = await getUserLostFoundListings(user.id);
+                if (ctx.mounted) setS(() { marketItems = market; lfItems = lf; loading = false; });
+              } catch (_) {
+                if (ctx.mounted) setS(() => loading = false);
+              }
+            });
+          }
+          return Center(
+            child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                child: Material(color: Colors.transparent, child: Padding(padding: const EdgeInsets.all(20),
+                  child: loading
+                      ? const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: cRed)))
+                      : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(children: [
+                            Expanded(child: Text('History — @${user.username}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: cText))),
+                            IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                          ]),
+                          const SizedBox(height: 4),
+                          Text('Registered: ${formatDate(user.registeredAt)}', style: const TextStyle(fontSize: 12, color: cMuted)),
+                          Text('Last Active: ${user.lastActive != null ? formatDate(user.lastActive!) : 'Never'}', style: const TextStyle(fontSize: 12, color: cMuted)),
+                          const SizedBox(height: 16),
+                          const _AdminLabel('Marketplace Listings'),
+                          const SizedBox(height: 8),
+                          if (marketItems.isEmpty)
+                            const Text('No marketplace listings.', style: TextStyle(fontSize: 12, color: cMuted))
+                          else
+                            ...marketItems.map((m) => _HistoryTile(
+                              title: m['title']?.toString() ?? '',
+                              subtitle: '${m['category']} · \$${m['price']} · ${m['status']}',
+                              date: m['created_at']?.toString() ?? '',
+                              icon: Icons.storefront_rounded,
+                            )),
+                          const SizedBox(height: 16),
+                          const _AdminLabel('Lost & Found Posts'),
+                          const SizedBox(height: 8),
+                          if (lfItems.isEmpty)
+                            const Text('No lost & found posts.', style: TextStyle(fontSize: 12, color: cMuted))
+                          else
+                            ...lfItems.map((l) => _HistoryTile(
+                              title: l['title']?.toString() ?? '',
+                              subtitle: '${l['category']} · ${l['type']} · ${l['status']}',
+                              date: l['created_at']?.toString() ?? '',
+                              icon: Icons.search_rounded,
+                            )),
+                        ])),
+                )),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
   Future<void> _openDetail(AdminUser user) async {
     bool loading = false; String? error;
     await showGeneralDialog(
@@ -1094,9 +1301,13 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
               child: Material(color: Colors.transparent, child: SingleChildScrollView(padding: const EdgeInsets.all(20),
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // ── Header ──
                   Row(children: [
-                    CircleAvatar(backgroundColor: user.isBanned ? cRedDark : cRedLight, radius: 24,
-                        child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U', style: TextStyle(color: user.isBanned ? Colors.white : cRed, fontWeight: FontWeight.w900, fontSize: 20))),
+                    CircleAvatar(
+                      backgroundColor: user.isBanned ? cRedDark : cRedLight, radius: 24,
+                      child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U',
+                          style: TextStyle(color: user.isBanned ? Colors.white : cRed, fontWeight: FontWeight.w900, fontSize: 20)),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(user.displayName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: cText)),
@@ -1106,6 +1317,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                     IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                   ]),
                   const SizedBox(height: 16),
+                  // ── Info rows ──
                   _UserInfoRow(label: 'Role',           value: user.role.label),
                   _UserInfoRow(label: 'Registered',     value: formatDate(user.registeredAt)),
                   _UserInfoRow(label: 'Last Active',    value: user.lastActive != null ? formatDate(user.lastActive!) : 'Never'),
@@ -1114,11 +1326,10 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                   _UserInfoRow(label: 'Warning Issued', value: user.hasWarning ? (user.warnedAt != null ? 'Yes · ${formatDate(user.warnedAt!)}' : 'Yes') : 'No', highlight: user.hasWarning),
                   _UserInfoRow(label: 'Status',         value: user.isBanned ? 'BANNED' : 'Active', highlight: user.isBanned),
                   const SizedBox(height: 12),
-                  // Warning notice banner
+                  // ── Warning banners ──
                   if (!user.isBanned && !user.hasWarning)
                     Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
+                      width: double.infinity, padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE082))),
                       child: const Row(children: [
                         Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFE67E22)),
@@ -1128,8 +1339,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                     ),
                   if (!user.isBanned && user.hasWarning)
                     Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
+                      width: double.infinity, padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(color: const Color(0xFFFDECEC), borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.4))),
                       child: const Row(children: [
                         Icon(Icons.warning_amber_rounded, size: 15, color: cRedDark),
@@ -1139,9 +1349,18 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                     ),
                   const SizedBox(height: 16),
                   if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
+                  // ── Action buttons ──
                   Wrap(spacing: 8, runSpacing: 8, children: [
 
-                    // ── Issue one-time warning (only if not yet warned and not banned) ──
+                    // View listing history
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.history_rounded, size: 16),
+                      label: const Text('View Listing History'),
+                      style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9))),
+                      onPressed: () => _openListingHistory(ctx, user),
+                    ),
+
+                    // Issue warning
                     if (!user.isBanned && !user.hasWarning)
                       OutlinedButton.icon(
                         icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
@@ -1150,7 +1369,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         onPressed: loading ? null : () async {
                           final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(
                             title: const Text('Issue a Warning?'),
-                            content: Text('This will send a one-time warning to @${user.username}. After this, the next violation can result in a permanent ban.'),
+                            content: Text('This will send a one-time warning to @${user.username}.'),
                             actions: [
                               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                               TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Issue Warning', style: TextStyle(color: Color(0xFFE67E22)))),
@@ -1166,16 +1385,16 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         },
                       ),
 
-                    // ── Warning already issued — show disabled indicator ──
+                    // Warning already issued — disabled
                     if (!user.isBanned && user.hasWarning)
                       OutlinedButton.icon(
                         icon: const Icon(Icons.check_rounded, size: 16),
                         label: const Text('Warning Issued'),
                         style: OutlinedButton.styleFrom(foregroundColor: cMuted, side: const BorderSide(color: cBorder)),
-                        onPressed: null, // disabled intentionally
+                        onPressed: null,
                       ),
 
-                    // ── Ban — only unlocked after warning has been issued ──
+                    // Ban — only after warning
                     if (!user.isBanned && user.hasWarning)
                       OutlinedButton.icon(
                         icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.block_rounded, size: 16),
@@ -1184,7 +1403,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         onPressed: loading ? null : () async {
                           final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(
                             title: const Text('Permanently Ban This User?'),
-                            content: Text('@${user.username} has already been warned. This will permanently ban them and blacklist their email from re-registering.'),
+                            content: Text('@${user.username} has already been warned. This will permanently ban them and blacklist their email.'),
                             actions: [
                               TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                               TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ban Permanently', style: TextStyle(color: cRedDark))),
@@ -1200,7 +1419,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         },
                       ),
 
-                    // ── Unban (only shown if already banned) ──
+                    // Unban
                     if (user.isBanned)
                       OutlinedButton.icon(
                         icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_open_rounded, size: 16),
@@ -1224,6 +1443,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                           } catch (e) { setS(() { loading = false; error = e.toString(); }); }
                         },
                       ),
+
                     // Toggle email verification
                     OutlinedButton.icon(
                       icon: Icon(user.isVerified ? Icons.verified_outlined : Icons.verified_rounded, size: 16),
@@ -1231,10 +1451,14 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                       style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9))),
                       onPressed: loading ? null : () async {
                         setS(() { loading = true; error = null; });
-                        try { await adminToggleVerification(userId: user.id, verify: !user.isVerified); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                        catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                        try {
+                          await adminToggleVerification(userId: user.id, verify: !user.isVerified);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          widget.onRefresh();
+                        } catch (e) { setS(() { loading = false; error = e.toString(); }); }
                       },
                     ),
+
                     // Delete account
                     OutlinedButton.icon(
                       icon: const Icon(Icons.delete_forever_rounded, size: 16),
@@ -1244,12 +1468,18 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(
                           title: const Text('Delete Account?'),
                           content: Text('Permanently deletes @${user.username} and all their data. Cannot be undone.'),
-                          actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red)))],
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                          ],
                         ));
                         if (confirm != true) return;
                         setS(() { loading = true; error = null; });
-                        try { await adminDeleteUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                        catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                        try {
+                          await adminDeleteUser(userId: user.id, email: user.email);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          widget.onRefresh();
+                        } catch (e) { setS(() { loading = false; error = e.toString(); }); }
                       },
                     ),
                   ]),
@@ -1272,7 +1502,8 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
         const SizedBox(height: 10),
         _SearchField(hint: 'Search users...', onChanged: (v) => setState(() => _q = v)),
       ])),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
           for (final f in ['All', 'Student', 'Faculty', 'Warned', 'Banned'])
             Padding(padding: const EdgeInsets.only(right: 8), child: _Chip(label: f, selected: _roleFilter == f, onTap: () => setState(() => _roleFilter = f))),
@@ -1288,38 +1519,17 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: u.isBanned
-                          ? const Color(0xFFFFF0F0)
-                          : u.hasWarning
-                              ? const Color(0xFFFFFBF0)
-                              : Colors.white,
+                      color: u.isBanned ? const Color(0xFFFFF0F0) : u.hasWarning ? const Color(0xFFFFFBF0) : Colors.white,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: u.isBanned
-                            ? cRedDark.withValues(alpha: 0.3)
-                            : u.hasWarning
-                                ? const Color(0xFFFFE082)
-                                : cBorder,
-                      ),
+                      border: Border.all(color: u.isBanned ? cRedDark.withValues(alpha: 0.3) : u.hasWarning ? const Color(0xFFFFE082) : cBorder),
                     ),
                     child: Row(children: [
                       CircleAvatar(
-                        backgroundColor: u.isBanned
-                            ? cRedDark
-                            : u.hasWarning
-                                ? const Color(0xFFFFF3E0)
-                                : cRedLight,
+                        backgroundColor: u.isBanned ? cRedDark : u.hasWarning ? const Color(0xFFFFF3E0) : cRedLight,
                         radius: 20,
                         child: Text(
                           u.username.isNotEmpty ? u.username[0].toUpperCase() : 'U',
-                          style: TextStyle(
-                            color: u.isBanned
-                                ? Colors.white
-                                : u.hasWarning
-                                    ? const Color(0xFFE67E22)
-                                    : cRed,
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: TextStyle(color: u.isBanned ? Colors.white : u.hasWarning ? const Color(0xFFE67E22) : cRed, fontWeight: FontWeight.w900),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1399,8 +1609,10 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
           child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 480),
             child: Container(
               margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))]),
+              decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))],
+              ),
               child: Material(color: Colors.transparent, child: Padding(padding: const EdgeInsets.all(20),
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
@@ -1413,7 +1625,11 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                   const SizedBox(height: 12),
                   Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [_AdminBadge(label: report.targetType.toUpperCase(), color: cRed), const SizedBox(width: 8), _AdminBadge(label: report.reason.label, color: const Color(0xFF8E44AD))]),
+                      Row(children: [
+                        _AdminBadge(label: report.targetType.toUpperCase(), color: cRed),
+                        const SizedBox(width: 8),
+                        _AdminBadge(label: report.reason.label, color: const Color(0xFF8E44AD)),
+                      ]),
                       const SizedBox(height: 8),
                       Text(report.targetTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
                       const SizedBox(height: 4),
@@ -1425,8 +1641,6 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                   const _AdminLabel('Choose an Action'),
                   const SizedBox(height: 10),
                   if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
-
-                  // ── Remove listing (separate from banning user) ──
                   if (report.targetType == 'listing' || report.targetType == 'lostfound') ...[
                     SizedBox(width: double.infinity, child: OutlinedButton.icon(
                       icon: const Icon(Icons.remove_circle_outline_rounded, size: 16),
@@ -1434,14 +1648,15 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                       style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
                       onPressed: loading ? null : () async {
                         setS(() { loading = true; error = null; });
-                        try { await adminRemoveListing(listingId: report.targetId, isLostFound: report.targetType == 'lostfound'); await adminResolveReport(reportId: report.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                        catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                        try {
+                          await adminRemoveListing(listingId: report.targetId, isLostFound: report.targetType == 'lostfound');
+                          await adminResolveReport(reportId: report.id);
+                          if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh();
+                        } catch (e) { setS(() { loading = false; error = e.toString(); }); }
                       },
                     )),
                     const SizedBox(height: 8),
                   ],
-
-                  // ── Ban reported user only (separate from the listing) ──
                   if (targetUser != null || report.targetType == 'user') ...[
                     SizedBox(width: double.infinity, child: OutlinedButton.icon(
                       icon: const Icon(Icons.block_rounded, size: 16),
@@ -1458,9 +1673,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                     )),
                     const SizedBox(height: 8),
                   ],
-
-                  // ── Both: ban user AND remove listing ──
-                  if ((report.targetType == 'listing' || report.targetType == 'lostfound') && (targetUser != null)) ...[
+                  if ((report.targetType == 'listing' || report.targetType == 'lostfound') && targetUser != null) ...[
                     SizedBox(width: double.infinity, child: OutlinedButton.icon(
                       icon: const Icon(Icons.gavel_rounded, size: 16),
                       label: const Text('Remove Listing & Ban User'),
@@ -1477,16 +1690,16 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                     )),
                     const SizedBox(height: 8),
                   ],
-
-                  // ── Dismiss ──
                   SizedBox(width: double.infinity, child: ElevatedButton.icon(
                     icon: const Icon(Icons.check_rounded, size: 16),
                     label: const Text('Dismiss (No Action)'),
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                     onPressed: loading ? null : () async {
                       setS(() { loading = true; error = null; });
-                      try { await adminResolveReport(reportId: report.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                      catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                      try {
+                        await adminResolveReport(reportId: report.id);
+                        if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh();
+                      } catch (e) { setS(() { loading = false; error = e.toString(); }); }
                     },
                   )),
                 ]),
@@ -1524,9 +1737,11 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: r.isResolved ? cBorder : cRed.withValues(alpha: 0.25))),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(r.targetType.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5))),
+                        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                            child: Text(r.targetType.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5))),
                         const SizedBox(width: 6),
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)), child: Text(r.reason.label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: cRed))),
+                        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
+                            child: Text(r.reason.label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: cRed))),
                         const Spacer(),
                         if (r.isResolved) const _AdminBadge(label: 'RESOLVED', color: Color(0xFF27AE60)),
                       ]),
@@ -1594,9 +1809,33 @@ class _AdminBadge extends StatelessWidget {
   }
 }
 
+// ── History tile used in listing history dialog ───────────────────────────────
+class _HistoryTile extends StatelessWidget {
+  final String title, subtitle, date;
+  final IconData icon;
+  const _HistoryTile({required this.title, required this.subtitle, required this.date, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
+      child: Row(children: [
+        Icon(icon, size: 16, color: cRed),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+          Text(subtitle, style: const TextStyle(fontSize: 11, color: cMuted)),
+        ])),
+        Text(date.length >= 10 ? date.substring(0, 10) : date, style: const TextStyle(fontSize: 11, color: cMuted)),
+      ]),
+    );
+  }
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // REPORT DIALOG — user-facing
-// Call from item_detail_screen.dart and lost_found_screen.dart
 // ═════════════════════════════════════════════════════════════════════════════
 
 Future<void> showReportDialog({
@@ -1635,21 +1874,27 @@ Future<void> showReportDialog({
               const SizedBox(height: 16),
               DropdownButtonFormField<ReportReason>(
                 value: selectedReason, hint: const Text('Select a reason *'),
-                decoration: InputDecoration(labelText: 'Reason',
+                decoration: InputDecoration(
+                  labelText: 'Reason',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
-                  filled: true, fillColor: cBg),
+                  filled: true, fillColor: cBg,
+                ),
                 items: ReportReason.values.map((r) => DropdownMenuItem(value: r, child: Text(r.label))).toList(),
                 onChanged: (v) => setS(() => selectedReason = v),
               ),
               const SizedBox(height: 12),
-              TextFormField(controller: notesCtrl, maxLines: 3,
-                decoration: InputDecoration(labelText: 'Additional notes (optional)', hintText: 'Describe the issue...', hintStyle: const TextStyle(color: cMuted, fontSize: 13),
+              TextFormField(
+                controller: notesCtrl, maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: 'Additional notes (optional)', hintText: 'Describe the issue...', hintStyle: const TextStyle(color: cMuted, fontSize: 13),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
                   enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
                   focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
-                  filled: true, fillColor: cBg)),
+                  filled: true, fillColor: cBg,
+                ),
+              ),
               if (error != null) ...[const SizedBox(height: 8), Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12))],
               const SizedBox(height: 16),
               SizedBox(width: double.infinity, child: ElevatedButton.icon(
@@ -1660,7 +1905,10 @@ Future<void> showReportDialog({
                   if (selectedReason == null) { setS(() => error = 'Please select a reason.'); return; }
                   setS(() { loading = true; error = null; });
                   try {
-                    await submitReport(targetId: targetId, targetType: targetType, targetTitle: targetTitle, reporterEmail: reporterEmail, reason: selectedReason!.name, notes: notesCtrl.text.trim());
+                    await submitReport(
+                      targetId: targetId, targetType: targetType, targetTitle: targetTitle,
+                      reporterEmail: reporterEmail, reason: selectedReason!.name, notes: notesCtrl.text.trim(),
+                    );
                     if (ctx.mounted) {
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
@@ -1679,3 +1927,5 @@ Future<void> showReportDialog({
     ),
   );
 }
+
+
