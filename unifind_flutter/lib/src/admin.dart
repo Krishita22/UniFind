@@ -790,7 +790,7 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
                       DropdownButtonFormField<String>(
                         value: category.isEmpty ? null : category,
                         decoration: const InputDecoration(labelText: 'Category'),
-                        items: (listing.isLostFound ? lostFoundCategories : categories).map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (v) => setS(() => category = v ?? category),
                       ),
                       const SizedBox(height: 8),
