@@ -235,7 +235,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 DropdownButtonFormField<String>(
                   value: category,
                   decoration: const InputDecoration(labelText: 'Category'),
-                  items: lostFoundCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                   onChanged: (v) => setDialogState(() => category = v ?? category),
                 ),
                 const SizedBox(height: 8),
