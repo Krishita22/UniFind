@@ -1,6 +1,6 @@
 part of '../main.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final String email;
   final String username;
   final VoidCallback onLogout;
@@ -12,16 +12,80 @@ class ProfileScreen extends StatelessWidget {
     required this.onLogout,
   });
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Uint8List? _avatarBytes;
+
   String get _initials {
-    if (username.isNotEmpty) return username[0].toUpperCase();
-    if (email.isNotEmpty) return email[0].toUpperCase();
+    if (widget.username.isNotEmpty) return widget.username[0].toUpperCase();
+    if (widget.email.isNotEmpty) return widget.email[0].toUpperCase();
     return 'U';
   }
 
   String get _displayHandle {
-    if (username.isNotEmpty) return username;
-    if (email.contains('@')) return email.split('@').first;
-    return email;
+    if (widget.username.isNotEmpty) return widget.username;
+    if (widget.email.contains('@')) return widget.email.split('@').first;
+    return widget.email;
+  }
+
+  Future<void> _pickAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 400);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() => _avatarBytes = bytes);
+  }
+
+  void _showAvatarOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: cSurface,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: cBorder, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('Profile Picture', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: cText)),
+            const SizedBox(height: 4),
+            const Text('Choose how to set your avatar', style: TextStyle(fontSize: 12, color: cMuted)),
+            const SizedBox(height: 16),
+            _BottomSheetOption(
+              icon: Icons.photo_library_outlined,
+              label: 'Choose from Gallery',
+              onTap: () { Navigator.pop(ctx); _pickAvatar(); },
+            ),
+            const SizedBox(height: 8),
+            _BottomSheetOption(
+              icon: Icons.camera_alt_outlined,
+              label: 'Take a Photo',
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picker = ImagePicker();
+                final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 400);
+                if (picked == null) return;
+                final bytes = await picked.readAsBytes();
+                setState(() => _avatarBytes = bytes);
+              },
+            ),
+            if (_avatarBytes != null) ...[
+              const SizedBox(height: 8),
+              _BottomSheetOption(
+                icon: Icons.delete_outline_rounded,
+                label: 'Remove Photo',
+                isDestructive: true,
+                onTap: () { Navigator.pop(ctx); setState(() => _avatarBytes = null); },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -43,18 +107,43 @@ class ProfileScreen extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Container(
-                width: 68, height: 68,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
-                ),
-                child: Center(
-                  child: Text(
-                    _initials,
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
-                  ),
+              // ── Tappable avatar ─────────────────────────────────────
+              GestureDetector(
+                onTap: _showAvatarOptions,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 72, height: 72,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.45), width: 2.5),
+                      ),
+                      child: ClipOval(
+                        child: _avatarBytes != null
+                            ? Image.memory(_avatarBytes!, fit: BoxFit.cover, width: 72, height: 72)
+                            : Center(
+                                child: Text(
+                                  _initials,
+                                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
+                                ),
+                              ),
+                      ),
+                    ),
+                    // Camera badge
+                    Positioned(
+                      bottom: 0, right: 0,
+                      child: Container(
+                        width: 22, height: 22,
+                        decoration: BoxDecoration(
+                          color: cRed,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                        child: const Icon(Icons.camera_alt_rounded, size: 11, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 16),
@@ -67,7 +156,7 @@ class ProfileScreen extends StatelessWidget {
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3),
                     ),
                     const SizedBox(height: 4),
-                    Text(email, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75))),
+                    Text(widget.email, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75))),
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
@@ -84,13 +173,33 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+
+        // ── Edit avatar hint ────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 4),
+          child: GestureDetector(
+            onTap: _showAvatarOptions,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.edit_outlined, size: 12, color: cMuted),
+                const SizedBox(width: 4),
+                Text(
+                  _avatarBytes != null ? 'Change profile picture' : 'Add a profile picture',
+                  style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 16),
 
         // ── Account section ─────────────────────────────────────────────
         _ProfileSectionHeader(label: 'Account'),
         const SizedBox(height: 8),
         _ProfileInfoTile(icon: Icons.person_outline_rounded, label: 'Username', value: _displayHandle),
-        _ProfileInfoTile(icon: Icons.mail_outline_rounded, label: 'Email', value: email),
+        _ProfileInfoTile(icon: Icons.mail_outline_rounded, label: 'Email', value: widget.email),
         _ProfileInfoTile(icon: Icons.school_outlined, label: 'Institution', value: 'Montclair State University'),
         const SizedBox(height: 20),
 
@@ -102,7 +211,7 @@ class ProfileScreen extends StatelessWidget {
           label: 'Change Password',
           subtitle: 'Update your account password',
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ForgotPasswordScreen(initialEmail: email)),
+            MaterialPageRoute(builder: (_) => ForgotPasswordScreen(initialEmail: widget.email)),
           ),
         ),
         const SizedBox(height: 20),
@@ -131,7 +240,7 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
             );
-            if (confirm == true) onLogout();
+            if (confirm == true) widget.onLogout();
           },
         ),
         const SizedBox(height: 32),
@@ -140,6 +249,38 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+class _BottomSheetOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDestructive;
+  const _BottomSheetOption({required this.icon, required this.label, required this.onTap, this.isDestructive = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isDestructive ? cRedDark : cText;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDestructive ? const Color(0xFFFFF0F0) : cBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDestructive ? cRed.withValues(alpha: 0.2) : cBorder),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
+          ],
+        ),
+      ),
     );
   }
 }
