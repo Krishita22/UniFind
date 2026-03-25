@@ -793,41 +793,63 @@ class _UniFindAppState extends State<UniFindApp> {
                   ),
                 ],
               ),
-              bottomNavigationBar: NavigationBar(
-                selectedIndex: _tab,
-                onDestinationSelected: (index) {
-                  setState(() => _tab = index);
-                  if (index == 3 || index == 0 || index == 1) {
-                    _loadListings();
-                    _loadLostFound();
-                  }
-                },
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.storefront_outlined),
-                    label: 'Shop',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.search),
-                    label: 'Lost/Found',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.add_circle_outline),
-                    label: 'Post',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.inventory_2_outlined),
-                    label: 'My Listings',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.menu_book_outlined),
-                    label: 'Docs',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline_rounded),
-                    label: 'Profile',
-                  ),
-                ],
+              bottomNavigationBar: Container(
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: cBorder, width: 1)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: NavigationBar(
+                  selectedIndex: _tab,
+                  backgroundColor: cSurface,
+                  indicatorColor: cRedLight,
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  height: 64,
+                  onDestinationSelected: (index) {
+                    setState(() => _tab = index);
+                    if (index == 3 || index == 0 || index == 1) {
+                      _loadListings();
+                      _loadLostFound();
+                    }
+                  },
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.storefront_outlined),
+                      selectedIcon: Icon(Icons.storefront_rounded, color: cRed),
+                      label: 'Shop',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.search_outlined),
+                      selectedIcon: Icon(Icons.search_rounded, color: cRed),
+                      label: 'Lost/Found',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.add_circle_outline_rounded),
+                      selectedIcon: Icon(Icons.add_circle_rounded, color: cRed),
+                      label: 'Post',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.inventory_2_outlined),
+                      selectedIcon: Icon(Icons.inventory_2_rounded, color: cRed),
+                      label: 'My Listings',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.menu_book_outlined),
+                      selectedIcon: Icon(Icons.menu_book_rounded, color: cRed),
+                      label: 'Docs',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.person_outline_rounded),
+                      selectedIcon: Icon(Icons.person_rounded, color: cRed),
+                      label: 'Profile',
+                    ),
+                  ],
+                ),
               ),
             ),
     );
@@ -849,6 +871,31 @@ class _UniFindAppState extends State<UniFindApp> {
         foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
+      ),
+      // ─── ADDED: Navigation bar theme ───────────────────────────────
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: cSurface,
+        indicatorColor: cRedLight,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: cRed,
+            );
+          }
+          return const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: cMuted,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: cRed, size: 22);
+          }
+          return const IconThemeData(color: cMuted, size: 22);
+        }),
       ),
     );
   }
