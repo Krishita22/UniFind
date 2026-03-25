@@ -5,11 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
 import 'api_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
 part 'src/lost_found_screen.dart';
 part 'src/post_listing_screen.dart';
+part 'src/profile_screen.dart';
 part 'src/my_listings_screen.dart';
 part 'src/documentation_screen.dart';
 part 'src/item_detail_screen.dart';
@@ -42,6 +44,72 @@ const Duration kFast = Duration(milliseconds: 180);
 const Duration kMid = Duration(milliseconds: 320);
 const Duration kSlow = Duration(milliseconds: 520);
 const Duration kPage = Duration(milliseconds: 420);
+
+// ─── BREADCRUMB LABELS ───────────────────────────────────────────────────────
+const List<List<String>> _tabBreadcrumbs = [
+  ['Home', 'Marketplace'],
+  ['Home', 'Lost & Found'],
+  ['Home', 'Post Item'],
+  ['Home', 'My Listings'],
+  ['Home', 'Docs'],
+  ['Home', 'Profile'],
+];
+
+// ─── BREADCRUMB BAR ──────────────────────────────────────────────────────────
+class _BreadcrumbBar extends StatelessWidget {
+  final int tab;
+  final VoidCallback? onHome;
+  const _BreadcrumbBar({required this.tab, this.onHome});
+
+  @override
+  Widget build(BuildContext context) {
+    final crumbs = _tabBreadcrumbs[tab.clamp(0, _tabBreadcrumbs.length - 1)];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: cRedLight,
+        border: Border(bottom: BorderSide(color: cBorder, width: 1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.home_outlined, size: 12, color: cMuted),
+          const SizedBox(width: 4),
+          for (int i = 0; i < crumbs.length; i++) ...[
+            if (i > 0) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, size: 13, color: cMuted),
+              const SizedBox(width: 4),
+            ],
+            if (i == crumbs.length - 1)
+              Text(
+                crumbs[i],
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: cRed,
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: i == 0 ? onHome : null,
+                child: Text(
+                  crumbs[i],
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: cMuted,
+                    decoration: i == 0 ? TextDecoration.underline : null,
+                    decorationColor: cMuted,
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 void main() => runApp(const UniFindApp());
 
@@ -693,6 +761,140 @@ class _UniFindAppState extends State<UniFindApp> {
                 }
               },
           ),
+          : Scaffold(
+              appBar: AppBar(
+                centerTitle: true,
+                title: Column(
+                  mainAxisSize: MainAxisSize.min, // keeps it centered vertically
+                  children: [
+                    Image.asset(
+                      'assets/images/whitelogo.png',
+                      height: 32,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 2), // small spacing
+                    Text(
+                      _username.isNotEmpty ? _username : _emailToHandle(_email),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white, // 👈 pure white
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Log out',
+                    onPressed: () {
+                      _logout();
+                      _clearSession();
+                    },
+                    icon: const Icon(Icons.logout),
+                  ),
+                ],
+              ),
+              body: Column(
+                children: [
+                  _BreadcrumbBar(
+                    tab: _tab,
+                    onHome: () => setState(() => _tab = 0),
+                  ),
+                  Expanded(
+                    child: IndexedStack(
+                      index: _tab,
+                      children: [
+                        MarketplaceScreen(items: _market, onListItem: _goToPostTab),
+                        LostFoundScreen(
+                          items: _lostFound,
+                          onCreateLost: () => _goToPostTab(ListingType.lost),
+                          onCreateFound: () => _goToPostTab(ListingType.found),
+                          onClaimLost: _claimLostItem,
+                          onPostFoundMatch: _postFoundMatch,
+                          submittedClaimItemIds: _submittedClaimItemIds,
+                          submittedMatchItemIds: _submittedMatchItemIds,
+                        ),
+                        PostListingScreen(
+                          key: ValueKey(_postFormNonce),
+                          onPost: _addListing,
+                          initialType: _postDefaultType,
+                        ),
+                        MyListingsScreen(
+                          marketplaceItems: _market.where(_isMyMarketplaceItem).toList(),
+                          lostFoundItems: _lostFound.where(_isMyLostFoundItem).toList(),
+                          onListItem: _goToPostTab,
+                          onEditMarketplace: _editMarketplaceItem,
+                          onEditLostFound: _editLostFoundItem,
+                        ),
+                        const DocumentationScreen(),
+                        ProfileScreen(
+                          email: _email,
+                          username: _username,
+                          onLogout: () { _logout(); _clearSession(); },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              bottomNavigationBar: Container(
+                decoration: BoxDecoration(
+                  border: Border(top: BorderSide(color: cBorder, width: 1)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: NavigationBar(
+                  selectedIndex: _tab,
+                  backgroundColor: cSurface,
+                  indicatorColor: cRedLight,
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  height: 64,
+                  onDestinationSelected: (index) {
+                    setState(() => _tab = index);
+                    if (index == 3 || index == 0 || index == 1) {
+                      _loadListings();
+                      _loadLostFound();
+                    }
+                  },
+                  destinations: const [
+                    NavigationDestination(
+                      icon: Icon(Icons.storefront_outlined),
+                      selectedIcon: Icon(Icons.storefront_rounded, color: cRed),
+                      label: 'Shop',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.search_outlined),
+                      selectedIcon: Icon(Icons.search_rounded, color: cRed),
+                      label: 'Lost/Found',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.add_circle_outline_rounded),
+                      selectedIcon: Icon(Icons.add_circle_rounded, color: cRed),
+                      label: 'Post',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.inventory_2_outlined),
+                      selectedIcon: Icon(Icons.inventory_2_rounded, color: cRed),
+                      label: 'My Listings',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.menu_book_outlined),
+                      selectedIcon: Icon(Icons.menu_book_rounded, color: cRed),
+                      label: 'Docs',
+                    ),
+                    NavigationDestination(
+                      icon: Icon(Icons.person_outline_rounded),
+                      selectedIcon: Icon(Icons.person_rounded, color: cRed),
+                      label: 'Profile',
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -712,6 +914,31 @@ class _UniFindAppState extends State<UniFindApp> {
         foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
+      ),
+      // ─── ADDED: Navigation bar theme ───────────────────────────────
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: cSurface,
+        indicatorColor: cRedLight,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: cRed,
+            );
+          }
+          return const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: cMuted,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: cRed, size: 22);
+          }
+          return const IconThemeData(color: cMuted, size: 22);
+        }),
       ),
     );
   }

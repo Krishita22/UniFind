@@ -20,7 +20,7 @@ class ItemDetailScreen extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 320,  
             pinned: true,
             backgroundColor: cNavBg,
             actions: [
@@ -75,6 +75,8 @@ class ItemDetailScreen extends StatelessWidget {
                   color: cPlaceholder,
                   child: Center(child: Icon(Icons.image_not_supported, size: 48, color: cMuted)),
                 ),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, size: 48, color: cMuted))),
               ),
             ),
           ),
