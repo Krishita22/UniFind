@@ -17,7 +17,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   double? _minPrice;
   double? _maxPrice;
 
-  // Price controllers for the side panel text fields
   final _minCtrl = TextEditingController();
   final _maxCtrl = TextEditingController();
 
@@ -49,7 +48,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     _maxCtrl.clear();
   }
 
-  // ── Mobile filter dialog (unchanged behavior on narrow screens) ───────────
   Future<void> _openFilters() async {
     String draftCategory = _cat;
     String draftCondition = _cond;
@@ -216,13 +214,13 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       padding: const EdgeInsets.all(12),
                       itemCount: filtered.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, childAspectRatio: 0.85,
-                        crossAxisSpacing: 10, mainAxisSpacing: 10,
+                        crossAxisCount: 2, childAspectRatio: 1.0,
+                        crossAxisSpacing: 8, mainAxisSpacing: 8,
                       ),
                       itemBuilder: (ctx, i) => _MarketCard(
                         item: filtered[i],
                         compact: false,
-                        onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: filtered[i], currentUserEmail: widget.currentUserEmail))),
+                        onTap: () => _showItemPopup(ctx, filtered[i], widget.currentUserEmail),
                       ),
                     ),
             ),
@@ -233,8 +231,155 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 }
 
-// ─── BROWSER LAYOUT (side panel + grid) ──────────────────────────────────────
-class _BrowserLayout extends StatelessWidget {
+// ── Item popup (shared by marketplace and lost & found) ───────────────────────
+void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUserEmail) {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Item',
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    transitionDuration: kMid,
+    pageBuilder: (ctx, _, __) => const SizedBox.shrink(),
+    transitionBuilder: (ctx, anim, __, ___) {
+      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+      return Opacity(
+        opacity: curved.value,
+        child: Transform.scale(
+          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                decoration: BoxDecoration(
+                  color: cSurface,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: cBorder),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 40, offset: const Offset(0, 12))],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Image header
+                      Stack(
+                        children: [
+                          Image.network(
+                            item.image,
+                            width: double.infinity,
+                            height: 180,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              height: 180,
+                              color: cPlaceholder,
+                              child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
+                            ),
+                          ),
+                          Positioned(
+                            top: 10, left: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(8)),
+                              child: Text(item.category, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8, right: 8,
+                            child: GestureDetector(
+                              onTap: () => Navigator.of(ctx).pop(),
+                              child: Container(
+                                width: 32, height: 32,
+                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Content
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(item.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.3)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text('\$${item.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -0.5)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: [
+                                  _PopupChip(icon: Icons.star_outline_rounded, label: item.condition),
+                                  _PopupChip(icon: Icons.location_on_outlined, label: item.location),
+                                  _PopupChip(icon: Icons.person_outline_rounded, label: item.seller),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.55)),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                child: _RedButton(
+                                  label: 'View Full Listing',
+                                  icon: Icons.open_in_new_rounded,
+                                  onTap: () {
+                                    Navigator.of(ctx).pop();
+                                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: item, currentUserEmail: currentUserEmail)));
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _PopupChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _PopupChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: cRed),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cRed)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── BROWSER LAYOUT (collapsible side panel + grid) ──────────────────────────
+class _BrowserLayout extends StatefulWidget {
   final List<MarketplaceItem> filtered;
   final String cat;
   final String cond;
@@ -272,27 +417,75 @@ class _BrowserLayout extends StatelessWidget {
   });
 
   @override
+  State<_BrowserLayout> createState() => _BrowserLayoutState();
+}
+
+class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProviderStateMixin {
+  bool _panelOpen = true;
+  late AnimationController _animCtrl;
+  late Animation<double> _widthAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(vsync: this, duration: kMid, value: 1.0);
+    _widthAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _animCtrl.dispose();
+    super.dispose();
+  }
+
+  void _togglePanel() {
+    setState(() => _panelOpen = !_panelOpen);
+    if (_panelOpen) {
+      _animCtrl.forward();
+    } else {
+      _animCtrl.reverse();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Side Panel ────────────────────────────────────────────────────
-        Container(
-          width: 240,
-          decoration: BoxDecoration(
-            color: cSurface,
-            border: Border(right: BorderSide(color: cBorder)),
-          ),
-          child: _SidePanel(
-            cat: cat,
-            cond: cond,
-            minCtrl: minCtrl,
-            maxCtrl: maxCtrl,
-            hasActiveFilters: hasActiveFilters,
-            onCatChanged: onCatChanged,
-            onCondChanged: onCondChanged,
-            onApplyPrice: onApplyPrice,
-            onClearFilters: onClearFilters,
+        // ── Collapsible Side Panel ─────────────────────────────────────────
+        AnimatedBuilder(
+          animation: _widthAnim,
+          builder: (context, child) {
+            return SizedBox(
+              width: _widthAnim.value * 240,
+              child: OverflowBox(
+                maxWidth: 240,
+                alignment: Alignment.topLeft,
+                child: child,
+              ),
+            );
+          },
+          child: Container(
+            width: 240,
+            decoration: BoxDecoration(
+              color: cSurface,
+              border: Border(right: BorderSide(color: cBorder)),
+            ),
+            child: AnimatedOpacity(
+              opacity: _panelOpen ? 1.0 : 0.0,
+              duration: kFast,
+              child: _SidePanel(
+                cat: widget.cat,
+                cond: widget.cond,
+                minCtrl: widget.minCtrl,
+                maxCtrl: widget.maxCtrl,
+                hasActiveFilters: widget.hasActiveFilters,
+                onCatChanged: widget.onCatChanged,
+                onCondChanged: widget.onCondChanged,
+                onApplyPrice: widget.onApplyPrice,
+                onClearFilters: widget.onClearFilters,
+              ),
+            ),
           ),
         ),
         // ── Main Content ──────────────────────────────────────────────────
@@ -301,31 +494,53 @@ class _BrowserLayout extends StatelessWidget {
             children: [
               // Header bar
               Container(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                padding: const EdgeInsets.fromLTRB(12, 12, 16, 10),
                 decoration: BoxDecoration(border: Border(bottom: BorderSide(color: cBorder))),
                 child: Row(
                   children: [
+                    // Toggle panel button
+                    Tooltip(
+                      message: _panelOpen ? 'Hide filters' : 'Show filters',
+                      child: GestureDetector(
+                        onTap: _togglePanel,
+                        child: AnimatedContainer(
+                          duration: kFast,
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: widget.hasActiveFilters ? cRedLight : cBg,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: widget.hasActiveFilters ? cRed.withValues(alpha: 0.4) : cBorder),
+                          ),
+                          child: Icon(
+                            _panelOpen ? Icons.chevron_left_rounded : Icons.tune_rounded,
+                            size: 18,
+                            color: widget.hasActiveFilters ? cRed : cMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: _SearchField(hint: 'Search marketplace...', onChanged: onSearch),
+                      child: _SearchField(hint: 'Search marketplace...', onChanged: widget.onSearch),
                     ),
                     const SizedBox(width: 12),
-                    _HoverButton(child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: onListItem)),
+                    _HoverButton(child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem)),
                   ],
                 ),
               ),
               // Results header
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Row(
                   children: [
                     Text(
-                      '${filtered.length} item${filtered.length == 1 ? '' : 's'}',
+                      '${widget.filtered.length} item${widget.filtered.length == 1 ? '' : 's'}',
                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cMuted),
                     ),
-                    if (hasActiveFilters) ...[
+                    if (widget.hasActiveFilters) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
-                        onTap: onClearFilters,
+                        onTap: widget.onClearFilters,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
@@ -345,21 +560,21 @@ class _BrowserLayout extends StatelessWidget {
               ),
               // Grid
               Expanded(
-                child: filtered.isEmpty
-                    ? _EmptyState(message: 'No items found', cta: 'List an Item', onCta: onListItem)
+                child: widget.filtered.isEmpty
+                    ? _EmptyState(message: 'No items found', cta: 'List an Item', onCta: widget.onListItem)
                     : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                        itemCount: filtered.length,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                        itemCount: widget.filtered.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
-                          childAspectRatio: 0.78,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.88,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
                         ),
                         itemBuilder: (ctx, i) => _MarketCard(
-                          item: filtered[i],
+                          item: widget.filtered[i],
                           compact: true,
-                          onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: filtered[i], currentUserEmail: currentUserEmail))),
+                          onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: widget.filtered[i], currentUserEmail: widget.currentUserEmail))),
                         ),
                       ),
               ),
@@ -401,165 +616,171 @@ class _SidePanel extends StatefulWidget {
 
 class _SidePanelState extends State<_SidePanel> {
   static const _conditions = ['All', 'New', 'Like New', 'Good', 'Fair'];
+  bool _categoryExpanded = true;
+  bool _conditionExpanded = true;
+  bool _priceExpanded = true;
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Panel header ─────────────────────────────────────────────
           Row(
             children: [
-              const Icon(Icons.tune_rounded, size: 16, color: cRed),
+              const Icon(Icons.tune_rounded, size: 15, color: cRed),
               const SizedBox(width: 6),
               const Expanded(
-                child: Text('Filters', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: cText)),
+                child: Text('Filters', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: cText)),
               ),
               if (widget.hasActiveFilters)
                 GestureDetector(
                   onTap: widget.onClearFilters,
-                  child: const Text('Clear', style: TextStyle(fontSize: 11, color: cRed, fontWeight: FontWeight.w700)),
+                  child: const Text('Clear all', style: TextStyle(fontSize: 11, color: cRed, fontWeight: FontWeight.w700)),
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Divider(height: 1, color: cBorder),
-          const SizedBox(height: 16),
 
-          // ── Category ─────────────────────────────────────────────────
-          const _PanelSectionLabel(label: 'CATEGORY'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: ['All', ...categories].map((c) {
-              final selected = widget.cat == c;
-              return GestureDetector(
-                onTap: () => widget.onCatChanged(c),
-                child: AnimatedContainer(
-                  duration: kFast,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: selected ? cRed : cBg,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: selected ? cRed : cBorder),
+          // ── Category (collapsible) ────────────────────────────────────
+          _CollapsibleSection(
+            label: 'CATEGORY',
+            expanded: _categoryExpanded,
+            onToggle: () => setState(() => _categoryExpanded = !_categoryExpanded),
+            child: Wrap(
+              spacing: 5,
+              runSpacing: 5,
+              children: ['All', ...categories].map((c) {
+                final selected = widget.cat == c;
+                return GestureDetector(
+                  onTap: () => widget.onCatChanged(c),
+                  child: AnimatedContainer(
+                    duration: kFast,
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: selected ? cRed : cBg,
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: selected ? cRed : cBorder),
+                    ),
+                    child: Text(c, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: selected ? Colors.white : cMuted)),
                   ),
-                  child: Text(
-                    c,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: selected ? Colors.white : cMuted),
-                  ),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
-          const SizedBox(height: 20),
-          Divider(height: 1, color: cBorder),
-          const SizedBox(height: 16),
 
-          // ── Condition ────────────────────────────────────────────────
-          const _PanelSectionLabel(label: 'CONDITION'),
-          const SizedBox(height: 8),
-          Column(
-            children: _conditions.map((c) {
-              final selected = widget.cond == c;
-              return GestureDetector(
-                onTap: () => widget.onCondChanged(c),
-                child: AnimatedContainer(
-                  duration: kFast,
-                  margin: const EdgeInsets.only(bottom: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: selected ? cRedLight : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: selected ? cRed.withValues(alpha: 0.4) : Colors.transparent),
-                  ),
-                  child: Row(
-                    children: [
-                      AnimatedContainer(
-                        duration: kFast,
-                        width: 16, height: 16,
-                        decoration: BoxDecoration(
-                          color: selected ? cRed : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: selected ? cRed : cMuted, width: 1.5),
+          // ── Condition (collapsible) ───────────────────────────────────
+          _CollapsibleSection(
+            label: 'CONDITION',
+            expanded: _conditionExpanded,
+            onToggle: () => setState(() => _conditionExpanded = !_conditionExpanded),
+            child: Column(
+              children: _conditions.map((c) {
+                final selected = widget.cond == c;
+                return GestureDetector(
+                  onTap: () => widget.onCondChanged(c),
+                  child: AnimatedContainer(
+                    duration: kFast,
+                    margin: const EdgeInsets.only(bottom: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: selected ? cRedLight : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9),
+                      border: Border.all(color: selected ? cRed.withValues(alpha: 0.4) : Colors.transparent),
+                    ),
+                    child: Row(
+                      children: [
+                        AnimatedContainer(
+                          duration: kFast,
+                          width: 14, height: 14,
+                          decoration: BoxDecoration(
+                            color: selected ? cRed : Colors.transparent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: selected ? cRed : cMuted, width: 1.5),
+                          ),
+                          child: selected ? const Icon(Icons.check_rounded, size: 9, color: Colors.white) : null,
                         ),
-                        child: selected ? const Icon(Icons.check_rounded, size: 10, color: Colors.white) : null,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(c, style: TextStyle(fontSize: 13, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? cRed : cText)),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(c, style: TextStyle(fontSize: 12, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, color: selected ? cRed : cText)),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
-          const SizedBox(height: 20),
-          Divider(height: 1, color: cBorder),
-          const SizedBox(height: 16),
 
-          // ── Price Range ───────────────────────────────────────────────
-          const _PanelSectionLabel(label: 'PRICE RANGE'),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: widget.minCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Min',
-                    hintStyle: const TextStyle(color: cMuted, fontSize: 12),
-                    prefixText: '\$',
-                    prefixStyle: const TextStyle(color: cMuted, fontSize: 13),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cRed, width: 1.5)),
-                    filled: true, fillColor: cBg,
+          // ── Price Range (collapsible) ─────────────────────────────────
+          _CollapsibleSection(
+            label: 'PRICE RANGE',
+            expanded: _priceExpanded,
+            onToggle: () => setState(() => _priceExpanded = !_priceExpanded),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: widget.minCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: const TextStyle(fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'Min',
+                          hintStyle: const TextStyle(color: cMuted, fontSize: 11),
+                          prefixText: '\$',
+                          prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cRed, width: 1.5)),
+                          filled: true, fillColor: cBg,
+                        ),
+                      ),
+                    ),
+                    const Padding(padding: EdgeInsets.symmetric(horizontal: 5), child: Text('–', style: TextStyle(color: cMuted, fontWeight: FontWeight.w700))),
+                    Expanded(
+                      child: TextField(
+                        controller: widget.maxCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        style: const TextStyle(fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'Max',
+                          hintStyle: const TextStyle(color: cMuted, fontSize: 11),
+                          prefixText: '\$',
+                          prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cRed, width: 1.5)),
+                          filled: true, fillColor: cBg,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final min = double.tryParse(widget.minCtrl.text.trim());
+                      final max = double.tryParse(widget.maxCtrl.text.trim());
+                      widget.onApplyPrice(min, max);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: cRed,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                    ),
+                    child: const Text('Apply', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
                 ),
-              ),
-              const Padding(padding: EdgeInsets.symmetric(horizontal: 6), child: Text('–', style: TextStyle(color: cMuted, fontWeight: FontWeight.w700))),
-              Expanded(
-                child: TextField(
-                  controller: widget.maxCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Max',
-                    hintStyle: const TextStyle(color: cMuted, fontSize: 12),
-                    prefixText: '\$',
-                    prefixStyle: const TextStyle(color: cMuted, fontSize: 13),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cRed, width: 1.5)),
-                    filled: true, fillColor: cBg,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                final min = double.tryParse(widget.minCtrl.text.trim());
-                final max = double.tryParse(widget.maxCtrl.text.trim());
-                widget.onApplyPrice(min, max);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: cRed,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-              ),
-              child: const Text('Apply', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              ],
             ),
           ),
         ],
@@ -568,13 +789,56 @@ class _SidePanelState extends State<_SidePanel> {
   }
 }
 
-class _PanelSectionLabel extends StatelessWidget {
+// ─── COLLAPSIBLE SECTION ──────────────────────────────────────────────────────
+class _CollapsibleSection extends StatelessWidget {
   final String label;
-  const _PanelSectionLabel({required this.label});
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget child;
+
+  const _CollapsibleSection({
+    required this.label,
+    required this.expanded,
+    required this.onToggle,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onToggle,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
+                ),
+                AnimatedRotation(
+                  turns: expanded ? 0 : -0.25,
+                  duration: kFast,
+                  child: const Icon(Icons.expand_more_rounded, size: 16, color: cMuted),
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: child,
+          ),
+          secondChild: const SizedBox.shrink(),
+          crossFadeState: expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+          duration: kFast,
+        ),
+        Divider(height: 1, color: cBorder),
+      ],
+    );
   }
 }
 
@@ -623,11 +887,10 @@ class _HoverButtonState extends State<_HoverButton> {
   }
 }
 
-// ─── MARKET CARD ─────────────────────────────────────────────────────────────
+// ─── MARKET CARD (compact / smaller) ─────────────────────────────────────────
 class _MarketCard extends StatefulWidget {
   final MarketplaceItem item;
   final VoidCallback onTap;
-  // compact = true on browser (smaller image height)
   final bool compact;
   const _MarketCard({required this.item, required this.onTap, this.compact = false});
   @override
@@ -665,20 +928,20 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
             duration: kMid,
             decoration: BoxDecoration(
               color: cSurface,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(color: _hovered ? cRed.withValues(alpha: 0.35) : cBorder),
               boxShadow: [BoxShadow(
-                color: _hovered ? cRed.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06),
-                blurRadius: _hovered ? 18 : 10, offset: const Offset(0, 3),
+                color: _hovered ? cRed.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.05),
+                blurRadius: _hovered ? 16 : 8, offset: const Offset(0, 2),
               )],
             ),
             clipBehavior: Clip.antiAlias,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image — fixed height when compact, flexible otherwise
-                SizedBox(
-                  height: widget.compact ? 100 : 120,
+                // Image
+                Expanded(
+                  flex: 3,
                   child: Stack(
                     children: [
                       Image.network(
@@ -686,39 +949,51 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted))),
+                        errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20))),
                       ),
                       Positioned(
-                        top: 8, left: 8,
+                        top: 6, left: 6,
                         child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(8)),
-                          child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(6)),
+                          child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('\$${widget.item.price.toStringAsFixed(0)}', style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: -0.5)),
-                      const SizedBox(height: 2),
-                      Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cText)),
-                      const SizedBox(height: 2),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on_outlined, size: 10, color: cMuted),
-                          const SizedBox(width: 3),
-                          Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 10, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(widget.item.condition, style: const TextStyle(fontSize: 10, color: cMuted)),
-                    ],
+                // Info
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('\$${widget.item.price.toStringAsFixed(0)}',
+                              style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(5), border: Border.all(color: cBorder)),
+                              child: Text(widget.item.condition, style: const TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 9, color: cMuted),
+                            const SizedBox(width: 2),
+                            Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 9, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
