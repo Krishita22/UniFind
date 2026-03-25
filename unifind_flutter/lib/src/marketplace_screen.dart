@@ -3,7 +3,8 @@ part of '../main.dart';
 class MarketplaceScreen extends StatefulWidget {
   final List<MarketplaceItem> items;
   final VoidCallback onListItem;
-  const MarketplaceScreen({super.key, required this.items, required this.onListItem});
+  final String currentUserEmail;
+  const MarketplaceScreen({super.key, required this.items, required this.onListItem, required this.currentUserEmail});
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -193,389 +194,43 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                   _HoverButton(child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem)),
                 ],
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Expanded(child: _SearchField(hint: 'Search marketplace...', onChanged: (v) => setState(() => _q = v))),
-                  const SizedBox(width: 8),
-                  _MarketFilterButton(onTap: _openFilters, hasActive: _hasActiveFilters),
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
-            Expanded(
-              child: filtered.isEmpty
-                  ? _EmptyState(message: 'No items found', cta: 'List an Item', onCta: widget.onListItem)
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: filtered.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, childAspectRatio: 1.0,
-                        crossAxisSpacing: 8, mainAxisSpacing: 8,
-                      ),
-                      itemBuilder: (ctx, i) => _MarketCard(
-                        item: filtered[i],
-                        compact: false,
-                        onTap: () => _showItemPopup(ctx, filtered[i]),
-                      ),
-                    ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-// ── Item popup (shared by marketplace and lost & found) ───────────────────────
-void _showItemPopup(BuildContext context, MarketplaceItem item) {
-  showGeneralDialog(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'Item',
-    barrierColor: Colors.black.withValues(alpha: 0.45),
-    transitionDuration: kMid,
-    pageBuilder: (ctx, _, __) => const SizedBox.shrink(),
-    transitionBuilder: (ctx, anim, __, ___) {
-      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
-      return Opacity(
-        opacity: curved.value,
-        child: Transform.scale(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                decoration: BoxDecoration(
-                  color: cSurface,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: cBorder),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 40, offset: const Offset(0, 12))],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Material(
-                  color: Colors.transparent,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Image header
-                      Stack(
-                        children: [
-                          Image.network(
-                            item.image,
-                            width: double.infinity,
-                            height: 180,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              height: 180,
-                              color: cPlaceholder,
-                              child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
-                            ),
-                          ),
-                          Positioned(
-                            top: 10, left: 10,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(8)),
-                              child: Text(item.category, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                            ),
-                          ),
-                          Positioned(
-                            top: 8, right: 8,
-                            child: GestureDetector(
-                              onTap: () => Navigator.of(ctx).pop(),
-                              child: Container(
-                                width: 32, height: 32,
-                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
-                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Content
-                      Flexible(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(item.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.3)),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text('\$${item.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -0.5)),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                children: [
-                                  _PopupChip(icon: Icons.star_outline_rounded, label: item.condition),
-                                  _PopupChip(icon: Icons.location_on_outlined, label: item.location),
-                                  _PopupChip(icon: Icons.person_outline_rounded, label: item.seller),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.55)),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: _RedButton(
-                                  label: 'View Full Listing',
-                                  icon: Icons.open_in_new_rounded,
-                                  onTap: () {
-                                    Navigator.of(ctx).pop();
-                                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: item)));
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-class _PopupChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _PopupChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: cRed),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cRed)),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── BROWSER LAYOUT (collapsible side panel + grid) ──────────────────────────
-class _BrowserLayout extends StatefulWidget {
-  final List<MarketplaceItem> filtered;
-  final String cat;
-  final String cond;
-  final double? minPrice;
-  final double? maxPrice;
-  final TextEditingController minCtrl;
-  final TextEditingController maxCtrl;
-  final bool hasActiveFilters;
-  final void Function(String) onCatChanged;
-  final void Function(String) onCondChanged;
-  final void Function(double?, double?) onApplyPrice;
-  final VoidCallback onClearFilters;
-  final VoidCallback onListItem;
-  final void Function(String) onSearch;
-  final String q;
-
-  const _BrowserLayout({
-    required this.filtered,
-    required this.cat,
-    required this.cond,
-    required this.minPrice,
-    required this.maxPrice,
-    required this.minCtrl,
-    required this.maxCtrl,
-    required this.hasActiveFilters,
-    required this.onCatChanged,
-    required this.onCondChanged,
-    required this.onApplyPrice,
-    required this.onClearFilters,
-    required this.onListItem,
-    required this.onSearch,
-    required this.q,
-  });
-
-  @override
-  State<_BrowserLayout> createState() => _BrowserLayoutState();
-}
-
-class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProviderStateMixin {
-  bool _panelOpen = true;
-  late AnimationController _animCtrl;
-  late Animation<double> _widthAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _animCtrl = AnimationController(vsync: this, duration: kMid, value: 1.0);
-    _widthAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _animCtrl.dispose();
-    super.dispose();
-  }
-
-  void _togglePanel() {
-    setState(() => _panelOpen = !_panelOpen);
-    if (_panelOpen) {
-      _animCtrl.forward();
-    } else {
-      _animCtrl.reverse();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Collapsible Side Panel ─────────────────────────────────────────
-        AnimatedBuilder(
-          animation: _widthAnim,
-          builder: (context, child) {
-            return SizedBox(
-              width: _widthAnim.value * 240,
-              child: OverflowBox(
-                maxWidth: 240,
-                alignment: Alignment.topLeft,
-                child: child,
-              ),
-            );
-          },
-          child: Container(
-            width: 240,
-            decoration: BoxDecoration(
-              color: cSurface,
-              border: Border(right: BorderSide(color: cBorder)),
-            ),
-            child: AnimatedOpacity(
-              opacity: _panelOpen ? 1.0 : 0.0,
-              duration: kFast,
-              child: _SidePanel(
-                cat: widget.cat,
-                cond: widget.cond,
-                minCtrl: widget.minCtrl,
-                maxCtrl: widget.maxCtrl,
-                hasActiveFilters: widget.hasActiveFilters,
-                onCatChanged: widget.onCatChanged,
-                onCondChanged: widget.onCondChanged,
-                onApplyPrice: widget.onApplyPrice,
-                onClearFilters: widget.onClearFilters,
-              ),
-            ),
-          ),
-        ),
-        // ── Main Content ──────────────────────────────────────────────────
-        Expanded(
-          child: Column(
-            children: [
-              // Header bar
-              Container(
-                padding: const EdgeInsets.fromLTRB(12, 12, 16, 10),
-                decoration: BoxDecoration(border: Border(bottom: BorderSide(color: cBorder))),
-                child: Row(
-                  children: [
-                    // Toggle panel button
-                    Tooltip(
-                      message: _panelOpen ? 'Hide filters' : 'Show filters',
-                      child: GestureDetector(
-                        onTap: _togglePanel,
-                        child: AnimatedContainer(
-                          duration: kFast,
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                            color: widget.hasActiveFilters ? cRedLight : cBg,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: widget.hasActiveFilters ? cRed.withValues(alpha: 0.4) : cBorder),
-                          ),
-                          child: Icon(
-                            _panelOpen ? Icons.chevron_left_rounded : Icons.tune_rounded,
-                            size: 18,
-                            color: widget.hasActiveFilters ? cRed : cMuted,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _SearchField(hint: 'Search marketplace...', onChanged: widget.onSearch),
-                    ),
-                    const SizedBox(width: 12),
-                    _HoverButton(child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem)),
-                  ],
-                ),
-              ),
-              // Results header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                child: Row(
-                  children: [
-                    Text(
-                      '${widget.filtered.length} item${widget.filtered.length == 1 ? '' : 's'}',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cMuted),
-                    ),
-                    if (widget.hasActiveFilters) ...[
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: widget.onClearFilters,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.close_rounded, size: 12, color: cRed),
-                              SizedBox(width: 3),
-                              Text('Clear filters', style: TextStyle(fontSize: 11, color: cRed, fontWeight: FontWeight.w700)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              // Grid
-              Expanded(
-                child: widget.filtered.isEmpty
-                    ? _EmptyState(message: 'No items found', cta: 'List an Item', onCta: widget.onListItem)
-                    : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                        itemCount: widget.filtered.length,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.88,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                        ),
-                        itemBuilder: (ctx, i) => _MarketCard(
-                          item: widget.filtered[i],
-                          compact: true,
-                          onTap: () => _showItemPopup(ctx, widget.filtered[i]),
-                        ),
-                      ),
-              ),
             ],
           ),
+        ),
+        // Search
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Expanded(
+                child: _SearchField(
+                  hint: 'Search marketplace...',
+                  onChanged: (v) => setState(() => _q = v),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _MarketFilterButton(onTap: _openFilters),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Expanded(
+          child: filtered.isEmpty
+              ? _EmptyState(message: 'No items found', cta: 'List an Item', onCta: widget.onListItem)
+              : GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: filtered.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.7,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemBuilder: (ctx, i) => _MarketCard(
+                    item: filtered[i],
+                    onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: filtered[i]))),
+                  ),
+                ),
         ),
       ],
     );

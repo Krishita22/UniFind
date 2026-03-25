@@ -493,3 +493,336 @@ Future<String> uploadImage(String filePath, Uint8List fileBytes) async {
     throw Exception(data['error']['message'] ?? 'Failed to upload image.');
   }
 }
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADMIN API CALLS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ─── ADMIN: GET STATS ────────────────────────────────────────────────────────
+Future<Map<String, dynamic>> getAdminStats() async {
+  final response = await http.get(
+    Uri.parse('$_baseUrl/admin/get_admin_stats.php'),
+    headers: {'Content-Type': 'application/json'},
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data['data'] ?? data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load admin stats.');
+}
+
+// ─── ADMIN: GET PENDING LISTINGS ─────────────────────────────────────────────
+Future<List<Map<String, dynamic>>> getAdminPendingListings() async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_pending_listings.php'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load pending listings.');
+}
+
+// ─── ADMIN: GET ACTIVE LISTINGS ──────────────────────────────────────────────
+Future<List<Map<String, dynamic>>> getAdminActiveListings() async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_active_listings.php'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load active listings.');
+}
+
+// ─── ADMIN: APPROVE LISTING ───────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminApproveListing({
+  required String listingId,
+  required bool isLostFound,
+  required String title,
+  required String description,
+  required String category,
+  required String condition,
+  required String location,
+  required double price,
+  required bool notifyUser,
+  required String userEmail,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/approve_listing.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'listing_id': listingId,
+      'is_lost_found': isLostFound,
+      'title': title,
+      'description': description,
+      'category': category,
+      'condition': condition,
+      'location': location,
+      'price': price,
+      'notify_user': notifyUser,
+      'user_email': userEmail,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to approve listing.');
+}
+
+// ─── ADMIN: DENY LISTING ─────────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminDenyListing({
+  required String listingId,
+  required bool isLostFound,
+  required String reason,
+  required String explanation,
+  required bool notifyUser,
+  required String userEmail,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/deny_listing.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'listing_id': listingId,
+      'is_lost_found': isLostFound,
+      'reason': reason,
+      'explanation': explanation,
+      'notify_user': notifyUser,
+      'user_email': userEmail,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to deny listing.');
+}
+
+// ─── ADMIN: GET USERS ────────────────────────────────────────────────────────
+Future<List<Map<String, dynamic>>> getAdminUsers() async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_users.php'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load users.');
+}
+
+// ─── ADMIN: ISSUE ONE-TIME WARNING ───────────────────────────────────────────
+// Sends a warning email to the user and marks has_warning = 1 in the DB.
+// A user must be warned once before they can be permanently banned.
+Future<Map<String, dynamic>> adminIssueWarning({
+  required int userId,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/issue_warning.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'user_id': userId, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to issue warning.');
+}
+
+// ─── ADMIN: BAN USER ─────────────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminBanUser({
+  required int userId,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/ban_user.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'user_id': userId, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to ban user.');
+}
+
+// ─── ADMIN: UNBAN USER ───────────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminUnbanUser({
+  required int userId,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/unban_user.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'user_id': userId, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to unban user.');
+}
+
+// ─── ADMIN: DELETE USER ──────────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminDeleteUser({
+  required int userId,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/delete_user.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'user_id': userId, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to delete user.');
+}
+
+// ─── ADMIN: TOGGLE EMAIL VERIFICATION ────────────────────────────────────────
+Future<Map<String, dynamic>> adminToggleVerification({
+  required int userId,
+  required bool verify,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/toggle_verification.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'user_id': userId, 'verify': verify}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to toggle verification.');
+}
+
+// ─── ADMIN: GET LOST & FOUND ITEMS ───────────────────────────────────────────
+Future<List<Map<String, dynamic>>> getAdminLostFoundItems() async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_lostfound_admin.php'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load lost & found items.');
+}
+
+// ─── ADMIN: MARK LOST/FOUND AS RESOLVED ──────────────────────────────────────
+Future<Map<String, dynamic>> adminMarkLostFoundResolved({
+  required String itemId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/resolve_lostfound.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'item_id': itemId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to resolve item.');
+}
+
+// ─── ADMIN: GET REPORTS ──────────────────────────────────────────────────────
+Future<List<Map<String, dynamic>>> getAdminReports() async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_reports.php'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load reports.');
+}
+
+// ─── ADMIN: RESOLVE REPORT ───────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminResolveReport({
+  required String reportId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/resolve_report.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'report_id': reportId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to resolve report.');
+}
+
+// ─── USER: SUBMIT REPORT ─────────────────────────────────────────────────────
+Future<Map<String, dynamic>> submitReport({
+  required String targetId,
+  required String targetType,
+  required String targetTitle,
+  required String reporterEmail,
+  required String reason,
+  required String notes,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/submit_report.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'target_id': targetId,
+      'target_type': targetType,
+      'target_title': targetTitle,
+      'reporter_email': reporterEmail,
+      'reason': reason,
+      'notes': notes,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to submit report.');
+}
+
+// ─── ADMIN: BAN USER BY EMAIL (used when user ID is not resolved) ─────────────
+Future<Map<String, dynamic>> adminBanUserByEmail({
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/ban_user.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to ban user by email.');
+}
+
+// ─── ADMIN: REMOVE LISTING (from reports panel) ───────────────────────────────
+Future<Map<String, dynamic>> adminRemoveListing({
+  required String listingId,
+  required bool isLostFound,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/remove_listing.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'listing_id': listingId, 'is_lost_found': isLostFound}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to remove listing.');
+}
+
+
+
+Future<List<Map<String, dynamic>>> getUserMarketListings(int userId) async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_user_listings.php?user_id=$userId'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load listings.');
+}
+
+Future<List<Map<String, dynamic>>> getUserLostFoundListings(int userId) async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_user_lostfound.php?user_id=$userId'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load lost & found.');
+}
+
