@@ -132,6 +132,211 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
   }
 }
 
+// ── Lost & Found item popup ────────────────────────────────────────────────────
+void _showLostFoundPopup(
+  BuildContext context,
+  LostFoundItem item, {
+  required Future<void> Function(ClaimEvidence) onClaim,
+  required Future<void> Function(FoundMatchInput) onPostFoundMatch,
+  required bool claimSubmittedByMe,
+  required bool matchSubmittedByMe,
+}) {
+  final isLost = item.type == LostFoundType.lost;
+  final typeColor = isLost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60);
+  final typeBg   = isLost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0);
+
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'LF Item',
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    transitionDuration: kMid,
+    pageBuilder: (ctx, _, __) => const SizedBox.shrink(),
+    transitionBuilder: (ctx, anim, __, ___) {
+      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+      return Opacity(
+        opacity: curved.value,
+        child: Transform.scale(
+          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 460, maxHeight: 580),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                decoration: BoxDecoration(
+                  color: cSurface,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: cBorder),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 40, offset: const Offset(0, 12))],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Image header
+                      Stack(
+                        children: [
+                          Image.network(
+                            item.image,
+                            width: double.infinity,
+                            height: 160,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              height: 160,
+                              color: cPlaceholder,
+                              child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
+                            ),
+                          ),
+                          Positioned(
+                            top: 10, left: 10,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: typeBg, borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: typeColor.withValues(alpha: 0.4))),
+                              child: Text(isLost ? 'Lost' : 'Found',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: typeColor)),
+                            ),
+                          ),
+                          Positioned(
+                            top: 8, right: 8,
+                            child: GestureDetector(
+                              onTap: () => Navigator.of(ctx).pop(),
+                              child: Container(
+                                width: 32, height: 32,
+                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Content
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.3)),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: [
+                                  _LFPopupChip(icon: Icons.category_outlined, label: item.category),
+                                  _LFPopupChip(icon: Icons.location_on_outlined, label: item.location),
+                                  _LFPopupChip(icon: Icons.person_outline_rounded, label: item.poster),
+                                  _LFPopupChip(icon: Icons.access_time_rounded, label: formatDate(item.createdAt)),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.55)),
+                              const SizedBox(height: 16),
+                              // Action button inside popup
+                              if (!isLost)
+                                _LFActionButton(
+                                  label: item.status.toLowerCase() == 'claimed'
+                                      ? 'Already Claimed'
+                                      : claimSubmittedByMe
+                                          ? 'Claim Submitted'
+                                          : 'Claim This Item',
+                                  icon: item.status.toLowerCase() == 'claimed'
+                                      ? Icons.check_circle_outline_rounded
+                                      : claimSubmittedByMe
+                                          ? Icons.mark_email_read_outlined
+                                          : Icons.volunteer_activism_outlined,
+                                  color: const Color(0xFFE74C3C),
+                                  disabled: item.status.toLowerCase() == 'claimed' || claimSubmittedByMe,
+                                  onTap: () async {
+                                    Navigator.of(ctx).pop();
+                                  },
+                                ),
+                              if (isLost)
+                                _LFActionButton(
+                                  label: matchSubmittedByMe ? 'Match Submitted' : 'I Found This Item',
+                                  icon: matchSubmittedByMe ? Icons.check_circle_outline_rounded : Icons.add_circle_outline_rounded,
+                                  color: const Color(0xFF27AE60),
+                                  disabled: matchSubmittedByMe,
+                                  onTap: () async {
+                                    Navigator.of(ctx).pop();
+                                  },
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _LFPopupChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _LFPopupChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(7), border: Border.all(color: cBorder)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: cMuted),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _LFActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool disabled;
+  final VoidCallback onTap;
+
+  const _LFActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.disabled = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: disabled ? null : onTap,
+        icon: Icon(icon, size: 16),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          side: BorderSide(color: disabled ? cBorder : color.withValues(alpha: 0.6)),
+          foregroundColor: disabled ? cMuted : color,
+          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+}
+
 class _LostFoundCard extends StatefulWidget {
   final LostFoundItem item;
   final Future<void> Function(ClaimEvidence evidence) onClaim;
@@ -211,9 +416,7 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
                   child: Container(
                     margin: const EdgeInsets.all(16),
                     padding: EdgeInsets.fromLTRB(
-                      16,
-                      16,
-                      16,
+                      16, 16, 16,
                       MediaQuery.of(ctx).viewInsets.bottom + 16,
                     ),
                     decoration: BoxDecoration(
@@ -221,11 +424,7 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: cBorder),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.10),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                        ),
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 24, offset: const Offset(0, 8)),
                       ],
                     ),
                     child: Material(
@@ -243,11 +442,7 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
   }
 
   Future<ClaimEvidence?> _openClaimSheet() async {
-    _proofCtrl.clear();
-    _identCtrl.clear();
-    _lastSeenCtrl.clear();
-    _contactCtrl.clear();
-
+    _proofCtrl.clear(); _identCtrl.clear(); _lastSeenCtrl.clear(); _contactCtrl.clear();
     String? error;
     return _openCenteredDialog<ClaimEvidence>((ctx, setModalState) {
       return SingleChildScrollView(
@@ -255,174 +450,98 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                  const Text(
-                    'Claim This Item',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Provide details to prove ownership. This will be sent for verification.',
-                    style: TextStyle(fontSize: 12, color: cMuted),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _proofCtrl,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Proof details *',
-                      hintText: 'Describe unique marks, contents, serial details...',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _identCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Identifying details',
-                      hintText: 'Color, brand, stickers, initials, etc.',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _lastSeenCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Where/when you lost it',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _contactCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Preferred contact note',
-                      hintText: 'Best time to reach you, alternate handle, etc.',
-                    ),
-                  ),
-                  if (error != null) ...[
-                    const SizedBox(height: 8),
-                    Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)),
-                  ],
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: _AuthButton(
-                      loading: false,
-                      label: 'Submit Claim',
-                      onTap: () {
-                        final proof = _proofCtrl.text.trim();
-                        if (proof.length < 12) {
-                          setModalState(() => error = 'Please add more proof details (at least 12 characters).');
-                          return;
-                        }
-                        Navigator.of(ctx).pop(
-                          ClaimEvidence(
-                            proofDetails: proof,
-                            identifyingDetails: _identCtrl.text.trim(),
-                            lastSeenContext: _lastSeenCtrl.text.trim(),
-                            contactNote: _contactCtrl.text.trim(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+            const Text('Claim This Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            const Text('Provide details to prove ownership. This will be sent for verification.', style: TextStyle(fontSize: 12, color: cMuted)),
+            const SizedBox(height: 12),
+            TextField(controller: _proofCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Proof details *', hintText: 'Describe unique marks, contents, serial details...')),
+            const SizedBox(height: 10),
+            TextField(controller: _identCtrl, decoration: const InputDecoration(labelText: 'Identifying details', hintText: 'Color, brand, stickers, initials, etc.')),
+            const SizedBox(height: 10),
+            TextField(controller: _lastSeenCtrl, decoration: const InputDecoration(labelText: 'Where/when you lost it')),
+            const SizedBox(height: 10),
+            TextField(controller: _contactCtrl, decoration: const InputDecoration(labelText: 'Preferred contact note', hintText: 'Best time to reach you, alternate handle, etc.')),
+            if (error != null) ...[
+              const SizedBox(height: 8),
+              Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: _AuthButton(
+                loading: false,
+                label: 'Submit Claim',
+                onTap: () {
+                  final proof = _proofCtrl.text.trim();
+                  if (proof.length < 12) {
+                    setModalState(() => error = 'Please add more proof details (at least 12 characters).');
+                    return;
+                  }
+                  Navigator.of(ctx).pop(ClaimEvidence(
+                    proofDetails: proof,
+                    identifyingDetails: _identCtrl.text.trim(),
+                    lastSeenContext: _lastSeenCtrl.text.trim(),
+                    contactNote: _contactCtrl.text.trim(),
+                  ));
+                },
               ),
-            );
+            ),
+          ],
+        ),
+      );
     });
   }
 
   Future<FoundMatchInput?> _openFoundMatchSheet() async {
-    _foundWhereCtrl.clear();
-    _foundWhenCtrl.clear();
-    _foundDetailsCtrl.clear();
-    _foundContactCtrl.clear();
+    _foundWhereCtrl.clear(); _foundWhenCtrl.clear(); _foundDetailsCtrl.clear(); _foundContactCtrl.clear();
     String? error;
-
     return _openCenteredDialog<FoundMatchInput>((ctx, setModalState) {
       return SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                  const Text('Match', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Submit a match request for "${widget.item.title}".',
-                    style: const TextStyle(fontSize: 12, color: cMuted),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _foundWhereCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Where did you find it? *',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _foundWhenCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'When did you find it? *',
-                      hintText: 'e.g. Today 2PM',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _foundDetailsCtrl,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Matching details *',
-                      hintText: 'Describe how this matches the lost item...',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _foundContactCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Contact note',
-                    ),
-                  ),
-                  if (error != null) ...[
-                    const SizedBox(height: 8),
-                    Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)),
-                  ],
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: _AuthButton(
-                      loading: false,
-                      label: 'Submit Match',
-                      onTap: () {
-                        final where = _foundWhereCtrl.text.trim();
-                        final when = _foundWhenCtrl.text.trim();
-                        final details = _foundDetailsCtrl.text.trim();
-                        if (where.isEmpty) {
-                          setModalState(() => error = 'Please enter where you found it.');
-                          return;
-                        }
-                        if (when.isEmpty) {
-                          setModalState(() => error = 'Please enter when you found it.');
-                          return;
-                        }
-                        if (details.isEmpty) {
-                          setModalState(() => error = 'Please enter matching details.');
-                          return;
-                        }
-                        if (details.length < 8) {
-                          setModalState(() => error = 'Matching details must be at least 8 characters.');
-                          return;
-                        }
-                        Navigator.of(ctx).pop(
-                          FoundMatchInput(
-                            foundLocation: where,
-                            foundWhen: when,
-                            matchDetails: details,
-                            contactNote: _foundContactCtrl.text.trim(),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
+            const Text('Match', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            Text('Submit a match request for "${widget.item.title}".', style: const TextStyle(fontSize: 12, color: cMuted)),
+            const SizedBox(height: 12),
+            TextField(controller: _foundWhereCtrl, decoration: const InputDecoration(labelText: 'Where did you find it? *')),
+            const SizedBox(height: 10),
+            TextField(controller: _foundWhenCtrl, decoration: const InputDecoration(labelText: 'When did you find it? *', hintText: 'e.g. Today 2PM')),
+            const SizedBox(height: 10),
+            TextField(controller: _foundDetailsCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Matching details *', hintText: 'Describe how this matches the lost item...')),
+            const SizedBox(height: 10),
+            TextField(controller: _foundContactCtrl, decoration: const InputDecoration(labelText: 'Contact note')),
+            if (error != null) ...[
+              const SizedBox(height: 8),
+              Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)),
+            ],
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: _AuthButton(
+                loading: false,
+                label: 'Submit Match',
+                onTap: () {
+                  final where = _foundWhereCtrl.text.trim();
+                  final when = _foundWhenCtrl.text.trim();
+                  final details = _foundDetailsCtrl.text.trim();
+                  if (where.isEmpty) { setModalState(() => error = 'Please enter where you found it.'); return; }
+                  if (when.isEmpty) { setModalState(() => error = 'Please enter when you found it.'); return; }
+                  if (details.isEmpty) { setModalState(() => error = 'Please enter matching details.'); return; }
+                  if (details.length < 8) { setModalState(() => error = 'Matching details must be at least 8 characters.'); return; }
+                  Navigator.of(ctx).pop(FoundMatchInput(
+                    foundLocation: where,
+                    foundWhen: when,
+                    matchDetails: details,
+                    contactNote: _foundContactCtrl.text.trim(),
+                  ));
+                },
               ),
-            );
+            ),
+          ],
+        ),
+      );
     });
   }
 
@@ -437,7 +556,18 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
 
     return GestureDetector(
       onTapDown: (_) => _c.forward(),
-      onTapUp: (_) => _c.reverse(),
+      onTapUp: (_) {
+        _c.reverse();
+        // Tap the card to open popup
+        _showLostFoundPopup(
+          context,
+          widget.item,
+          onClaim: widget.onClaim,
+          onPostFoundMatch: widget.onPostFoundMatch,
+          claimSubmittedByMe: isSubmitted,
+          matchSubmittedByMe: isMatchSubmitted,
+        );
+      },
       onTapCancel: () => _c.reverse(),
       child: ScaleTransition(
         scale: _scale,
@@ -456,10 +586,9 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
                   widget.item.image,
-                  width: 80,
-                  height: 80,
+                  width: 72, height: 72,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(width: 80, height: 80, child: ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted)))),
+                  errorBuilder: (_, __, ___) => const SizedBox(width: 72, height: 72, child: ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20)))),
                 ),
               ),
               const SizedBox(width: 12),
@@ -488,61 +617,36 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
                         Expanded(child: Text('${widget.item.location} · ${widget.item.poster} · ${formatDate(widget.item.createdAt)}', style: const TextStyle(fontSize: 11, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
                       ],
                     ),
-                    if (!isLost) ...[
-                      const SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                    // Action buttons inline (still available from card directly)
+                    if (!isLost)
                       SizedBox(
-                        height: 30,
+                        height: 28,
                         child: OutlinedButton.icon(
-                          onPressed: isClaimed || _claiming
-                              || isSubmitted
+                          onPressed: isClaimed || _claiming || isSubmitted
                               ? null
                               : () async {
                                   final evidence = await _openClaimSheet();
                                   if (evidence == null) return;
                                   setState(() => _claiming = true);
-                                  try {
-                                    await widget.onClaim(evidence);
-                                  } finally {
-                                    if (mounted) setState(() => _claiming = false);
-                                  }
+                                  try { await widget.onClaim(evidence); }
+                                  finally { if (mounted) setState(() => _claiming = false); }
                                 },
                           icon: _claiming
-                              ? const SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : Icon(
-                                  isClaimed
-                                      ? Icons.check_circle_outline_rounded
-                                      : isSubmitted
-                                          ? Icons.mark_email_read_outlined
-                                      : Icons.volunteer_activism_outlined,
-                                  size: 14,
-                                ),
-                          label: Text(isClaimed ? 'Claimed' : isSubmitted ? 'Submitted' : 'Claim'),
+                              ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                              : Icon(isClaimed ? Icons.check_circle_outline_rounded : isSubmitted ? Icons.mark_email_read_outlined : Icons.volunteer_activism_outlined, size: 13),
+                          label: Text(isClaimed ? 'Claimed' : isSubmitted ? 'Submitted' : 'Claim', style: const TextStyle(fontSize: 11)),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            side: BorderSide(
-                              color: isClaimed
-                                  ? cBorder
-                                  : const Color(0xFFE74C3C).withValues(alpha: 0.35),
-                            ),
-                            foregroundColor: isClaimed
-                                ? cMuted
-                                : const Color(0xFFE74C3C),
-                            textStyle: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            side: BorderSide(color: isClaimed ? cBorder : const Color(0xFFE74C3C).withValues(alpha: 0.35)),
+                            foregroundColor: isClaimed ? cMuted : const Color(0xFFE74C3C),
+                            textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
-                    ],
-                    if (isLost) ...[
-                      const SizedBox(height: 8),
+                    if (isLost)
                       SizedBox(
-                        height: 30,
+                        height: 28,
                         child: OutlinedButton.icon(
                           onPressed: _postingMatch || isMatchSubmitted
                               ? null
@@ -550,30 +654,16 @@ class _LostFoundCardState extends State<_LostFoundCard> with SingleTickerProvide
                                   final input = await _openFoundMatchSheet();
                                   if (input == null) return;
                                   setState(() => _postingMatch = true);
-                                  try {
-                                    await widget.onPostFoundMatch(input);
-                                  } finally {
-                                    if (mounted) setState(() => _postingMatch = false);
-                                  }
+                                  try { await widget.onPostFoundMatch(input); }
+                                  finally { if (mounted) setState(() => _postingMatch = false); }
                                 },
-                          icon: const Icon(Icons.add_circle_outline_rounded, size: 14),
-                          label: Text(
-                            isMatchSubmitted
-                                ? 'Submitted'
-                                : _postingMatch
-                                    ? 'Posting...'
-                                    : 'Match',
-                          ),
+                          icon: const Icon(Icons.add_circle_outline_rounded, size: 13),
+                          label: Text(isMatchSubmitted ? 'Submitted' : _postingMatch ? 'Posting...' : 'Match', style: const TextStyle(fontSize: 11)),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 10),
-                            side: BorderSide(
-                              color: const Color(0xFF27AE60).withValues(alpha: 0.35),
-                            ),
+                            side: BorderSide(color: const Color(0xFF27AE60).withValues(alpha: 0.35)),
                             foregroundColor: const Color(0xFF27AE60),
-                            textStyle: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
