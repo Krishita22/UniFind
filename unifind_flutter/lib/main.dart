@@ -18,11 +18,13 @@ part 'src/item_detail_screen.dart';
 part 'src/ui_controls.dart';
 part 'src/ui_feedback.dart';
 part 'src/data.dart';
+part 'src/admin.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
   int? userId,
   String? username,
+  String? role,
 ]);
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -126,6 +128,8 @@ class _UniFindAppState extends State<UniFindApp> {
   String _email = '';
   String _username = '';
   int? _userId;
+  String _role = '';
+  UserRole _userRole = UserRole.unknown;
   ListingType _postDefaultType = ListingType.marketplace;
 
   final List<MarketplaceItem> _market = [];
@@ -444,6 +448,7 @@ class _UniFindAppState extends State<UniFindApp> {
     final email = prefs.getString('logged_in_email') ?? '';
     final username = prefs.getString('logged_in_username') ?? '';
     final userId = prefs.getInt('logged_in_user_id');
+    final role = prefs.getString('logged_in_role') ?? '';
 
     if (!mounted) return;
     setState(() {
@@ -451,6 +456,8 @@ class _UniFindAppState extends State<UniFindApp> {
       _email = email;
       _username = username;
       _userId = userId;
+      _role = role;
+      _userRole = UserRoleExt.fromString(role);
       _sessionLoaded = true;
     });
 
@@ -658,14 +665,19 @@ class _UniFindAppState extends State<UniFindApp> {
     }
   }
 
-  void _login(String email, [int? userId, String? username]) {
-    setState(() {
-      _loggedIn = true;
-      _email = email;
-      _username = (username ?? '').trim();
-      _userId = userId;
-      _tab = 0;
-    });
+  void _login(String email, [int? userId, String? username, String? role]) {
+  print('DEBUG _login called: role=$role');
+  print('DEBUG userRole will be: ${UserRoleExt.fromString(role ?? '')}');
+  setState(() {
+    _loggedIn = true;
+    _email = email;
+    _username = (username ?? '').trim();
+    _userId = userId;
+    _role = (role ?? '').trim();
+    _userRole = UserRoleExt.fromString(_role);
+    _tab = 0;
+  });
+  print('DEBUG _userRole after setState: $_userRole');
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
       prefs.setString('logged_in_email', email);
@@ -675,6 +687,7 @@ class _UniFindAppState extends State<UniFindApp> {
       } else {
         prefs.remove('logged_in_user_id');
       }
+      prefs.setString('logged_in_role', (role ?? '').trim());
     });
     _restoreSubmissionState(email);
     _loadListings();
@@ -686,6 +699,8 @@ class _UniFindAppState extends State<UniFindApp> {
         _email = '';
         _username = '';
         _userId = null;
+        _role = '';
+        _userRole = UserRole.unknown;
         _tab = 0;
         _submittedClaimItemIds.clear();
         _submittedMatchItemIds.clear();
@@ -697,6 +712,7 @@ class _UniFindAppState extends State<UniFindApp> {
       prefs.remove('logged_in_email');
       prefs.remove('logged_in_username');
       prefs.remove('logged_in_user_id');
+      prefs.remove('logged_in_role');
     });
   }
 
@@ -718,6 +734,33 @@ class _UniFindAppState extends State<UniFindApp> {
       theme: _buildTheme(),
       home: !_loggedIn
           ? LandingPage(onLogin: _login)
+          : RoleAuthWrapper(
+              role: _userRole,
+              email: _email,
+              username: _username,
+              userId: _userId,
+              onLogout: () { _logout(); _clearSession(); },
+              market: _market,
+              lostFound: _lostFound,
+              tab: _tab,
+              postFormNonce: _postFormNonce,
+              postDefaultType: _postDefaultType,
+              submittedClaimItemIds: _submittedClaimItemIds,
+              submittedMatchItemIds: _submittedMatchItemIds,
+              goToPostTab: _goToPostTab,
+              addListing: _addListing,
+              claimLostItem: _claimLostItem,
+              postFoundMatch: _postFoundMatch,
+              editMarketplace: _editMarketplaceItem,
+              editLostFound: _editLostFoundItem,
+              onTabChanged: (index) {
+                setState(() => _tab = index);
+                if (index == 3 || index == 0 || index == 1) {
+                  _loadListings();
+                  _loadLostFound();
+                }
+              },
+          ),
           : Scaffold(
               appBar: AppBar(
                 centerTitle: true,
