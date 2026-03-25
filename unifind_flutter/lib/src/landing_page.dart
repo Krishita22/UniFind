@@ -7,6 +7,7 @@ class LandingPage extends StatelessWidget {
   static final _aboutKey = GlobalKey();
   static final _howKey = GlobalKey();
   static final _faqKey = GlobalKey();
+  static final _contactKey = GlobalKey();
 
   void _scrollTo(GlobalKey k) {
     final ctx = k.currentContext;
@@ -27,20 +28,22 @@ class LandingPage extends StatelessWidget {
       ),
     ));
   }
-void _openRegister(BuildContext ctx) {
-  Navigator.of(ctx).push(PageRouteBuilder(
-    transitionDuration: kPage,
-    pageBuilder: (_, a, __) => FadeTransition(
-      opacity: a,
-      child: RegistrationScreen(
-        onRegister: (email, [userId, username]) {
-          onLogin(email, userId, username);
-          Navigator.of(ctx).popUntil((r) => r.isFirst);
-        },
+
+  void _openRegister(BuildContext ctx) {
+    Navigator.of(ctx).push(PageRouteBuilder(
+      transitionDuration: kPage,
+      pageBuilder: (_, a, __) => FadeTransition(
+        opacity: a,
+        child: RegistrationScreen(
+          onRegister: (email, [userId, username]) {
+            onLogin(email, userId, username);
+            Navigator.of(ctx).popUntil((r) => r.isFirst);
+          },
+        ),
       ),
-    ),
-  ));
-}
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,6 +56,7 @@ void _openRegister(BuildContext ctx) {
               onAbout: () => _scrollTo(_aboutKey),
               onHow: () => _scrollTo(_howKey),
               onFaq: () => _scrollTo(_faqKey),
+              onContact: () => _scrollTo(_contactKey),
               onLogin: () => _openLogin(context),
               onRegister: () => _openRegister(context),
             ),
@@ -61,7 +65,8 @@ void _openRegister(BuildContext ctx) {
             const _FeaturesSection(),
             KeyedSubtree(key: _aboutKey, child: const _AboutSection()),
             KeyedSubtree(key: _faqKey, child: const _FaqSection()),
-            _ExclusiveBanner(onLogin: () => _openRegister(context)),
+            KeyedSubtree(key: _contactKey, child: const _ContactSection()), // ← Contact after FAQ
+            _ExclusiveBanner(onLogin: () => _openRegister(context)),         // ← Banner after Contact
             const _Footer(),
           ],
         ),
@@ -72,8 +77,15 @@ void _openRegister(BuildContext ctx) {
 
 // ─── LANDING NAV ─────────────────────────────────────────────────────────────
 class _LandingNav extends StatelessWidget {
-  final VoidCallback onAbout, onHow, onFaq, onLogin, onRegister;
-  const _LandingNav({required this.onAbout, required this.onHow, required this.onFaq, required this.onLogin, required this.onRegister});
+  final VoidCallback onAbout, onHow, onFaq, onContact, onLogin, onRegister;
+  const _LandingNav({
+    required this.onAbout,
+    required this.onHow,
+    required this.onFaq,
+    required this.onContact,
+    required this.onLogin,
+    required this.onRegister,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +93,7 @@ class _LandingNav extends StatelessWidget {
       MapEntry('About', onAbout),
       MapEntry('How It Works', onHow),
       MapEntry('FAQ', onFaq),
+      MapEntry('Contact', onContact),
     ];
 
     return Container(
@@ -181,10 +194,7 @@ class _PillButtonState extends State<_PillButton> with SingleTickerProviderState
   }
 
   @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
+  void dispose() { _c.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -194,10 +204,7 @@ class _PillButtonState extends State<_PillButton> with SingleTickerProviderState
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTapDown: (_) => _c.forward(),
-        onTapUp: (_) {
-          _c.reverse();
-          widget.onTap();
-        },
+        onTapUp: (_) { _c.reverse(); widget.onTap(); },
         onTapCancel: () => _c.reverse(),
         child: ScaleTransition(
           scale: _scale,
@@ -205,27 +212,16 @@ class _PillButtonState extends State<_PillButton> with SingleTickerProviderState
             duration: kFast,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: _hovered
-                  ? Colors.white.withValues(alpha: 0.30)
-                  : Colors.white.withValues(alpha: 0.15),
+              color: _hovered ? Colors.white.withValues(alpha: 0.30) : Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: _hovered ? 0.6 : 0.3),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: _hovered ? 0.6 : 0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(widget.icon, size: 14, color: Colors.white),
                 const SizedBox(width: 6),
-                Text(
-                  widget.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -255,11 +251,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo> {
         curve: Curves.easeOutCubic,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          child: Image.asset(
-            'assets/images/whitelogo.png',
-            height: 44,
-            fit: BoxFit.contain,
-          ),
+          child: Image.asset('assets/images/whitelogo.png', height: 44, fit: BoxFit.contain),
         ),
       ),
     );
@@ -297,89 +289,26 @@ class _HeroSectionState extends State<_HeroSection> with TickerProviderStateMixi
       animation: _ctrl,
       builder: (_, child) => Opacity(
         opacity: _fade.value,
-        child: Transform.translate(
-          offset: Offset(0, _slide.value),
-          child: Transform.scale(scale: _scale.value, child: child),
-        ),
+        child: Transform.translate(offset: Offset(0, _slide.value), child: Transform.scale(scale: _scale.value, child: child)),
       ),
       child: Stack(
         children: [
-          // Background decoration
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFF5F5), Color(0xFFFCECEC), Color(0xFFFFF8F8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-          ),
-          // Decorative circle
-          Positioned(
-            right: -60,
-            top: -40,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent]),
-              ),
-            ),
-          ),
-          Positioned(
-            left: -40,
-            bottom: -20,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.06), Colors.transparent]),
-              ),
-            ),
-          ),
+          Positioned.fill(child: Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFF5F5), Color(0xFFFCECEC), Color(0xFFFFF8F8)], begin: Alignment.topLeft, end: Alignment.bottomRight)))),
+          Positioned(right: -60, top: -40, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
+          Positioned(left: -40, bottom: -20, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.06), Colors.transparent])))),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
             child: Column(
               children: [
-                // Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: cRedLight,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: cBorder),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.school_rounded, size: 14, color: cRed),
-                      SizedBox(width: 6),
-                      Text('MSU Campus Exclusive', style: TextStyle(color: cRed, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
-                    ],
-                  ),
+                  decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.school_rounded, size: 14, color: cRed), SizedBox(width: 6), Text('MSU Campus Exclusive', style: TextStyle(color: cRed, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3))]),
                 ),
                 const SizedBox(height: 28),
-                const Text(
-                  'Your Campus.\nYour Marketplace.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 52,
-                    fontWeight: FontWeight.w900,
-                    color: cText,
-                    height: 1.15,
-                    letterSpacing: -1.5,
-                  ),
-                ),
+                const Text('Your Campus.\nYour Marketplace.', textAlign: TextAlign.center, style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: cText, height: 1.15, letterSpacing: -1.5)),
                 const SizedBox(height: 20),
-                const Text(
-                  'Buy, sell, and reunite with lost items within the\nMontclair State University community.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 17, color: cMuted, height: 1.7),
-                ),
+                const Text('Buy, sell, and reunite with lost items within the\nMontclair State University community.', textAlign: TextAlign.center, style: TextStyle(fontSize: 17, color: cMuted, height: 1.7)),
                 const SizedBox(height: 40),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -389,7 +318,6 @@ class _HeroSectionState extends State<_HeroSection> with TickerProviderStateMixi
                     _HeroButton(label: 'Log In', primary: false, onTap: widget.onLogin),
                   ],
                 ),
-
               ],
             ),
           ),
@@ -440,29 +368,13 @@ class _HeroButtonState extends State<_HeroButton> with SingleTickerProviderState
             duration: kFast,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             decoration: BoxDecoration(
-              gradient: widget.primary
-                  ? LinearGradient(
-                      colors: _hovered ? [cRedDark, Color(0xFF5A0A0A)] : [cRed, cRedDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
+              gradient: widget.primary ? LinearGradient(colors: _hovered ? [cRedDark, Color(0xFF5A0A0A)] : [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
               color: widget.primary ? null : (_hovered ? cRedLight : cSurface),
               borderRadius: BorderRadius.circular(32),
               border: widget.primary ? null : Border.all(color: cRed, width: 2),
-              boxShadow: widget.primary
-                  ? [BoxShadow(color: cRed.withValues(alpha: _hovered ? 0.55 : 0.35), blurRadius: _hovered ? 24 : 16, offset: const Offset(0, 6))]
-                  : null,
+              boxShadow: widget.primary ? [BoxShadow(color: cRed.withValues(alpha: _hovered ? 0.55 : 0.35), blurRadius: _hovered ? 24 : 16, offset: const Offset(0, 6))] : null,
             ),
-            child: Text(
-              widget.label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: widget.primary ? Colors.white : cRed,
-                letterSpacing: 0.3,
-              ),
-            ),
+            child: Text(widget.label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: widget.primary ? Colors.white : cRed, letterSpacing: 0.3)),
           ),
         ),
       ),
@@ -509,16 +421,10 @@ class _HowItWorksSectionState extends State<_HowItWorksSection> with SingleTicke
           const Text('to get started on UniFind.', style: TextStyle(fontSize: 16, color: cMuted)),
           const SizedBox(height: 52),
           Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            alignment: WrapAlignment.center,
+            spacing: 20, runSpacing: 20, alignment: WrapAlignment.center,
             children: List.generate(steps.length, (i) {
               final s = steps[i];
-              final delay = Duration(milliseconds: 120 * i);
-              return ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 200),
-                child: _StepCard(icon: s.icon, title: s.title, desc: s.desc, delay: delay),
-              );
+              return ConstrainedBox(constraints: const BoxConstraints(minHeight: 200), child: _StepCard(icon: s.icon, title: s.title, desc: s.desc, delay: Duration(milliseconds: 120 * i)));
             }),
           ),
         ],
@@ -574,9 +480,7 @@ class _StepCardState extends State<_StepCard> with SingleTickerProviderStateMixi
       child: ScaleTransition(
         scale: _scale,
         child: AnimatedContainer(
-          duration: kMid,
-          width: 270,
-          padding: const EdgeInsets.all(28),
+          duration: kMid, width: 270, padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: _hovered ? cRedLight : cSurface,
             borderRadius: BorderRadius.circular(20),
@@ -584,19 +488,9 @@ class _StepCardState extends State<_StepCard> with SingleTickerProviderStateMixi
             boxShadow: [BoxShadow(color: _hovered ? cRed.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06), blurRadius: _hovered ? 20 : 10, offset: const Offset(0, 4))],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center, mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
-                ),
-                child: Icon(widget.icon, color: Colors.white, size: 24),
-              ),
+              Container(width: 52, height: 52, decoration: BoxDecoration(gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))]), child: Icon(widget.icon, color: Colors.white, size: 24)),
               const SizedBox(height: 16),
               Text(widget.title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: cText)),
               const SizedBox(height: 8),
@@ -627,7 +521,6 @@ class _FeaturesSection extends StatelessWidget {
       _FeatureData(Icons.bolt_rounded, 'Post in Seconds', 'Create a listing with a title, photo, price, and category in just a few clicks.'),
       _FeatureData(Icons.verified_user_rounded, 'MSU Community Only', 'Exclusively for Montclair State University members — a trusted, verified space you can rely on.'),
     ];
-
     return Container(
       color: const Color(0xFFF8F2F2),
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 72),
@@ -639,12 +532,7 @@ class _FeaturesSection extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('for campus life, simplified.', style: TextStyle(fontSize: 16, color: cMuted)),
           const SizedBox(height: 52),
-          Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            alignment: WrapAlignment.center,
-            children: features.map((f) => _FeatureCard(icon: f.icon, title: f.title, desc: f.desc)).toList(),
-          ),
+          Wrap(spacing: 20, runSpacing: 20, alignment: WrapAlignment.center, children: features.map((f) => _FeatureCard(icon: f.icon, title: f.title, desc: f.desc)).toList()),
         ],
       ),
     );
@@ -684,12 +572,9 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
         animation: _lift,
         builder: (_, child) => Transform.translate(offset: Offset(0, _lift.value), child: child),
         child: AnimatedContainer(
-          duration: kMid,
-          width: 270,
-          padding: const EdgeInsets.all(26),
+          duration: kMid, width: 270, padding: const EdgeInsets.all(26),
           decoration: BoxDecoration(
-            color: cSurface,
-            borderRadius: BorderRadius.circular(20),
+            color: cSurface, borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _hov ? cRed.withValues(alpha: 0.3) : cBorder),
             boxShadow: [BoxShadow(color: _hov ? cRed.withValues(alpha: 0.14) : Colors.black.withValues(alpha: 0.07), blurRadius: _hov ? 24 : 12, offset: const Offset(0, 4))],
           ),
@@ -697,15 +582,8 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               AnimatedContainer(
-                duration: kMid,
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: _hov
-                      ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight)
-                      : const LinearGradient(colors: [cRedLight, cRedLight]),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                duration: kMid, width: 50, height: 50,
+                decoration: BoxDecoration(gradient: _hov ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight) : const LinearGradient(colors: [cRedLight, cRedLight]), borderRadius: BorderRadius.circular(14)),
                 child: Icon(widget.icon, color: _hov ? Colors.white : cRed, size: 24),
               ),
               const SizedBox(height: 16),
@@ -751,9 +629,7 @@ class _AboutSection extends StatelessWidget {
           const SizedBox(height: 52),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
-            child: Column(
-              children: items.map((i) => _AboutRow(icon: i.icon, title: i.title, desc: i.desc, shaded: i.shaded)).toList(),
-            ),
+            child: Column(children: items.map((i) => _AboutRow(icon: i.icon, title: i.title, desc: i.desc, shaded: i.shaded)).toList()),
           ),
         ],
       ),
@@ -783,72 +659,27 @@ class _AboutRowState extends State<_AboutRow> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        transform: _hovered
-            ? Matrix4.translationValues(0, -8, 0)
-            : Matrix4.identity(),
+        transform: _hovered ? Matrix4.translationValues(0, -8, 0) : Matrix4.identity(),
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: widget.shaded ? cRedLight : cSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _hovered ? cRed.withValues(alpha: 0.4) : cBorder,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _hovered
-                  ? cRed.withValues(alpha: 0.18)
-                  : Colors.black.withValues(alpha: 0.06),
-              blurRadius: _hovered ? 24 : 10,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          border: Border.all(color: _hovered ? cRed.withValues(alpha: 0.4) : cBorder),
+          boxShadow: [BoxShadow(color: _hovered ? cRed.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.06), blurRadius: _hovered ? 24 : 10, offset: const Offset(0, 6))],
         ),
         child: Row(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [cRed, cRedDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: cRed.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Icon(widget.icon, color: Colors.white, size: 22),
-            ),
+            Container(width: 52, height: 52, decoration: BoxDecoration(gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))]), child: Icon(widget.icon, color: Colors.white, size: 22)),
             const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: cRed,
-                    ),
-                  ),
+                  Text(widget.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cRed)),
                   const SizedBox(height: 6),
-                  Text(
-                    widget.desc,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: cMuted,
-                      height: 1.6,
-                    ),
-                  ),
+                  Text(widget.desc, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.6)),
                 ],
               ),
             ),
@@ -948,34 +779,325 @@ class _FaqTileState extends State<_FaqTile> with SingleTickerProviderStateMixin 
               child: Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: _open ? cRed : cRedLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: RotationTransition(
-                      turns: _rotate,
-                      child: Icon(Icons.keyboard_arrow_down_rounded, color: _open ? Colors.white : cRed, size: 20),
-                    ),
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(color: _open ? cRed : cRedLight, borderRadius: BorderRadius.circular(8)),
+                    child: RotationTransition(turns: _rotate, child: Icon(Icons.keyboard_arrow_down_rounded, color: _open ? Colors.white : cRed, size: 20)),
                   ),
                   const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(widget.question, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _open ? cRed : cText)),
-                  ),
+                  Expanded(child: Text(widget.question, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _open ? cRed : cText))),
                 ],
               ),
             ),
           ),
           SizeTransition(
             sizeFactor: _expand,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(64, 0, 18, 18),
-              child: Text(widget.answer, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.7)),
+            child: Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(64, 0, 18, 18), child: Text(widget.answer, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.7))),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── CONTACT SECTION ─────────────────────────────────────────────────────────
+class _ContactSection extends StatefulWidget {
+  const _ContactSection();
+
+  @override
+  State<_ContactSection> createState() => _ContactSectionState();
+}
+
+class _ContactSectionState extends State<_ContactSection> {
+  final _formKey = GlobalKey<FormState>();
+  String _name = '';
+  String _email = '';
+  String _subject = '';
+  String _message = '';
+  bool _loading = false;
+  bool _submitted = false;
+
+  Future<void> _submit() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  setState(() => _loading = true);
+
+  try {
+    final response = await http.post(
+    Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
+    headers: {
+      'Content-Type': 'application/json', // This is required
+    },
+    body: jsonEncode({
+      'name': _name,
+      'email': _email,
+      'subject': _subject,
+      'message': _message,
+    }),
+  );
+
+    final data = jsonDecode(response.body);
+
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _submitted = data['success'] == true;
+      });
+    }
+
+    if (data['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['error'] ?? 'Something went wrong')),
+      );
+    }
+
+  } catch (e) {
+    if (mounted) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to send message')),
+      );
+    }
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: cSurface,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 72),
+      child: Column(
+        children: [
+          _SectionLabel(label: 'CONTACT'),
+          const SizedBox(height: 12),
+          const Text('Get in touch', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.8)),
+          const SizedBox(height: 8),
+          const Text('Have a question or feedback? We\'d love to hear from you.', style: TextStyle(fontSize: 16, color: cMuted), textAlign: TextAlign.center),
+          const SizedBox(height: 52),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: _submitted
+                  ? _SuccessCard()
+                  : _FormCard(
+                      formKey: _formKey,
+                      loading: _loading,
+                      onNameChanged: (v) => _name = v,
+                      onEmailChanged: (v) => _email = v,
+                      onSubjectChanged: (v) => _subject = v,
+                      onMessageChanged: (v) => _message = v,
+                      onSubmit: _submit,
+                    ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FormCard extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final bool loading;
+  final ValueChanged<String> onNameChanged, onEmailChanged, onSubjectChanged, onMessageChanged;
+  final VoidCallback onSubmit;
+
+  const _FormCard({
+    required this.formKey,
+    required this.loading,
+    required this.onNameChanged,
+    required this.onEmailChanged,
+    required this.onSubjectChanged,
+    required this.onMessageChanged,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('form'),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: cSurface, borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cBorder),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
+      ),
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth > 480;
+                final nameField = _ContactField(label: 'Your Name', hint: 'Jane Doe', icon: Icons.person_outline_rounded, onChanged: onNameChanged, textInputAction: TextInputAction.next, validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null);
+                final emailField = _ContactField(label: 'Your Email', hint: 'you@example.com', icon: Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress, onChanged: onEmailChanged, textInputAction: TextInputAction.next, validator: (v) { if (v == null || v.trim().isEmpty) return 'Email is required'; if (!v.contains('@')) return 'Enter a valid email'; return null; });
+                if (wide) {
+                  return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: nameField), const SizedBox(width: 14), Expanded(child: emailField)]);
+                }
+                return Column(children: [nameField, const SizedBox(height: 16), emailField]);
+              },
+            ),
+            const SizedBox(height: 16),
+            _ContactField(label: 'Subject', hint: 'What\'s this about?', icon: Icons.subject_rounded, onChanged: onSubjectChanged, textInputAction: TextInputAction.next, validator: (v) => (v == null || v.trim().isEmpty) ? 'Subject is required' : null),
+            const SizedBox(height: 16),
+            _ContactMessageField(onChanged: onMessageChanged, validator: (v) { if (v == null || v.trim().isEmpty) return 'Message is required'; if (v.trim().length < 10) return 'Please write a bit more'; return null; }),
+            const SizedBox(height: 28),
+            _ContactSubmitButton(loading: loading, onTap: onSubmit),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuccessCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('success'),
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 32),
+      decoration: BoxDecoration(
+        color: cSurface, borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cBorder),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight), shape: BoxShape.circle, boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))]),
+            child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+          ),
+          const SizedBox(height: 20),
+          const Text('Email client opened!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText)),
+          const SizedBox(height: 8),
+          const Text('Your message was pre-filled in your email client.\nJust hit send and we\'ll get back to you shortly.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: cMuted, height: 1.6)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── CONTACT FORM HELPERS ────────────────────────────────────────────────────
+
+class _ContactField extends StatelessWidget {
+  final String label, hint;
+  final IconData icon;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
+  final TextInputAction? textInputAction;
+  final String? Function(String?)? validator;
+
+  const _ContactField({required this.label, required this.hint, required this.icon, this.keyboardType, this.onChanged, this.textInputAction, this.validator});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          keyboardType: keyboardType, onChanged: onChanged, textInputAction: textInputAction, validator: validator,
+          decoration: InputDecoration(
+            hintText: hint, hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: Icon(icon, size: 18, color: cMuted),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true, fillColor: cBg, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactMessageField extends StatelessWidget {
+  final ValueChanged<String>? onChanged;
+  final String? Function(String?)? validator;
+
+  const _ContactMessageField({this.onChanged, this.validator});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Message', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          onChanged: onChanged, validator: validator, maxLines: 5, minLines: 4, textInputAction: TextInputAction.newline,
+          decoration: InputDecoration(
+            hintText: 'Write your message here...', hintStyle: const TextStyle(color: cMuted, fontSize: 14), alignLabelWithHint: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true, fillColor: cBg, contentPadding: const EdgeInsets.all(16),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactSubmitButton extends StatefulWidget {
+  final bool loading;
+  final VoidCallback onTap;
+
+  const _ContactSubmitButton({required this.loading, required this.onTap});
+
+  @override
+  State<_ContactSubmitButton> createState() => _ContactSubmitButtonState();
+}
+
+class _ContactSubmitButtonState extends State<_ContactSubmitButton> with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale;
+  bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: kFast);
+    _scale = Tween(begin: 1.0, end: 0.97).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => _c.forward(),
+        onTapUp: (_) { _c.reverse(); widget.onTap(); },
+        onTapCancel: () => _c.reverse(),
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedScale(
+            scale: _hovered ? 1.015 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: Container(
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
+              ),
+              child: Center(
+                child: widget.loading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.send_rounded, color: Colors.white, size: 16), SizedBox(width: 8), Text('Send Message', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3))]),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -999,13 +1121,8 @@ class _ExclusiveBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
-            ),
+            width: 64, height: 64,
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2)),
             child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
           ),
           const SizedBox(height: 20),

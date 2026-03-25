@@ -258,9 +258,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         _confirmPassword.isNotEmpty;
   }
 
+  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
     return _newPassword.length >= 6 &&
-        _newPassword.length <= 14 &&
+        !_newPassword.contains(' ') &&
         RegExp(r'[A-Z]').hasMatch(_newPassword) &&
         RegExp(r'[0-9]').hasMatch(_newPassword) &&
         RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_newPassword);
@@ -458,6 +459,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   },
                                 ),
                                 const SizedBox(height: 16),
+                                // ── UPDATED validator: no max length, no spaces ──
                                 _PasswordField(
                                   key: const ValueKey('forgot_new_password'),
                                   label: 'New Password',
@@ -468,8 +470,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   validator: (v) {
                                     if (!_codeSent) return null;
                                     if (v == null || v.isEmpty) return 'New password is required';
+                                    if (v.contains(' ')) return 'Password cannot contain spaces';
                                     if (v.length < 6) return 'Minimum 6 characters';
-                                    if (v.length > 14) return 'Maximum 14 characters';
                                     if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
                                     if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
                                     if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
@@ -554,7 +556,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   String _code = '';
   bool _loading = false;
   bool _codeSent = false;
-  bool _agreedToTerms = false;   // ← terms checkbox state
+  bool _agreedToTerms = false;
   String? _errorMessage;
   late AnimationController _c;
   late Animation<double> _fade, _slide;
@@ -576,15 +578,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
     return parsed != null && parsed >= 18;
   }
 
+  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
     return _password.length >= 6 &&
-        _password.length <= 14 &&
+        !_password.contains(' ') &&
         RegExp(r'[A-Z]').hasMatch(_password) &&
         RegExp(r'[0-9]').hasMatch(_password) &&
         RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_password);
   }
 
-  // Button is enabled only when all conditions are met for each step
   bool get _canProceed {
     if (!_codeSent) return _ageValid;
     return _passwordStrong && _agreedToTerms;
@@ -599,12 +601,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
 
     try {
       if (!_codeSent) {
-        // TEMP: skip API call for UI testing
+        await sendSignupVerificationCode(
+          email: _email.trim().toLowerCase(),
+          password: 'TempPass123!',
+        );
+        if (!mounted) return;
         setState(() => _codeSent = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('(Test mode) Skipping verification code.')),
+          const SnackBar(
+            content: Text('Verification code sent. Set your password and enter the code.'),
+          ),
         );
-        return;
       } else {
         await verifyCodeAndCreateAccount(
           email: _email.trim().toLowerCase(),
@@ -708,7 +715,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                             children: [
 
                               if (!_codeSent) ...[
-                                // ── Step 1: profile info ──────────────────
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -809,7 +815,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               ],
 
                               if (_codeSent) ...[
-                                // ── Step 2: password + verification + terms ─
+                                // ── UPDATED validator: no max length, no spaces ──
                                 _PasswordField(
                                   key: const ValueKey('signup_password'),
                                   onChanged: (v) => setState(() => _password = v),
@@ -818,8 +824,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                       FocusScope.of(context).nextFocus(),
                                   validator: (v) {
                                     if (v == null || v.isEmpty) return 'Password is required';
+                                    if (v.contains(' ')) return 'Password cannot contain spaces';
                                     if (v.length < 6) return 'Minimum 6 characters';
-                                    if (v.length > 14) return 'Maximum 14 characters';
                                     if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
                                     if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
                                     if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
@@ -849,7 +855,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 ),
                                 const SizedBox(height: 20),
 
-                                // ── Terms & Conditions checkbox ────────────
                                 GestureDetector(
                                   onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
                                   child: Row(
@@ -1080,16 +1085,16 @@ class _PasswordFieldState extends State<_PasswordField> {
   String _value = '';
   bool _obscure = true;
 
+  // ── UPDATED: removed _hasMaxLength, added _hasNoSpaces ────────────────────
   bool get _hasMinLength => _value.length >= 6;
-  bool get _hasMaxLength => _value.length <= 14;
   bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(_value);
   bool get _hasNumber    => RegExp(r'[0-9]').hasMatch(_value);
   bool get _hasSpecial   => RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_value);
 
+  // Score is now out of 4
   int get _score {
     int s = 0;
     if (_hasMinLength) s++;
-    if (_hasMaxLength && _value.isNotEmpty) s++;
     if (_hasUppercase) s++;
     if (_hasNumber)    s++;
     if (_hasSpecial)   s++;
@@ -1098,17 +1103,17 @@ class _PasswordFieldState extends State<_PasswordField> {
 
   Color get _barColor {
     if (_value.isEmpty) return cBorder;
-    if (_score <= 2) return const Color(0xFFE53935);
-    if (_score <= 3) return const Color(0xFFFB8C00);
-    if (_score == 4) return const Color(0xFFFDD835);
-    return const Color(0xFF43A047);
+    if (_score <= 1) return const Color(0xFFE53935);
+    if (_score == 2) return const Color(0xFFFB8C00);
+    if (_score == 3) return const Color(0xFFFDD835);
+    return const Color(0xFF43A047); // all 4 met = Strong (green)
   }
 
   String get _strengthLabel {
-    if (_value.isEmpty) return 'None';
-    if (_score <= 2) return 'Weak';
-    if (_score <= 3) return 'Fair';
-    if (_score == 4) return 'Good';
+    if (_value.isEmpty) return '';
+    if (_score <= 1) return 'Weak';
+    if (_score == 2) return 'Fair';
+    if (_score == 3) return 'Good';
     return 'Strong';
   }
 
@@ -1124,6 +1129,8 @@ class _PasswordFieldState extends State<_PasswordField> {
         const SizedBox(height: 6),
         TextFormField(
           obscureText: _obscure,
+          // ── Block spaces from being typed or pasted ────────────────────────
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           onChanged: (v) {
             setState(() => _value = v);
             widget.onChanged(v);
@@ -1158,7 +1165,7 @@ class _PasswordFieldState extends State<_PasswordField> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: _value.isEmpty ? 0 : _score / 5,
+                  value: _value.isEmpty ? 0 : _score / 4, // out of 4 now
                   minHeight: 6,
                   backgroundColor: cBorder,
                   valueColor: AlwaysStoppedAnimation<Color>(_barColor),
@@ -1177,7 +1184,8 @@ class _PasswordFieldState extends State<_PasswordField> {
           ],
         ),
         const SizedBox(height: 10),
-        _PasswordRule(met: _hasMinLength, text: '6–14 characters'),
+        // ── UPDATED rules: removed max-length rule ─────────────────────────
+        _PasswordRule(met: _hasMinLength, text: 'At least 6 characters'),
         _PasswordRule(met: _hasUppercase, text: 'At least one uppercase letter'),
         _PasswordRule(met: _hasNumber,    text: 'At least one number'),
         _PasswordRule(met: _hasSpecial,   text: 'At least one special character (!@#\$%^&*...)'),
@@ -1223,6 +1231,8 @@ class _ConfirmPasswordFieldState extends State<_ConfirmPasswordField> {
         const SizedBox(height: 6),
         TextFormField(
           obscureText: _obscure,
+          // ── Block spaces here too ──────────────────────────────────────────
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           textInputAction: widget.textInputAction,
           onChanged: (v) {
             setState(() => _value = v);
