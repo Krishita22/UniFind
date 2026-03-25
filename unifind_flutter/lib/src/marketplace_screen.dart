@@ -574,7 +574,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                         itemBuilder: (ctx, i) => _MarketCard(
                           item: widget.filtered[i],
                           compact: true,
-                          onTap: () => Navigator.of(ctx).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: widget.filtered[i], currentUserEmail: widget.currentUserEmail))),
+                          onTap: () => _showItemPopup(ctx, widget.filtered[i], widget.currentUserEmail),
                         ),
                       ),
               ),
