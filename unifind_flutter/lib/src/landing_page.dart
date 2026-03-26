@@ -822,13 +822,8 @@ class _ContactSectionState extends State<_ContactSection> {
   setState(() => _loading = true);
 
   try {
-    final client = HttpClient()
-      ..badCertificateCallback = (cert, host, port) => true;
-
-    final ioClient = IOClient(client);
-
     final response = await http.post(
-      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
+      Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': _name,
@@ -853,15 +848,15 @@ class _ContactSectionState extends State<_ContactSection> {
       );
     }
 
-  } catch (e) {
-    if (mounted) {
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message')),
+        );
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {

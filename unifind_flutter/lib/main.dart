@@ -10,8 +10,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'dart:io';
-import 'package:http/io_client.dart';
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
