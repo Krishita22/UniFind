@@ -822,18 +822,21 @@ class _ContactSectionState extends State<_ContactSection> {
   setState(() => _loading = true);
 
   try {
-    final response = await http.post(
-    Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
-    headers: {
-      'Content-Type': 'application/json', // This is required
-    },
-    body: jsonEncode({
-      'name': _name,
-      'email': _email,
-      'subject': _subject,
-      'message': _message,
-    }),
-  );
+    final client = HttpClient()
+      ..badCertificateCallback = (cert, host, port) => true;
+
+    final ioClient = IOClient(client);
+
+    final response = await ioClient.post(
+      Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': _name,
+        'email': _email,
+        'subject': _subject,
+        'message': _message,
+      }),
+    );
 
     final data = jsonDecode(response.body);
 
@@ -854,7 +857,7 @@ class _ContactSectionState extends State<_ContactSection> {
     if (mounted) {
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to send message')),
+        SnackBar(content: Text('Error: $e')),
       );
     }
   }
