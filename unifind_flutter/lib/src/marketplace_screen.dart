@@ -1,5 +1,6 @@
 part of '../main.dart';
 
+
 class MarketplaceScreen extends StatefulWidget {
   final List<MarketplaceItem> items;
   final VoidCallback onListItem;
@@ -175,8 +176,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             currentUserEmail: widget.currentUserEmail,
           );
         }
-
-        // ── Mobile layout ─────────────────────────────────────────────────
         return Column(
           children: [
             Container(
@@ -230,9 +229,60 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 }
+// ── Full-screen image viewer ──────────────────────────────────────────────────
+class _FullScreenImagePage extends StatelessWidget {
+  final String imageUrl;
+  const _FullScreenImagePage({required this.imageUrl});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Center(
+            child: Image.network(
+              imageUrl,
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (_, __, ___) => const Center(
+                child: Icon(Icons.image_not_supported, color: Colors.white30, size: 48),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-// ── Item popup (shared by marketplace and lost & found) ───────────────────────
+// ── Item popup — full detail content ─────────────────────────────────────────
 void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUserEmail) {
+  // Helper to clean up seller display name (mirrors ItemDetailScreen logic)
+  String asSellerUsername() {
+    final raw = item.seller.trim();
+    if (raw.isEmpty || raw.contains('@') || raw.contains(' ')) return 'Student';
+    return raw;
+  }
   showGeneralDialog(
     context: context,
     barrierDismissible: true,
@@ -248,9 +298,10 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
           scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+              // Taller max height to fit all the detail content
+              constraints: const BoxConstraints(maxWidth: 500, maxHeight: 680),
               child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
                 decoration: BoxDecoration(
                   color: cSurface,
                   borderRadius: BorderRadius.circular(24),
@@ -264,80 +315,262 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Image header
+                      // ── Tappable image header ─────────────────────────
                       Stack(
                         children: [
-                          Image.network(
-                            item.image,
-                            width: double.infinity,
-                            height: 180,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              height: 180,
-                              color: cPlaceholder,
-                              child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              PageRouteBuilder(
+                                opaque: false,
+                                barrierColor: Colors.black,
+                                pageBuilder: (_, __, ___) => _FullScreenImagePage(imageUrl: item.image),
+                                transitionsBuilder: (_, anim, __, child) =>
+                                    FadeTransition(opacity: anim, child: child),
+                                transitionDuration: kMid,
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                Image.network(
+                                  item.image,
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    height: 200,
+                                    color: cPlaceholder,
+                                    child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
+                                  ),
+                                ),
+                                // Expand affordance badge
+                                Positioned(
+                                  bottom: 8, right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.open_in_full_rounded, size: 11, color: Colors.white),
+                                        SizedBox(width: 4),
+                                        Text('Tap to expand', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
+                          // Category badge
                           Positioned(
                             top: 10, left: 10,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(8)),
-                              child: Text(item.category, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                              decoration: BoxDecoration(
+                                color: cRed.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                item.category.toUpperCase(),
+                                style: const TextStyle(color: cRed, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6),
+                              ),
                             ),
                           ),
+                          // Report + close buttons row
                           Positioned(
                             top: 8, right: 8,
-                            child: GestureDetector(
-                              onTap: () => Navigator.of(ctx).pop(),
-                              child: Container(
-                                width: 32, height: 32,
-                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
-                                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-                              ),
+                            child: Row(
+                              children: [
+                                // Report menu
+                                PopupMenuButton<String>(
+                                  icon: Container(
+                                    width: 32, height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.45),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.more_vert, color: Colors.white, size: 16),
+                                  ),
+                                  tooltip: 'Options',
+                                  onSelected: (value) {
+                                    Navigator.of(ctx).pop();
+                                    if (value == 'report_listing') {
+                                      showReportDialog(
+                                        context: context,
+                                        targetId: item.id,
+                                        targetType: 'listing',
+                                        targetTitle: item.title,
+                                        reporterEmail: currentUserEmail,
+                                      );
+                                    } else if (value == 'report_user') {
+                                      showReportDialog(
+                                        context: context,
+                                        targetId: item.sellerEmail.isNotEmpty ? item.sellerEmail : item.id,
+                                        targetType: 'user',
+                                        targetTitle: '@${asSellerUsername()}',
+                                        reporterEmail: currentUserEmail,
+                                      );
+                                    }
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(
+                                      value: 'report_listing',
+                                      child: Row(children: [
+                                        Icon(Icons.flag_outlined, size: 15, color: cRed),
+                                        SizedBox(width: 10),
+                                        Text('Report Listing', style: TextStyle(fontSize: 13)),
+                                      ]),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'report_user',
+                                      child: Row(children: [
+                                        Icon(Icons.person_off_outlined, size: 15, color: cRed),
+                                        SizedBox(width: 10),
+                                        Text('Report Seller', style: TextStyle(fontSize: 13)),
+                                      ]),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 4),
+                                // Close button
+                                GestureDetector(
+                                  onTap: () => Navigator.of(ctx).pop(),
+                                  child: Container(
+                                    width: 32, height: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.45),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      // Content
+                      // ── Scrollable content (mirrors ItemDetailScreen) ──
                       Flexible(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Price + category badge row
                               Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Expanded(
-                                    child: Text(item.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.3)),
+                                  Text(
+                                    '\$${item.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -1),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text('\$${item.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -0.5)),
+                                  const Spacer(),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: cRed.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      item.category.toUpperCase(),
+                                      style: const TextStyle(color: cRed, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6),
+                                    ),
+                                  ),
                                 ],
+                              ),
+                              const SizedBox(height: 4),
+                              // Title
+                              Text(
+                                item.title,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cText, letterSpacing: -0.3, height: 1.25),
+                              ),
+                              const SizedBox(height: 6),
+                              // Seller + date row
+                              Row(
+                                children: [
+                                  const Icon(Icons.person_outline_rounded, size: 13, color: cMuted),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    asSellerUsername(),
+                                    style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Icon(Icons.circle, size: 3, color: cMuted),
+                                  const SizedBox(width: 10),
+                                  const Icon(Icons.calendar_today_outlined, size: 12, color: cMuted),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    formatDate(item.createdAt),
+                                    style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+
+
+                              // Condition + location chips
+                              Row(
+                                children: [
+                                  _InfoChip(icon: Icons.stars_rounded, label: item.condition),
+                                  const SizedBox(width: 8),
+                                  _InfoChip(icon: Icons.location_on_outlined, label: item.location),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+
+
+                              Divider(height: 1, color: cBorder),
+                              const SizedBox(height: 18),
+
+
+                              // Description
+                              const Text(
+                                'Description',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText, letterSpacing: 0.1),
                               ),
                               const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 4,
-                                children: [
-                                  _PopupChip(icon: Icons.star_outline_rounded, label: item.condition),
-                                  _PopupChip(icon: Icons.location_on_outlined, label: item.location),
-                                  _PopupChip(icon: Icons.person_outline_rounded, label: item.seller),
-                                ],
+                              Text(
+                                item.description,
+                                style: const TextStyle(fontSize: 13, color: cMuted, height: 1.75),
                               ),
-                              const SizedBox(height: 12),
-                              Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.55)),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: _RedButton(
-                                  label: 'View Full Listing',
-                                  icon: Icons.open_in_new_rounded,
-                                  onTap: () {
-                                    Navigator.of(ctx).pop();
-                                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => ItemDetailScreen(item: item, currentUserEmail: currentUserEmail)));
-                                  },
+                              const SizedBox(height: 24),
+
+
+                              // Contact Seller button (same behaviour as detail screen)
+                              GestureDetector(
+                                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Row(children: [
+                                      Icon(Icons.message_rounded, color: Colors.white, size: 17),
+                                      SizedBox(width: 10),
+                                      Text('Contact flow coming soon!'),
+                                    ]),
+                                    backgroundColor: cRed,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    margin: const EdgeInsets.all(12),
+                                  ),
+                                ),
+                                child: Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: cRed,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.message_rounded, color: Colors.white, size: 17),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Contact Seller',
+                                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
@@ -378,7 +611,7 @@ class _PopupChip extends StatelessWidget {
   }
 }
 
-// ─── BROWSER LAYOUT (collapsible side panel + grid) ──────────────────────────
+// ─── BROWSER LAYOUT ───────────────────────────────────────────────────────────
 class _BrowserLayout extends StatefulWidget {
   final List<MarketplaceItem> filtered;
   final String cat;
@@ -440,11 +673,8 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
 
   void _togglePanel() {
     setState(() => _panelOpen = !_panelOpen);
-    if (_panelOpen) {
-      _animCtrl.forward();
-    } else {
-      _animCtrl.reverse();
-    }
+    if (_panelOpen) _animCtrl.forward();
+    else _animCtrl.reverse();
   }
 
   @override
@@ -452,25 +682,15 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Collapsible Side Panel ─────────────────────────────────────────
         AnimatedBuilder(
           animation: _widthAnim,
-          builder: (context, child) {
-            return SizedBox(
-              width: _widthAnim.value * 240,
-              child: OverflowBox(
-                maxWidth: 240,
-                alignment: Alignment.topLeft,
-                child: child,
-              ),
-            );
-          },
+          builder: (context, child) => SizedBox(
+            width: _widthAnim.value * 240,
+            child: OverflowBox(maxWidth: 240, alignment: Alignment.topLeft, child: child),
+          ),
           child: Container(
             width: 240,
-            decoration: BoxDecoration(
-              color: cSurface,
-              border: Border(right: BorderSide(color: cBorder)),
-            ),
+            decoration: BoxDecoration(color: cSurface, border: Border(right: BorderSide(color: cBorder))),
             child: AnimatedOpacity(
               opacity: _panelOpen ? 1.0 : 0.0,
               duration: kFast,
@@ -488,17 +708,14 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
             ),
           ),
         ),
-        // ── Main Content ──────────────────────────────────────────────────
         Expanded(
           child: Column(
             children: [
-              // Header bar
               Container(
                 padding: const EdgeInsets.fromLTRB(12, 12, 16, 10),
                 decoration: BoxDecoration(border: Border(bottom: BorderSide(color: cBorder))),
                 child: Row(
                   children: [
-                    // Toggle panel button
                     Tooltip(
                       message: _panelOpen ? 'Hide filters' : 'Show filters',
                       child: GestureDetector(
@@ -520,15 +737,12 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: _SearchField(hint: 'Search marketplace...', onChanged: widget.onSearch),
-                    ),
+                    Expanded(child: _SearchField(hint: 'Search marketplace...', onChanged: widget.onSearch)),
                     const SizedBox(width: 12),
                     _HoverButton(child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem)),
                   ],
                 ),
               ),
-              // Results header
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
                 child: Row(
@@ -558,7 +772,6 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                   ],
                 ),
               ),
-              // Grid
               Expanded(
                 child: widget.filtered.isEmpty
                     ? _EmptyState(message: 'No items found', cta: 'List an Item', onCta: widget.onListItem)
@@ -566,10 +779,8 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                         itemCount: widget.filtered.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 0.88,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
+                          crossAxisCount: 3, childAspectRatio: 0.88,
+                          crossAxisSpacing: 10, mainAxisSpacing: 10,
                         ),
                         itemBuilder: (ctx, i) => _MarketCard(
                           item: widget.filtered[i],
@@ -627,14 +838,11 @@ class _SidePanelState extends State<_SidePanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Panel header ─────────────────────────────────────────────
           Row(
             children: [
               const Icon(Icons.tune_rounded, size: 15, color: cRed),
               const SizedBox(width: 6),
-              const Expanded(
-                child: Text('Filters', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: cText)),
-              ),
+              const Expanded(child: Text('Filters', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: cText))),
               if (widget.hasActiveFilters)
                 GestureDetector(
                   onTap: widget.onClearFilters,
@@ -644,15 +852,12 @@ class _SidePanelState extends State<_SidePanel> {
           ),
           const SizedBox(height: 12),
           Divider(height: 1, color: cBorder),
-
-          // ── Category (collapsible) ────────────────────────────────────
           _CollapsibleSection(
             label: 'CATEGORY',
             expanded: _categoryExpanded,
             onToggle: () => setState(() => _categoryExpanded = !_categoryExpanded),
             child: Wrap(
-              spacing: 5,
-              runSpacing: 5,
+              spacing: 5, runSpacing: 5,
               children: ['All', ...categories].map((c) {
                 final selected = widget.cat == c;
                 return GestureDetector(
@@ -671,8 +876,6 @@ class _SidePanelState extends State<_SidePanel> {
               }).toList(),
             ),
           ),
-
-          // ── Condition (collapsible) ───────────────────────────────────
           _CollapsibleSection(
             label: 'CONDITION',
             expanded: _conditionExpanded,
@@ -712,8 +915,6 @@ class _SidePanelState extends State<_SidePanel> {
               }).toList(),
             ),
           ),
-
-          // ── Price Range (collapsible) ─────────────────────────────────
           _CollapsibleSection(
             label: 'PRICE RANGE',
             expanded: _priceExpanded,
@@ -728,10 +929,8 @@ class _SidePanelState extends State<_SidePanel> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         style: const TextStyle(fontSize: 12),
                         decoration: InputDecoration(
-                          hintText: 'Min',
-                          hintStyle: const TextStyle(color: cMuted, fontSize: 11),
-                          prefixText: '\$',
-                          prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
+                          hintText: 'Min', hintStyle: const TextStyle(color: cMuted, fontSize: 11),
+                          prefixText: '\$', prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
@@ -747,10 +946,8 @@ class _SidePanelState extends State<_SidePanel> {
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         style: const TextStyle(fontSize: 12),
                         decoration: InputDecoration(
-                          hintText: 'Max',
-                          hintStyle: const TextStyle(color: cMuted, fontSize: 11),
-                          prefixText: '\$',
-                          prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
+                          hintText: 'Max', hintStyle: const TextStyle(color: cMuted, fontSize: 11),
+                          prefixText: '\$', prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
@@ -771,8 +968,7 @@ class _SidePanelState extends State<_SidePanel> {
                       widget.onApplyPrice(min, max);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: cRed,
-                      foregroundColor: Colors.white,
+                      backgroundColor: cRed, foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
                       padding: const EdgeInsets.symmetric(vertical: 9),
@@ -815,9 +1011,7 @@ class _CollapsibleSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Row(
               children: [
-                Expanded(
-                  child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
-                ),
+                Expanded(child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2))),
                 AnimatedRotation(
                   turns: expanded ? 0 : -0.25,
                   duration: kFast,
@@ -828,10 +1022,7 @@ class _CollapsibleSection extends StatelessWidget {
           ),
         ),
         AnimatedCrossFade(
-          firstChild: Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: child,
-          ),
+          firstChild: Padding(padding: const EdgeInsets.only(bottom: 10), child: child),
           secondChild: const SizedBox.shrink(),
           crossFadeState: expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
           duration: kFast,
@@ -887,7 +1078,7 @@ class _HoverButtonState extends State<_HoverButton> {
   }
 }
 
-// ─── MARKET CARD (compact / smaller) ─────────────────────────────────────────
+// ─── MARKET CARD ──────────────────────────────────────────────────────────────
 class _MarketCard extends StatefulWidget {
   final MarketplaceItem item;
   final VoidCallback onTap;
@@ -901,6 +1092,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
   late AnimationController _c;
   late Animation<double> _scale;
   bool _hovered = false;
+
 
   @override
   void initState() {
@@ -939,7 +1131,6 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Image
                 Expanded(
                   flex: 3,
                   child: Stack(
@@ -962,7 +1153,6 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                     ],
                   ),
                 ),
-                // Info
                 Expanded(
                   flex: 2,
                   child: Padding(
@@ -972,12 +1162,12 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('\$${widget.item.price.toStringAsFixed(0)}',
-                              style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
+                                style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                               decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(5), border: Border.all(color: cBorder)),
@@ -1004,3 +1194,6 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
     );
   }
 }
+
+
+

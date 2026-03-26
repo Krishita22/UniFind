@@ -3,13 +3,15 @@ part of '../main.dart';
 class ItemDetailScreen extends StatelessWidget {
   final MarketplaceItem item;
   final String currentUserEmail;
-  const ItemDetailScreen({super.key, required this.item, required this.currentUserEmail});
+  const ItemDetailScreen({
+    super.key,
+    required this.item,
+    required this.currentUserEmail,
+  });
 
   String _asSellerUsername() {
     final raw = item.seller.trim();
-    if (raw.isEmpty) return 'Student';
-    if (raw.contains('@')) return 'Student';
-    if (raw.contains(' ')) return 'Student';
+    if (raw.isEmpty || raw.contains('@') || raw.contains(' ')) return 'Student';
     return raw;
   }
 
@@ -19,12 +21,13 @@ class ItemDetailScreen extends StatelessWidget {
       backgroundColor: cBg,
       body: CustomScrollView(
         slivers: [
+          // ── Hero image app bar ──
           SliverAppBar(
-            expandedHeight: 320,
+            expandedHeight: 300,
             pinned: true,
             backgroundColor: cNavBg,
+            elevation: 0,
             actions: [
-              // ── Report popup menu — report listing OR report seller ──
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, color: Colors.white),
                 tooltip: 'Options',
@@ -40,7 +43,9 @@ class ItemDetailScreen extends StatelessWidget {
                   } else if (value == 'report_user') {
                     showReportDialog(
                       context: context,
-                      targetId: item.sellerEmail.isNotEmpty ? item.sellerEmail : item.id,
+                      targetId: item.sellerEmail.isNotEmpty
+                          ? item.sellerEmail
+                          : item.id,
                       targetType: 'user',
                       targetTitle: '@${_asSellerUsername()}',
                       reporterEmail: currentUserEmail,
@@ -51,17 +56,19 @@ class ItemDetailScreen extends StatelessWidget {
                   const PopupMenuItem(
                     value: 'report_listing',
                     child: Row(children: [
-                      Icon(Icons.flag_outlined, size: 16, color: cRed),
+                      Icon(Icons.flag_outlined, size: 15, color: cRed),
                       SizedBox(width: 10),
-                      Text('Report Listing', style: TextStyle(fontSize: 13)),
+                      Text('Report Listing',
+                          style: TextStyle(fontSize: 13)),
                     ]),
                   ),
                   const PopupMenuItem(
                     value: 'report_user',
                     child: Row(children: [
-                      Icon(Icons.person_off_outlined, size: 16, color: cRed),
+                      Icon(Icons.person_off_outlined, size: 15, color: cRed),
                       SizedBox(width: 10),
-                      Text('Report Seller', style: TextStyle(fontSize: 13)),
+                      Text('Report Seller',
+                          style: TextStyle(fontSize: 13)),
                     ]),
                   ),
                 ],
@@ -70,88 +77,186 @@ class ItemDetailScreen extends StatelessWidget {
             flexibleSpace: FlexibleSpaceBar(
               background: Image.network(
                 item.image,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, size: 48, color: cMuted))),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const ColoredBox(
+                  color: cPlaceholder,
+                  child: Center(
+                    child: Icon(Icons.image_not_supported,
+                        size: 42, color: cMuted),
+                  ),
+                ),
               ),
             ),
           ),
+
+          // ── Content ──
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Price + category badge
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('\$${item.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -1)),
-                            const SizedBox(height: 4),
-                            Text(item.title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: cText, letterSpacing: -0.3)),
-                          ],
+                      Text(
+                        '\$${item.price.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w900,
+                          color: cRed,
+                          letterSpacing: -1,
                         ),
                       ),
+                      const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(10)),
-                        child: Text(item.category, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: cRed.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          item.category.toUpperCase(),
+                          style: const TextStyle(
+                            color: cRed,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: cSurface, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
-                    child: Column(
-                      children: [
-                        _DetailRow(icon: Icons.stars_rounded, label: 'Condition', value: item.condition),
-                        _DetailRow(icon: Icons.location_on_outlined, label: 'Location', value: item.location),
-                        _DetailRow(icon: Icons.calendar_today_outlined, label: 'Posted', value: formatDate(item.createdAt)),
-                        _DetailRow(
-                          icon: Icons.person_outline_rounded,
-                          label: 'Seller',
-                          value: _asSellerUsername(),
-                          isLast: true,
-                        ),
-                      ],
+                  const SizedBox(height: 4),
+
+                  // Title
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w800,
+                      color: cText,
+                      letterSpacing: -0.3,
+                      height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Description', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: cText)),
+                  const SizedBox(height: 6),
+
+                  // Seller + posted date inline
+                  Row(
+                    children: [
+                      const Icon(Icons.person_outline_rounded,
+                          size: 13, color: cMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        _asSellerUsername(),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: cMuted,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 10),
+                      const Icon(Icons.circle, size: 3, color: cMuted),
+                      const SizedBox(width: 10),
+                      const Icon(Icons.calendar_today_outlined,
+                          size: 12, color: cMuted),
+                      const SizedBox(width: 4),
+                      Text(
+                        formatDate(item.createdAt),
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: cMuted,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Condition + location chips row
+                  Row(
+                    children: [
+                      _InfoChip(
+                        icon: Icons.stars_rounded,
+                        label: item.condition,
+                      ),
+                      const SizedBox(width: 8),
+                      _InfoChip(
+                        icon: Icons.location_on_outlined,
+                        label: item.location,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Divider
+                  Divider(height: 1, color: cBorder),
+                  const SizedBox(height: 20),
+
+                  // Description
+                  const Text(
+                    'Description',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: cText,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.7)),
-                  const SizedBox(height: 24),
+                  Text(
+                    item.description,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: cMuted,
+                      height: 1.75,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Contact button
                   GestureDetector(
                     onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: const Row(children: [Icon(Icons.message_rounded, color: Colors.white, size: 18), SizedBox(width: 10), Text('Contact flow coming soon!')]),
+                        content: const Row(children: [
+                          Icon(Icons.message_rounded,
+                              color: Colors.white, size: 17),
+                          SizedBox(width: 10),
+                          Text('Contact flow coming soon!'),
+                        ]),
                         backgroundColor: cRed,
                         behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                         margin: const EdgeInsets.all(12),
                       ),
                     ),
                     child: Container(
-                      height: 50,
+                      height: 48,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
+                        color: cRed,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.message_rounded, color: Colors.white, size: 18),
+                          Icon(Icons.message_rounded,
+                              color: Colors.white, size: 17),
                           SizedBox(width: 8),
-                          Text('Contact Seller', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                          Text(
+                            'Contact Seller',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
@@ -162,30 +267,36 @@ class ItemDetailScreen extends StatelessWidget {
   }
 }
 
-class _DetailRow extends StatelessWidget {
+// ── Small pill chip for condition / location ──
+class _InfoChip extends StatelessWidget {
   final IconData icon;
-  final String label, value;
-  final bool isLast;
-  const _DetailRow({required this.icon, required this.label, required this.value, this.isLast = false});
+  final String label;
+  const _InfoChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              Icon(icon, size: 16, color: cRed),
-              const SizedBox(width: 12),
-              Text(label, style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600)),
-              const Spacer(),
-              Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: cSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: cBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: cRed),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: cText,
+            ),
           ),
-        ),
-        if (!isLast) Divider(height: 1, color: cBorder),
-      ],
+        ],
+      ),
     );
   }
 }
