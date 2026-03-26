@@ -827,8 +827,8 @@ class _ContactSectionState extends State<_ContactSection> {
 
     final ioClient = IOClient(client);
 
-    final response = await ioClient.post(
-      Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
+    final response = await http.post(
+      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': _name,
