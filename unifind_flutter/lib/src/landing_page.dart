@@ -970,9 +970,9 @@ class _SuccessCard extends StatelessWidget {
             child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
           ),
           const SizedBox(height: 20),
-          const Text('Email client opened!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText)),
+          const Text('Message sent!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText)),
           const SizedBox(height: 8),
-          const Text('Your message was pre-filled in your email client.\nJust hit send and we\'ll get back to you shortly.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: cMuted, height: 1.6)),
+          const Text('Thanks for reaching out.\nWe\'ll get back to you shortly.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: cMuted, height: 1.6)),
         ],
       ),
     );
