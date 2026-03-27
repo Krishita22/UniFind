@@ -833,7 +833,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   validator: (v) {
                                     if (v == null || v.isEmpty) return 'Password is required';
                                     if (v.length < 6) return 'Minimum 6 characters';
-                                    if (v.length > 14) return 'Maximum 14 characters';
+                                    if (v.contains(' ')) return 'No spaces allowed';
                                     if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
                                     if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
                                     if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
@@ -1011,7 +1011,7 @@ class _PasswordFieldState extends State<_PasswordField> {
 
   // ── Rule checkers ──────────────────────────────────────────────────────────
   bool get _hasMinLength   => _value.length >= 6;
-  bool get _hasMaxLength   => _value.length <= 14;
+  bool get _hasNoSpaces    => !_value.contains(' ');
   bool get _hasUppercase   => RegExp(r'[A-Z]').hasMatch(_value);
   bool get _hasNumber      => RegExp(r'[0-9]').hasMatch(_value);
   bool get _hasSpecial     => RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_value);
@@ -1019,7 +1019,7 @@ class _PasswordFieldState extends State<_PasswordField> {
   int get _score {
     int s = 0;
     if (_hasMinLength) s++;
-    if (_hasMaxLength && _value.isNotEmpty) s++;
+    if (_hasNoSpaces && _value.isNotEmpty) s++;
     if (_hasUppercase) s++;
     if (_hasNumber)    s++;
     if (_hasSpecial)   s++;
@@ -1028,17 +1028,17 @@ class _PasswordFieldState extends State<_PasswordField> {
 
   Color get _barColor {
     if (_value.isEmpty) return cBorder;
-    if (_score <= 2) return const Color(0xFFE53935); // red
-    if (_score <= 3) return const Color(0xFFFB8C00); // orange
-    if (_score == 4) return const Color(0xFFFDD835); // yellow
-    return const Color(0xFF43A047);                  // green
+    if (_score <= 1) return const Color(0xFFE53935);
+    if (_score == 2) return const Color(0xFFFB8C00);
+    if (_score == 3) return const Color(0xFFFDD835);
+    return const Color(0xFF43A047);
   }
 
   String get _strengthLabel {
     if (_value.isEmpty) return '';
-    if (_score <= 2) return 'Weak';
-    if (_score <= 3) return 'Fair';
-    if (_score == 4) return 'Good';
+    if (_score <= 1) return 'Weak';
+    if (_score == 2) return 'Fair';
+    if (_score == 3) return 'Good';
     return 'Strong';
   }
 
@@ -1094,7 +1094,7 @@ class _PasswordFieldState extends State<_PasswordField> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: _score / 5,
+                    value: _value.isEmpty ? 0 : _score / 4,
                     minHeight: 6,
                     backgroundColor: cBorder,
                     valueColor: AlwaysStoppedAnimation<Color>(_barColor),
@@ -1115,7 +1115,7 @@ class _PasswordFieldState extends State<_PasswordField> {
 
           // ── Rules checklist ───────────────────────────────────────────
           const SizedBox(height: 10),
-          _PasswordRule(met: _hasMinLength,  text: '6–14 characters'),
+          _PasswordRule(met: _hasMinLength,  text: 'At least 6 characters'),
           _PasswordRule(met: _hasUppercase,  text: 'At least one uppercase letter'),
           _PasswordRule(met: _hasNumber,     text: 'At least one number'),
           _PasswordRule(met: _hasSpecial,    text: 'At least one special character (!@#\$%^&*...)'),
