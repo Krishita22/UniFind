@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 part 'src/landing_page.dart';
@@ -114,7 +115,18 @@ class _BreadcrumbBar extends StatelessWidget {
   }
 }
 
-void main() => runApp(const UniFindApp());
+void main() {
+  HttpOverrides.global = _AllowBadCertificates();
+  runApp(const UniFindApp());
+}
+
+class _AllowBadCertificates extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (cert, host, port) => true;
+  }
+}
 
 // ─── ROOT ────────────────────────────────────────────────────────────────────
 class UniFindApp extends StatefulWidget {
