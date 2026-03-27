@@ -227,6 +227,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   String _email = '';
   String _code = '';
   String _newPassword = '';
+  String _confirmPassword = '';
   bool _loading = false;
   bool _codeSent = false;
   bool _emailNotFound = false;
@@ -255,6 +256,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   void dispose() {
     _c.dispose();
     super.dispose();
+  }
+
+  bool get _resetReady {
+    if (!_codeSent) return _email.trim().isNotEmpty;
+    return _email.trim().isNotEmpty &&
+        _code.trim().isNotEmpty &&
+        _passwordStrong &&
+        _confirmPassword == _newPassword &&
+        _confirmPassword.isNotEmpty;
+  }
+
+  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
+  bool get _passwordStrong {
+    return _newPassword.length >= 6 &&
+        !_newPassword.contains(' ') &&
+        RegExp(r'[A-Z]').hasMatch(_newPassword) &&
+        RegExp(r'[0-9]').hasMatch(_newPassword) &&
+        RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_newPassword);
   }
 
   String _forgotPasswordErrorMessage(ApiException e) {
@@ -449,37 +468,32 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                _StyledField(
+                                // ── UPDATED validator: no max length, no spaces ──
+                                _PasswordField(
                                   key: const ValueKey('forgot_new_password'),
                                   label: 'New Password',
-                                  hint: '••••••••',
-                                  icon: Icons.lock_outline_rounded,
-                                  obscure: true,
-                                  onChanged: (v) => _newPassword = v,
+                                  onChanged: (v) => setState(() => _newPassword = v),
                                   textInputAction: TextInputAction.next,
+                                  onFieldSubmitted: (_) =>
+                                      FocusScope.of(context).nextFocus(),
                                   validator: (v) {
                                     if (!_codeSent) return null;
                                     if (v == null || v.isEmpty) return 'New password is required';
+                                    if (v.contains(' ')) return 'Password cannot contain spaces';
                                     if (v.length < 6) return 'Minimum 6 characters';
-                                    if (v.length > 14) return 'Maximum 14 characters';
+                                    if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
+                                    if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
+                                    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
                                     return null;
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                _StyledField(
+                                _ConfirmPasswordField(
                                   key: const ValueKey('forgot_confirm_password'),
-                                  label: 'Confirm New Password',
-                                  hint: '••••••••',
-                                  icon: Icons.lock_outline_rounded,
-                                  obscure: true,
+                                  newPassword: _newPassword,
+                                  onChanged: (v) => setState(() => _confirmPassword = v),
                                   textInputAction: TextInputAction.done,
                                   onFieldSubmitted: (_) => _submit(),
-                                  validator: (v) {
-                                    if (!_codeSent) return null;
-                                    if (v == null || v.isEmpty) return 'Please confirm your password';
-                                    if (v != _newPassword) return 'Passwords do not match';
-                                    return null;
-                                  },
                                 ),
                               ],
                               if (_errorMessage != null) ...[
@@ -567,12 +581,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
+  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
-  return _password.length >= 6 &&
-      _password.length <= 14 &&
-      RegExp(r'[A-Z]').hasMatch(_password) &&
-      RegExp(r'[0-9]').hasMatch(_password) &&
-      RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_password);
+    return _password.length >= 6 &&
+        !_password.contains(' ') &&
+        RegExp(r'[A-Z]').hasMatch(_password) &&
+        RegExp(r'[0-9]').hasMatch(_password) &&
+        RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_password);
   }
 
   Future<void> _submit() async {
@@ -975,6 +990,7 @@ class _PasswordField extends StatefulWidget {
   final String? Function(String?)? validator;
   final ValueChanged<String>? onFieldSubmitted;
   final TextInputAction? textInputAction;
+  final String label;
 
   const _PasswordField({
     super.key,
@@ -982,6 +998,7 @@ class _PasswordField extends StatefulWidget {
     this.validator,
     this.onFieldSubmitted,
     this.textInputAction,
+    this.label = 'Password',
   });
 
   @override
@@ -1031,9 +1048,9 @@ class _PasswordFieldState extends State<_PasswordField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Field label ───────────────────────────────────────────────────
-        const Text(
-          'Password',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
+        Text(
+          widget.label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
         ),
         const SizedBox(height: 6),
 
@@ -1137,6 +1154,99 @@ class _PasswordRule extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── CONFIRM PASSWORD FIELD ───────────────────────────────────────────────────
+class _ConfirmPasswordField extends StatefulWidget {
+  final String newPassword;
+  final ValueChanged<String> onChanged;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onFieldSubmitted;
+
+  const _ConfirmPasswordField({
+    super.key,
+    required this.newPassword,
+    required this.onChanged,
+    this.textInputAction,
+    this.onFieldSubmitted,
+  });
+
+  @override
+  State<_ConfirmPasswordField> createState() => _ConfirmPasswordFieldState();
+}
+
+class _ConfirmPasswordFieldState extends State<_ConfirmPasswordField> {
+  String _value = '';
+  bool _obscure = true;
+
+  bool get _mismatch => _value.isNotEmpty && _value != widget.newPassword;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Confirm Password',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          obscureText: _obscure,
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+          textInputAction: widget.textInputAction,
+          onChanged: (v) {
+            setState(() => _value = v);
+            widget.onChanged(v);
+          },
+          onFieldSubmitted: widget.onFieldSubmitted,
+          validator: (v) {
+            if (v == null || v.isEmpty) return 'Please confirm your password';
+            if (v != widget.newPassword) return 'Passwords do not match';
+            return null;
+          },
+          decoration: InputDecoration(
+            hintText: '••••••••',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: cMuted),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                size: 18,
+                color: cMuted,
+              ),
+              onPressed: () => setState(() => _obscure = !_obscure),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _mismatch ? cRedDark : cBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: _mismatch ? cRedDark : cRed, width: 2),
+            ),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+        if (_mismatch) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 13, color: cRedDark),
+              SizedBox(width: 4),
+              Text(
+                'Passwords do not match',
+                style: TextStyle(fontSize: 11, color: cRedDark, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
