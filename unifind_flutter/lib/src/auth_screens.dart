@@ -550,6 +550,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   String _code = '';
   bool _loading = false;
   bool _codeSent = false;
+  bool _agreedToTerms = false;
   String? _errorMessage;
   late AnimationController _c;
   late Animation<double> _fade, _slide;
@@ -852,6 +853,68 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                     return null;
                                   },
                                 ),
+                                const SizedBox(height: 20),
+
+                                GestureDetector(
+                                  onTap: () => setState(() => _agreedToTerms = !_agreedToTerms),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      AnimatedContainer(
+                                        duration: const Duration(milliseconds: 150),
+                                        width: 20,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: _agreedToTerms ? cRed : cBg,
+                                          borderRadius: BorderRadius.circular(5),
+                                          border: Border.all(
+                                            color: _agreedToTerms ? cRed : cBorder,
+                                            width: _agreedToTerms ? 0 : 1.5,
+                                          ),
+                                        ),
+                                        child: _agreedToTerms
+                                            ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: RichText(
+                                          text: TextSpan(
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: cMuted,
+                                              height: 1.5,
+                                              fontFamily: 'Georgia',
+                                            ),
+                                            children: [
+                                              const TextSpan(text: 'I have read and agree to the  '),
+                                              TextSpan(
+                                                text: 'Terms & Conditions',
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                  color: cRed,
+                                                  height: 1.5,
+                                                  decorationColor: cRed,
+                                                  decoration: TextDecoration.underline,
+                                                  fontFamily: 'Georgia',
+                                                ),
+                                                recognizer: TapGestureRecognizer()
+                                                  ..onTap = () async {
+                                                    final uri = Uri.parse(
+                                                      'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/terms.html',
+                                                    );
+                                                    if (await canLaunchUrl(uri)) {
+                                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                                    }
+                                                  },
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
 
                               if (_errorMessage != null) ...[
@@ -868,13 +931,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: (!_codeSent || _passwordStrong)
+                                onTap: (!_codeSent || (_passwordStrong && _agreedToTerms))
                                     ? _submit
                                     : () {},
                                 label: _codeSent
                                     ? 'Verify & Create Account'
                                     : 'Send Verification Code',
-                                disabled: _codeSent && !_passwordStrong,
+                                disabled: _codeSent && (!_passwordStrong || !_agreedToTerms),
                               ),
                             ],
                           ),
