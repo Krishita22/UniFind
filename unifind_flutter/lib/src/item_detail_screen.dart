@@ -21,7 +21,6 @@ class ItemDetailScreen extends StatelessWidget {
       backgroundColor: cBg,
       body: CustomScrollView(
         slivers: [
-          // -- Hero image app bar --
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
@@ -88,8 +87,6 @@ class ItemDetailScreen extends StatelessWidget {
               ),
             ),
           ),
-
-          // -- Content --
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
@@ -267,8 +264,7 @@ class ItemDetailScreen extends StatelessWidget {
   }
 }
 
-// -- Small pill chip for condition / location --
-class _InfoChip extends StatelessWidget {
+class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   const _InfoChip({required this.icon, required this.label});
