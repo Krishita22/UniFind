@@ -549,7 +549,7 @@ class _AdminAppState extends State<AdminApp> {
               ),
               _AdminLostFoundPanel(items: _lf, onRefresh: _loadAll),
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
-              _AdminReportsPanel(reports: _reports, users: _users, onRefresh: _loadAll),
+              _AdminReportsPanel(reports: _reports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
             ]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab.index,
@@ -1382,8 +1382,16 @@ class _UserInfoRow extends StatelessWidget {
 class _AdminReportsPanel extends StatefulWidget {
   final List<AdminReport> reports;
   final List<AdminUser> users;
+  final List<PendingListing> allListings;
+  final List<AdminLostFoundItem> allLFItems;
   final VoidCallback onRefresh;
-  const _AdminReportsPanel({required this.reports, required this.users, required this.onRefresh});
+  const _AdminReportsPanel({
+    required this.reports,
+    required this.users,
+    required this.allListings,
+    required this.allLFItems,
+    required this.onRefresh,
+  });
 
   @override
   State<_AdminReportsPanel> createState() => _AdminReportsPanelState();
@@ -1393,15 +1401,60 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
   bool _showResolved = false;
   List<AdminReport> get _filtered => widget.reports.where((r) => r.isResolved == _showResolved).toList();
 
+  // ── Look up listing from already-loaded data (no API call needed) ─────────
+  Map<String, dynamic>? _findListing(String listingId, bool isLostFound) {
+    if (isLostFound) {
+      for (final item in widget.allLFItems) {
+        if (item.id == listingId) {
+          return {
+            'title': item.title,
+            'description': item.description,
+            'category': item.category,
+            'location': item.location,
+            'image': item.image,
+            'status': item.status,
+            'seller_username': item.posterUsername,
+            'price': '',
+          };
+        }
+      }
+    } else {
+      for (final item in widget.allListings) {
+        if (item.id == listingId) {
+          return {
+            'title': item.title,
+            'description': item.description,
+            'category': item.category,
+            'location': item.location,
+            'image': item.image,
+            'status': item.type,
+            'seller_username': item.sellerUsername,
+            'price': item.price > 0 ? item.price.toStringAsFixed(0) : '',
+          };
+        }
+      }
+    }
+    return null;
+  }
+
   Future<void> _openAction(AdminReport report) async {
     bool loading = false;
     String? error;
 
+    // For listing reports — fetch listing details to show inline
+    Map<String, dynamic>? listingDetails;
+    bool listingFetched = false;
+
+    // For user reports — fetch their listing history
     List<Map<String, dynamic>> userMarketItems = [];
     List<Map<String, dynamic>> userLFItems = [];
     bool historyLoaded = false;
 
-    final targetUser = widget.users.cast<AdminUser?>().firstWhere(
+    final isLostFoundReport = report.targetType == 'lostfound';
+
+    // For user reports: match by email or user id directly.
+    // For listing reports: target_id is the listing id — resolve the owner below.
+    AdminUser? targetUser = widget.users.cast<AdminUser?>().firstWhere(
       (u) => u?.email == report.targetId || u?.id.toString() == report.targetId,
       orElse: () => null,
     );
@@ -1415,12 +1468,44 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
       transitionBuilder: (ctx, anim, __, ___) => Opacity(
         opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
         child: StatefulBuilder(builder: (ctx, setS) {
+          // Load listing details + resolve listing owner from seller/poster info
+          if ((report.targetType == 'listing' || report.targetType == 'lostfound') && !listingFetched) {
+            listingFetched = true;
+            listingDetails = _findListing(report.targetId, isLostFoundReport);
+            if (targetUser == null) {
+              if (isLostFoundReport) {
+                for (final item in widget.allLFItems) {
+                  if (item.id == report.targetId) {
+                    targetUser = widget.users.cast<AdminUser?>().firstWhere(
+                      (u) => u?.email.toLowerCase() == item.posterEmail.toLowerCase()
+                          || u?.username.toLowerCase() == item.posterUsername.toLowerCase(),
+                      orElse: () => null,
+                    );
+                    break;
+                  }
+                }
+              } else {
+                for (final item in widget.allListings) {
+                  if (item.id == report.targetId) {
+                    targetUser = widget.users.cast<AdminUser?>().firstWhere(
+                      (u) => u?.email.toLowerCase() == item.sellerEmail.toLowerCase()
+                          || u?.username.toLowerCase() == item.sellerUsername.toLowerCase(),
+                      orElse: () => null,
+                    );
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          // Load user history once for user reports
           if (report.targetType == 'user' && !historyLoaded && targetUser != null) {
             historyLoaded = true;
             Future.microtask(() async {
               try {
-                final market = await getUserMarketListings(targetUser.id);
-                final lf     = await getUserLostFoundListings(targetUser.id);
+                final market = await getUserMarketListings(targetUser!.id);
+                final lf     = await getUserLostFoundListings(targetUser!.id);
                 if (ctx.mounted) setS(() { userMarketItems = market; userLFItems = lf; });
               } catch (_) {}
             });
@@ -1475,51 +1560,62 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                       // LISTING / LOSTFOUND REPORT ACTIONS
                       // ══════════════════════════════════════════
                       if (report.targetType == 'listing' || report.targetType == 'lostfound') ...[
+
+                        // ── Listing preview card ──
+                        const _AdminLabel('Reported Listing'),
+                        const SizedBox(height: 8),
+                        if (listingDetails == null)
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
+                            child: const Row(children: [
+                              Icon(Icons.info_outline_rounded, size: 16, color: cMuted),
+                              SizedBox(width: 10),
+                              Text('Listing details not available (may have been removed).', style: TextStyle(fontSize: 12, color: cMuted)),
+                            ]),
+                          )
+                        else
+                          Container(
+                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              // Image
+                              if ((listingDetails!['image']?.toString() ?? '').isNotEmpty)
+                                Image.network(
+                                  listingDetails!['image']?.toString() ?? '',
+                                  height: 140, width: double.infinity, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(height: 80, color: cPlaceholder, child: const Center(child: Icon(Icons.image_not_supported, color: cMuted))),
+                                ),
+                              Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(listingDetails!['title']?.toString() ?? report.targetTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
+                                  const SizedBox(height: 4),
+                                  Text(listingDetails!['description']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: cMuted, height: 1.4)),
+                                  const SizedBox(height: 8),
+                                  Wrap(spacing: 8, runSpacing: 4, children: [
+                                    if ((listingDetails!['price']?.toString() ?? '0') != '0' && (listingDetails!['price']?.toString() ?? '') != '')
+                                      _AdminBadge(label: '\$${listingDetails!['price']}', color: cRed),
+                                    if ((listingDetails!['category']?.toString() ?? '').isNotEmpty)
+                                      _AdminBadge(label: listingDetails!['category'].toString(), color: cMuted),
+                                    if ((listingDetails!['location']?.toString() ?? '').isNotEmpty)
+                                      _AdminBadge(label: listingDetails!['location'].toString(), color: const Color(0xFF2980B9)),
+                                    _AdminBadge(
+                                      label: (listingDetails!['status']?.toString() ?? 'unknown').toUpperCase(),
+                                      color: listingDetails!['status'] == 'active' ? const Color(0xFF27AE60) : const Color(0xFFE67E22),
+                                    ),
+                                  ]),
+                                  const SizedBox(height: 6),
+                                  Text('By: ${listingDetails!['seller_username'] ?? listingDetails!['poster_username'] ?? 'Unknown'}', style: const TextStyle(fontSize: 11, color: cMuted)),
+                                ]),
+                              ),
+                            ]),
+                          ),
+                        const SizedBox(height: 16),
+
                         const _AdminLabel('Choose an Action'),
                         const SizedBox(height: 10),
                         if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
-
-                        // View listing hint
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                            label: const Text('View Listing'),
-                            style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9)), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                content: Text('Search for "${report.targetTitle}" in the Listings panel.'),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                margin: const EdgeInsets.all(12),
-                              ));
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Issue warning to listing owner
-                        if (targetUser != null && !targetUser.isBanned && !targetUser.hasWarning) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
-                              label: const Text('Issue Warning to User'),
-                              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22)), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
-                              onPressed: loading ? null : () async {
-                                setS(() { loading = true; error = null; });
-                                try {
-                                  await adminIssueWarning(userId: targetUser.id, email: targetUser.email);
-                                  await adminResolveReport(reportId: report.id);
-                                  if (ctx.mounted) Navigator.pop(ctx);
-                                  widget.onRefresh();
-                                } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
 
                         // Remove listing & notify user
                         SizedBox(
@@ -1531,7 +1627,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                             onPressed: loading ? null : () async {
                               setS(() { loading = true; error = null; });
                               try {
-                                await adminRemoveListing(listingId: report.targetId, isLostFound: report.targetType == 'lostfound');
+                                await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFoundReport);
                                 await adminResolveReport(reportId: report.id);
                                 if (ctx.mounted) Navigator.pop(ctx);
                                 widget.onRefresh();
@@ -1539,6 +1635,30 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                             },
                           ),
                         ),
+                        const SizedBox(height: 8),
+
+                        // Remove listing & issue warning
+                        if (targetUser != null && !targetUser!.hasWarning) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
+                              label: const Text('Remove Listing & Issue Warning'),
+                              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22)), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
+                              onPressed: loading ? null : () async {
+                                setS(() { loading = true; error = null; });
+                                try {
+                                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFoundReport);
+                                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
+                                  await adminResolveReport(reportId: report.id);
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  widget.onRefresh();
+                                } catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         const SizedBox(height: 8),
 
                         // Remove listing & ban user
@@ -1552,8 +1672,8 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                               onPressed: loading ? null : () async {
                                 setS(() { loading = true; error = null; });
                                 try {
-                                  await adminRemoveListing(listingId: report.targetId, isLostFound: report.targetType == 'lostfound');
-                                  await adminBanUser(userId: targetUser.id, email: targetUser.email);
+                                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFoundReport);
+                                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
                                   await adminResolveReport(reportId: report.id);
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   widget.onRefresh();
@@ -1596,11 +1716,11 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              _UserInfoRow(label: 'Role',           value: targetUser.role.label),
-                              _UserInfoRow(label: 'Registered',     value: formatDate(targetUser.registeredAt)),
-                              _UserInfoRow(label: 'Total Listings', value: '${targetUser.listingCount}'),
-                              _UserInfoRow(label: 'Warning Issued', value: targetUser.hasWarning ? 'Yes' : 'No', highlight: targetUser.hasWarning),
-                              _UserInfoRow(label: 'Status',         value: targetUser.isBanned ? 'BANNED' : 'Active', highlight: targetUser.isBanned),
+                              _UserInfoRow(label: 'Role',           value: targetUser!.role.label),
+                              _UserInfoRow(label: 'Registered',     value: formatDate(targetUser!.registeredAt)),
+                              _UserInfoRow(label: 'Total Listings', value: '${targetUser!.listingCount}'),
+                              _UserInfoRow(label: 'Warning Issued', value: targetUser!.hasWarning ? 'Yes' : 'No', highlight: targetUser!.hasWarning),
+                              _UserInfoRow(label: 'Status',         value: targetUser!.isBanned ? 'BANNED' : 'Active', highlight: targetUser!.isBanned),
                             ]),
                           ),
                           const SizedBox(height: 10),
@@ -1625,8 +1745,8 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                         const SizedBox(height: 10),
                         if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
 
-                        // Issue warning (only if not warned or banned)
-                        if (targetUser != null && !targetUser.isBanned && !targetUser.hasWarning) ...[
+                        // Issue warning
+                        if (targetUser != null && !targetUser!.isBanned && !targetUser!.hasWarning) ...[
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
@@ -1636,7 +1756,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                               onPressed: loading ? null : () async {
                                 setS(() { loading = true; error = null; });
                                 try {
-                                  await adminIssueWarning(userId: targetUser.id, email: targetUser.email);
+                                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
                                   await adminResolveReport(reportId: report.id);
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   widget.onRefresh();
@@ -1648,7 +1768,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                         ],
 
                         // Warning already issued banner
-                        if (targetUser != null && targetUser.hasWarning && !targetUser.isBanned) ...[
+                        if (targetUser != null && targetUser!.hasWarning && !targetUser!.isBanned) ...[
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE082))),
@@ -1672,7 +1792,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
                               setS(() { loading = true; error = null; });
                               try {
                                 if (targetUser != null) {
-                                  await adminBanUser(userId: targetUser.id, email: targetUser.email);
+                                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
                                 } else {
                                   await adminBanUserByEmail(email: report.targetId);
                                 }
@@ -1923,4 +2043,3 @@ Future<void> showReportDialog({
     ),
   );
 }
-
