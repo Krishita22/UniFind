@@ -404,17 +404,29 @@ class _AdminAppState extends State<AdminApp> {
             type: _s(a['type']).isEmpty ? 'listing' : _s(a['type']),
           )).toList();
 
-      final pending = rawPending.map((p) => PendingListing(
-        id: _s(p['id']), title: _s(p['title']), description: _s(p['description']),
-        category: _s(p['category']), condition: _s(p['condition']).isEmpty ? 'Good' : _s(p['condition']),
-        location: _s(p['location']), price: double.tryParse(_s(p['price'])) ?? 0,
-        image: _s(p['image']).isEmpty ? _s(p['image_url']) : _s(p['image']),
-        sellerEmail: _s(p['seller_email']),
-        sellerUsername: _s(p['seller_username']).isEmpty ? 'Student' : _s(p['seller_username']),
-        submittedAt: _d(p['created_at']),
-        isLostFound: _s(p['type']) == 'lost' || _s(p['type']) == 'found',
-        type: _s(p['type']).isEmpty ? 'marketplace' : _s(p['type']),
-      )).toList();
+      final pending = rawPending.map((p) {
+        final rawType = _s(p['type']);
+        final isLF = p['is_lost_found'] == true || p['is_lost_found'] == 1 ||
+            rawType == 'lost' || rawType == 'found';
+        return PendingListing(
+          id: _s(p['id']),
+          title: _s(p['title']),
+          description: _s(p['description']),
+          category: _s(p['category']),
+          condition: _s(p['condition']).isEmpty || _s(p['condition']) == 'N/A'
+              ? 'Good'
+              : _s(p['condition']),
+          location: _s(p['location']),
+          price: double.tryParse(_s(p['price'])) ?? 0,
+          image: _s(p['image']).isEmpty ? _s(p['image_url']) : _s(p['image']),
+          sellerEmail: _s(p['seller_email']),
+          sellerUsername:
+         _s(p['seller_username']).isEmpty ? 'Student' : _s(p['seller_username']),
+          submittedAt: _d(p['created_at']),
+          isLostFound: isLF,
+          type: rawType.isEmpty ? 'marketplace' : rawType,
+        );
+      }).toList();
 
       final active = rawActive.map((p) => PendingListing(
         id: _s(p['id']), title: _s(p['title']), description: _s(p['description']),
@@ -806,7 +818,7 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
                       DropdownButtonFormField<String>(
                         value: category.isEmpty ? null : category,
                         decoration: const InputDecoration(labelText: 'Category'),
-                        items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        items: (listing.isLostFound ? lostFoundCategories : categories).map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                         onChanged: (v) => setS(() => category = v ?? category),
                       ),
                       const SizedBox(height: 8),
@@ -1460,21 +1472,6 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         },
                       ),
 
-                    // Toggle email verification
-                    OutlinedButton.icon(
-                      icon: Icon(user.isVerified ? Icons.verified_outlined : Icons.verified_rounded, size: 16),
-                      label: Text(user.isVerified ? 'Unverify Email' : 'Verify Email'),
-                      style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9))),
-                      onPressed: loading ? null : () async {
-                        setS(() { loading = true; error = null; });
-                        try {
-                          await adminToggleVerification(userId: user.id, verify: !user.isVerified);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          widget.onRefresh();
-                        } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                      },
-                    ),
-
                     // Delete account
                     OutlinedButton.icon(
                       icon: const Icon(Icons.delete_forever_rounded, size: 16),
@@ -1483,7 +1480,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                       onPressed: loading ? null : () async {
                         final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(
                           title: const Text('Delete Account?'),
-                          content: Text('Permanently deletes @${user.username} and all their data. Cannot be undone.'),
+                          content: Text('Permanently deletes @${user.username} and all their data. Their email can be used to create a new account afterwards.'),
                           actions: [
                             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                             TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
