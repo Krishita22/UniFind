@@ -478,19 +478,21 @@ class _UniFindAppState extends State<UniFindApp> {
   }
 
   Future<void> _addListing(NewListingInput in_) async {
-    try {
-      if (in_.type == ListingType.marketplace) {
-        _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
-        final res = await createListing(
-          title: in_.title,
-          description: in_.description,
-          price: in_.price,
-          category: in_.category,
-          condition: in_.condition,
-          location: in_.location,
-          email: _email,
-          image: in_.imageUrl,
-        );
+  try {
+    if (in_.type == ListingType.marketplace) {
+      _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
+      print('DEBUG _addListing: email=$_email, title=${in_.title}');
+      final res = await createListing(
+        title: in_.title,
+        description: in_.description,
+        price: in_.price,
+        category: in_.category,
+        condition: in_.condition,
+        location: in_.location,
+        email: _email,
+        image: in_.imageUrl,
+      );
+      print('DEBUG createListing response: $res');
         final id = _extractIdFromResponse(res);
         if (id.isNotEmpty) _myMarketIds.add(id);
       } else {
@@ -509,11 +511,12 @@ class _UniFindAppState extends State<UniFindApp> {
       }
       await _loadListings();
       await _loadLostFound();
-    } catch (_) {
+    } catch (e) {
+      print('DEBUG addListing error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not sync with database. Please try again.'),
+        SnackBar(
+          content: Text('Error: $e'),
           behavior: SnackBarBehavior.floating,
         ),
       );

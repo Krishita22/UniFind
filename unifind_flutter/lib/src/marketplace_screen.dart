@@ -220,6 +220,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                         item: filtered[i],
                         compact: false,
                         onTap: () => _showItemPopup(ctx, filtered[i], widget.currentUserEmail),
+                        currentUserEmail: widget.currentUserEmail,
                       ),
                     ),
             ),
@@ -229,53 +230,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 }
-// ── Full-screen image viewer ──────────────────────────────────────────────────
-class _FullScreenImagePage extends StatelessWidget {
-  final String imageUrl;
-  const _FullScreenImagePage({required this.imageUrl});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Center(
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.contain,
-              width: double.infinity,
-              height: double.infinity,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.image_not_supported, color: Colors.white30, size: 48),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
-// ── Item popup — full detail content ─────────────────────────────────────────
+// ── Item popup (shared by marketplace and lost & found) ───────────────────────
 void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUserEmail) {
   // Helper to clean up seller display name (mirrors ItemDetailScreen logic)
   String asSellerUsername() {
@@ -315,7 +271,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // ── Tappable image header ─────────────────────────
+                      // Image header
                       Stack(
                         children: [
                           GestureDetector(
@@ -452,7 +408,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                           ),
                         ],
                       ),
-                      // ── Scrollable content (mirrors ItemDetailScreen) ──
+                      // Content
                       Flexible(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -611,7 +567,7 @@ class _PopupChip extends StatelessWidget {
   }
 }
 
-// ─── BROWSER LAYOUT ───────────────────────────────────────────────────────────
+// ─── BROWSER LAYOUT (collapsible side panel + grid) ──────────────────────────
 class _BrowserLayout extends StatefulWidget {
   final List<MarketplaceItem> filtered;
   final String cat;
@@ -786,6 +742,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                           item: widget.filtered[i],
                           compact: true,
                           onTap: () => _showItemPopup(ctx, widget.filtered[i], widget.currentUserEmail),
+                          currentUserEmail: widget.currentUserEmail,
                         ),
                       ),
               ),
@@ -797,7 +754,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
   }
 }
 
-// ─── SIDE PANEL ───────────────────────────────────────────────────────────────
+// --- SIDE PANEL ---
 class _SidePanel extends StatefulWidget {
   final String cat;
   final String cond;
@@ -939,7 +896,7 @@ class _SidePanelState extends State<_SidePanel> {
                         ),
                       ),
                     ),
-                    const Padding(padding: EdgeInsets.symmetric(horizontal: 5), child: Text('–', style: TextStyle(color: cMuted, fontWeight: FontWeight.w700))),
+                    const Padding(padding: EdgeInsets.symmetric(horizontal: 5), child: Text('--', style: TextStyle(color: cMuted, fontWeight: FontWeight.w700))),
                     Expanded(
                       child: TextField(
                         controller: widget.maxCtrl,
@@ -985,7 +942,7 @@ class _SidePanelState extends State<_SidePanel> {
   }
 }
 
-// ─── COLLAPSIBLE SECTION ──────────────────────────────────────────────────────
+// --- COLLAPSIBLE SECTION ---
 class _CollapsibleSection extends StatelessWidget {
   final String label;
   final bool expanded;
@@ -1033,7 +990,7 @@ class _CollapsibleSection extends StatelessWidget {
   }
 }
 
-// ─── FILTER BUTTON (mobile) ───────────────────────────────────────────────────
+// --- FILTER BUTTON (mobile) ---
 class _MarketFilterButton extends StatelessWidget {
   final VoidCallback onTap;
   final bool hasActive;
@@ -1078,12 +1035,13 @@ class _HoverButtonState extends State<_HoverButton> {
   }
 }
 
-// ─── MARKET CARD ──────────────────────────────────────────────────────────────
+// ─── MARKET CARD (compact / smaller) ─────────────────────────────────────────
 class _MarketCard extends StatefulWidget {
   final MarketplaceItem item;
   final VoidCallback onTap;
   final bool compact;
-  const _MarketCard({required this.item, required this.onTap, this.compact = false});
+  final String currentUserEmail;
+  const _MarketCard({required this.item, required this.onTap, this.compact = false, this.currentUserEmail = ''});
   @override
   State<_MarketCard> createState() => _MarketCardState();
 }
@@ -1180,6 +1138,23 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                             const Icon(Icons.location_on_outlined, size: 9, color: cMuted),
                             const SizedBox(width: 2),
                             Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 9, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            GestureDetector(
+                              onTap: () => showReportDialog(
+                                context: context,
+                                targetId: widget.item.id,
+                                targetType: 'listing',
+                                targetTitle: widget.item.title,
+                                reporterEmail: widget.currentUserEmail,
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.flag_outlined, size: 10, color: cMuted),
+                                  SizedBox(width: 2),
+                                  Text('Report', style: TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ],
