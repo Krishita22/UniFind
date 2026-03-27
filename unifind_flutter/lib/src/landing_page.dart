@@ -5,6 +5,7 @@ class LandingPage extends StatelessWidget {
   const LandingPage({super.key, required this.onLogin});
 
   static final _aboutKey = GlobalKey();
+  static final _featuresKey = GlobalKey();
   static final _howKey = GlobalKey();
   static final _faqKey = GlobalKey();
   static final _contactKey = GlobalKey();
@@ -53,6 +54,7 @@ void _openRegister(BuildContext ctx) {
             _LandingNav(
               onAbout: () => _scrollTo(_aboutKey),
               onHow: () => _scrollTo(_howKey),
+              onFeatures: () => _scrollTo(_featuresKey),
               onFaq: () => _scrollTo(_faqKey),
               onContact: () => _scrollTo(_contactKey),
               onLogin: () => _openLogin(context),
@@ -60,7 +62,7 @@ void _openRegister(BuildContext ctx) {
             ),
             _HeroSection(onLogin: () => _openLogin(context), onRegister: () => _openRegister(context)),
             KeyedSubtree(key: _howKey, child: const _HowItWorksSection()),
-            const _FeaturesSection(),
+            KeyedSubtree(key: _featuresKey, child: const _FeaturesSection()),
             KeyedSubtree(key: _aboutKey, child: const _AboutSection()),
             KeyedSubtree(key: _faqKey, child: const _FaqSection()),
             KeyedSubtree(key: _contactKey, child: const _ContactSection()),
@@ -75,15 +77,17 @@ void _openRegister(BuildContext ctx) {
 
 // ─── LANDING NAV ─────────────────────────────────────────────────────────────
 class _LandingNav extends StatelessWidget {
-  final VoidCallback onAbout, onHow, onFaq, onContact, onLogin, onRegister;
-  const _LandingNav({required this.onAbout, required this.onHow, required this.onFaq, required this.onContact, required this.onLogin, required this.onRegister});
-
+  final VoidCallback onAbout, onHow, onFeatures, onFaq, onContact, onLogin, onRegister;
+  const _LandingNav({required this.onAbout, required this.onHow, required this.onFeatures, required this.onFaq, required this.onContact, required this.onLogin, required this.onRegister});
+  
   @override
   Widget build(BuildContext context) {
     final navItems = <MapEntry<String, VoidCallback>>[
-      MapEntry('About', onAbout),
       MapEntry('How It Works', onHow),
+      MapEntry('Features', onFeatures),
+      MapEntry('About', onAbout),
       MapEntry('FAQ', onFaq),
+      MapEntry('Contact', onContact),
     ];
 
     return Container(
