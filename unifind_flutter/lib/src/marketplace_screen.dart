@@ -230,53 +230,8 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 }
-// -- Full-screen image viewer --
-class _FullScreenImagePage extends StatelessWidget {
-  final String imageUrl;
-  const _FullScreenImagePage({required this.imageUrl});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Center(
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.contain,
-              width: double.infinity,
-              height: double.infinity,
-              errorBuilder: (_, __, ___) => const Center(
-                child: Icon(Icons.image_not_supported, color: Colors.white30, size: 48),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
-// -- Item popup -- full detail content --
+// ── Item popup (shared by marketplace and lost & found) ───────────────────────
 void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUserEmail) {
   // Helper to clean up seller display name (mirrors ItemDetailScreen logic)
   String asSellerUsername() {
@@ -316,7 +271,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // -- Tappable image header --
+                      // Image header
                       Stack(
                         children: [
                           GestureDetector(
@@ -453,7 +408,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                           ),
                         ],
                       ),
-                      // -- Scrollable content (mirrors ItemDetailScreen) --
+                      // Content
                       Flexible(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -612,7 +567,7 @@ class _PopupChip extends StatelessWidget {
   }
 }
 
-// --- BROWSER LAYOUT ---
+// ─── BROWSER LAYOUT (collapsible side panel + grid) ──────────────────────────
 class _BrowserLayout extends StatefulWidget {
   final List<MarketplaceItem> filtered;
   final String cat;
@@ -1080,7 +1035,7 @@ class _HoverButtonState extends State<_HoverButton> {
   }
 }
 
-// --- MARKET CARD ---
+// ─── MARKET CARD (compact / smaller) ─────────────────────────────────────────
 class _MarketCard extends StatefulWidget {
   final MarketplaceItem item;
   final VoidCallback onTap;
@@ -1214,3 +1169,6 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
     );
   }
 }
+
+
+
