@@ -1252,7 +1252,18 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         },
                       ),
                     if (!user.isBanned && user.hasWarning)
-                      OutlinedButton.icon(icon: const Icon(Icons.check_rounded, size: 16), label: const Text('Warning Issued'), style: OutlinedButton.styleFrom(foregroundColor: cMuted, side: const BorderSide(color: cBorder)), onPressed: null),
+                      OutlinedButton.icon(
+                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.undo_rounded, size: 16),
+                        label: const Text('Revoke Warning'),
+                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
+                        onPressed: loading ? null : () async {
+                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Revoke Warning?'), content: Text('This will remove the warning from @\${user.username}\'s account.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Color(0xFFE67E22))))]));
+                          if (confirm != true) return;
+                          setS(() { loading = true; error = null; });
+                          try { await adminRevokeWarning(userId: user.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                        },
+                      ),
                     if (!user.isBanned && user.hasWarning)
                       OutlinedButton.icon(
                         icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.block_rounded, size: 16),
