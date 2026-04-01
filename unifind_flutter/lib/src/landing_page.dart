@@ -29,20 +29,22 @@ class LandingPage extends StatelessWidget {
       ),
     ));
   }
-void _openRegister(BuildContext ctx) {
-  Navigator.of(ctx).push(PageRouteBuilder(
-    transitionDuration: kPage,
-    pageBuilder: (_, a, __) => FadeTransition(
-      opacity: a,
-      child: RegistrationScreen(
-        onRegister: (email, [userId, username, role]) {
-          onLogin(email, userId, username, role);
-          Navigator.of(ctx).popUntil((r) => r.isFirst);
-        },
+  
+  void _openRegister(BuildContext ctx) {
+    Navigator.of(ctx).push(PageRouteBuilder(
+      transitionDuration: kPage,
+      pageBuilder: (_, a, __) => FadeTransition(
+        opacity: a,
+        child: RegistrationScreen(
+          onRegister: (email, [userId, username, role]) {
+            onLogin(email, userId, username, role);
+            Navigator.of(ctx).popUntil((r) => r.isFirst);
+          },
+        ),
       ),
-    ),
-  ));
-}
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
