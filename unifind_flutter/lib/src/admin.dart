@@ -586,47 +586,237 @@ class _AdminDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+        // ── Hero Banner ──
         Container(
-          width: double.infinity, padding: const EdgeInsets.all(20),
+          width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           decoration: BoxDecoration(
             gradient: const LinearGradient(colors: [cNavBg, cNavBgDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
           ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Admin Dashboard', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-            const SizedBox(height: 4),
-            Text('UniFind · ${_todayLabel()}', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.75))),
+          child: Row(children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Admin Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+              const SizedBox(height: 4),
+              Text('UniFind · ${_todayLabel()}', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
+            ])),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 7, height: 7, decoration: BoxDecoration(color: const Color(0xFF4ADE80), shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: const Color(0xFF4ADE80).withValues(alpha: 0.4), blurRadius: 6)])),
+                const SizedBox(width: 7),
+                const Text('System Online', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
+              ]),
+            ),
           ]),
         ),
-        const SizedBox(height: 20),
-        const Text('Overview', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: cText, letterSpacing: 0.2)),
+        const SizedBox(height: 12),
+
+        // ── Stat Cards ──
+        const Text('OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
         const SizedBox(height: 10),
-        GridView.count(
-          shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2, childAspectRatio: 1.6, crossAxisSpacing: 10, mainAxisSpacing: 10,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _StatCard(label: 'Active Listings',   value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded,     color: cRed,                    onTap: () => onNavigate(AdminTab.listings, showActive: true)),
-            _StatCard(label: 'Pending Approvals', value: '${stats.pendingApprovals}',    icon: Icons.pending_actions_rounded, color: const Color(0xFFE67E22), onTap: () => onNavigate(AdminTab.listings, showActive: false)),
-            _StatCard(label: 'New Users (7d)',    value: '${stats.newUsersThisWeek}',    icon: Icons.person_add_rounded,      color: const Color(0xFF2980B9), onTap: () => onNavigate(AdminTab.users, showActive: false)),
-            _StatCard(label: 'Open Reports',      value: '${stats.openReports}',         icon: Icons.flag_rounded,            color: const Color(0xFF8E44AD), onTap: () => onNavigate(AdminTab.reports, showActive: false)),
+            Expanded(child: _StatCard(label: 'Active Listings', value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded, color: cRed, onTap: () => onNavigate(AdminTab.listings, showActive: true))),
+            const SizedBox(width: 10),
+            Expanded(child: _StatCard(label: 'Pending Approvals', value: '${stats.pendingApprovals}', icon: Icons.pending_actions_rounded, color: const Color(0xFFD97706), onTap: () => onNavigate(AdminTab.listings, showActive: false))),
+            const SizedBox(width: 10),
+            Expanded(child: _StatCard(label: 'New Users (7d)', value: '${stats.newUsersThisWeek}', icon: Icons.person_add_rounded, color: const Color(0xFF1D4ED8), onTap: () => onNavigate(AdminTab.users, showActive: false))),
+            const SizedBox(width: 10),
+            Expanded(child: _StatCard(label: 'Open Reports', value: '${stats.openReports}', icon: Icons.flag_rounded, color: const Color(0xFF7C3AED), onTap: () => onNavigate(AdminTab.reports, showActive: false))),
           ],
         ),
-        const SizedBox(height: 20),
-        const Text('Recent Activity', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: cText, letterSpacing: 0.2)),
-        const SizedBox(height: 10),
-        stats.recentActivity.isEmpty
-            ? _AdminEmptyState(message: 'No recent activity', icon: Icons.history_rounded)
-            : Column(children: stats.recentActivity.take(12).map((a) => _ActivityTile(entry: a)).toList()),
+        const SizedBox(height: 12),
+
+        // ── Bottom Two-Column Grid ──
+        SizedBox(
+          height: 575,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // ── Activity Feed ──
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: cBorder),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Recent Activity',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: cBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: cBorder),
+                        ),
+                        child: Text(
+                          '${stats.recentActivity.length} events',
+                          style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+                  
+                  Expanded(
+                    child: stats.recentActivity.isEmpty
+                        ? _AdminEmptyState(message: 'No recent activity', icon: Icons.history_rounded)
+                        : Scrollbar(
+                            thumbVisibility: true,
+                            child: ListView.builder(
+                              padding: const EdgeInsets.only(right: 25),
+                              itemCount: stats.recentActivity.length,
+                              itemBuilder: (context, index) => _ActivityTile(entry: stats.recentActivity[index]),
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 14),
+
+          // ── Quick Actions ──
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Quick Actions', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
+                  const SizedBox(height: 17),
+                  _QuickAction(icon: Icons.pending_actions_rounded, iconBg: const Color.fromARGB(255, 254, 199, 199), iconColor: cRed, label: 'Pending Listings', sub: '${stats.pendingApprovals} submissions awaiting', onTap: () => onNavigate(AdminTab.listings, showActive: false)),
+                  _QuickAction(icon: Icons.storefront_rounded,      iconBg: const Color.fromARGB(255, 254, 236, 226), iconColor: const Color(0xFFD97706),                    label: 'Active Listings',    sub: '${stats.totalActiveListings} live posts',    onTap: () => onNavigate(AdminTab.listings, showActive: true)),
+                  _QuickAction(icon: Icons.flag_rounded,            iconBg: const Color.fromARGB(255, 254, 247, 226), iconColor: const Color.fromARGB(255, 161, 122, 39), label: 'Reports',      sub: '${stats.openReports} reports need action',   onTap: () => onNavigate(AdminTab.reports, showActive: false)),
+                  _QuickAction(icon: Icons.people_outline_rounded,  iconBg: const Color.fromARGB(255, 219, 254, 221), iconColor: const Color(0xFF16A34A), label: 'Users',              sub: 'View, warn, or ban accounts',                onTap: () => onNavigate(AdminTab.users, showActive: false)),
+                  _QuickAction(icon: Icons.search_rounded,          iconBg: const Color.fromARGB(255, 209, 227, 250), iconColor: const Color.fromARGB(255, 22, 83, 163), label: 'Lost & Found',    sub: 'Review claims and matches',                  onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
+                  _QuickAction(icon: Icons.admin_panel_settings_outlined,          iconBg: const Color.fromARGB(255, 241, 209, 250), iconColor: const Color.fromARGB(255, 129, 23, 171), label: 'My Profile',    sub: 'View profile information',                  onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
+                  _QuickAction(icon: Icons.add,          iconBg: const Color.fromARGB(255, 250, 209, 240), iconColor: const Color.fromARGB(255, 219, 31, 219), label: 'Admins',    sub: 'Create new admin profiles',                  onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
+                ],
+              ),
+            ),
+          ),
+        ]),
+        ),
+        // end bottom two-column Row
       ]),
+      // end Column children
+    );
+  }
+  // end build
+}
+// end _AdminDashboard
+
+class _QuickAction extends StatefulWidget {
+  final IconData icon;
+  final Color iconBg, iconColor;
+  final String label, sub;
+  final VoidCallback onTap;
+  const _QuickAction({required this.icon, required this.iconBg, required this.iconColor, required this.label, required this.sub, required this.onTap});
+
+  @override
+  State<_QuickAction> createState() => _QuickActionState();
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color bgColor, borderColor, iconColor, textColor;
+  final bool loading;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon, required this.label,
+    required this.bgColor, required this.borderColor, required this.iconColor,
+    required this.textColor, required this.loading, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: loading ? null : onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(children: [
+          loading
+              ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: iconColor))
+              : Icon(icon, color: iconColor, size: 16),
+          const SizedBox(width: 10),
+          Expanded(child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textColor))),
+          Icon(Icons.chevron_right_rounded, color: textColor.withValues(alpha: 0.4), size: 16),
+        ]),
+      ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
+class _QuickActionState extends State<_QuickAction> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _hovered ? cBg : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _hovered ? cBorder.withValues(alpha: 0.6) : cBorder),
+            boxShadow: _hovered ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))] : [],
+          ),
+          child: Row(children: [
+            Container(width: 32, height: 32, decoration: BoxDecoration(color: widget.iconBg, borderRadius: BorderRadius.circular(8)), child: Icon(widget.icon, color: widget.iconColor, size: 16)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(widget.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+              Text(widget.sub, style: const TextStyle(fontSize: 11, color: cMuted)),
+            ])),
+            const Icon(Icons.chevron_right_rounded, color: cMuted, size: 18),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── _StatCard widget ──
+class _StatCard extends StatefulWidget {
   final String label, value;
   final IconData icon;
   final Color color;
@@ -634,30 +824,55 @@ class _StatCard extends StatelessWidget {
   const _StatCard({required this.label, required this.value, required this.icon, required this.color, required this.onTap});
 
   @override
+  State<_StatCard> createState() => _StatCardState();
+}
+
+class _StatCardState extends State<_StatCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap, borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _hovered ? cBg : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cBorder),
+            boxShadow: []
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(width: 36, height: 36, decoration: BoxDecoration(color: widget.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(widget.icon, color: widget.color, size: 18)),
+              const SizedBox(height: 6),
+              Text(widget.value, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: widget.color, letterSpacing: -0.5)),
+              Text(widget.label, style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600)),
+            ],
+          ),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Container(width: 36, height: 36, decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: color, size: 18)),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: color, letterSpacing: -0.5)),
-            Text(label, style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600)),
-          ]),
-        ]),
       ),
     );
   }
 }
 
-class _ActivityTile extends StatelessWidget {
+class _ActivityTile extends StatefulWidget {
   final ActivityEntry entry;
   const _ActivityTile({required this.entry});
+
+  @override
+  State<_ActivityTile> createState() => _ActivityTileState();
+}
+
+class _ActivityTileState extends State<_ActivityTile> {
+  bool _hovered = false;
 
   String _timeAgo(DateTime dt) {
     final d = DateTime.now().difference(dt);
@@ -670,17 +885,29 @@ class _ActivityTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final icons  = {'listing': Icons.storefront_rounded, 'user': Icons.person_rounded, 'report': Icons.flag_rounded, 'lostfound': Icons.search_rounded};
     final colors = {'listing': cRed, 'user': const Color(0xFF2980B9), 'report': const Color(0xFF8E44AD), 'lostfound': const Color(0xFF27AE60)};
-    final icon  = icons[entry.type]  ?? Icons.circle;
-    final color = colors[entry.type] ?? cMuted;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
-      child: Row(children: [
-        Container(width: 34, height: 34, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 16)),
-        const SizedBox(width: 12),
-        Expanded(child: Text(entry.description, style: const TextStyle(fontSize: 13, color: cText))),
-        Text(_timeAgo(entry.timestamp), style: const TextStyle(fontSize: 11, color: cMuted)),
-      ]),
+    final icon  = icons[widget.entry.type]  ?? Icons.circle;
+    final color = colors[widget.entry.type] ?? cMuted;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _hovered ? cBg : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cBorder),
+          boxShadow: [],
+        ),
+        child: Row(children: [
+          Container(width: 34, height: 34, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 16)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(widget.entry.description, style: const TextStyle(fontSize: 13, color: cText))),
+          Text(_timeAgo(widget.entry.timestamp), style: const TextStyle(fontSize: 11, color: cMuted)),
+        ]),
+      ),
     );
   }
 }
@@ -1257,7 +1484,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                         label: const Text('Revoke Warning'),
                         style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
                         onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Revoke Warning?'), content: Text('This will remove the warning from @\${user.username}\'s account.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Color(0xFFE67E22))))]));
+                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Revoke Warning?'), content: Text('This will remove the warning from @${user.username}\'s account.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Color(0xFFE67E22))))]));
                           if (confirm != true) return;
                           setS(() { loading = true; error = null; });
                           try { await adminRevokeWarning(userId: user.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
@@ -1410,22 +1637,22 @@ class _AdminReportsPanel extends StatefulWidget {
 
 class _AdminReportsPanelState extends State<_AdminReportsPanel> {
   bool _showResolved = false;
-  List<AdminReport> get _filtered => widget.reports.where((r) => r.isResolved == _showResolved).toList();
+  AdminReport? _selected;
+  bool _loading = false;
+  String? _error;
 
-  // ── Look up listing from already-loaded data (no API call needed) ─────────
+  List<AdminReport> get _filtered =>
+      widget.reports.where((r) => r.isResolved == _showResolved).toList();
+
   Map<String, dynamic>? _findListing(String listingId, bool isLostFound) {
     if (isLostFound) {
       for (final item in widget.allLFItems) {
         if (item.id == listingId) {
           return {
-            'title': item.title,
-            'description': item.description,
-            'category': item.category,
-            'location': item.location,
-            'image': item.image,
-            'status': item.status,
-            'seller_username': item.posterUsername,
-            'price': '',
+            'title': item.title, 'description': item.description,
+            'category': item.category, 'location': item.location,
+            'image': item.image, 'status': item.status,
+            'seller_username': item.posterUsername, 'price': '',
           };
         }
       }
@@ -1433,12 +1660,9 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
       for (final item in widget.allListings) {
         if (item.id == listingId) {
           return {
-            'title': item.title,
-            'description': item.description,
-            'category': item.category,
-            'location': item.location,
-            'image': item.image,
-            'status': item.type,
+            'title': item.title, 'description': item.description,
+            'category': item.category, 'location': item.location,
+            'image': item.image, 'status': item.type,
             'seller_username': item.sellerUsername,
             'price': item.price > 0 ? item.price.toStringAsFixed(0) : '',
           };
@@ -1448,454 +1672,479 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
     return null;
   }
 
-  Future<void> _openAction(AdminReport report) async {
-    bool loading = false;
-    String? error;
-
-    // For listing reports — fetch listing details to show inline
-    Map<String, dynamic>? listingDetails;
-    bool listingFetched = false;
-
-    // For user reports — fetch their listing history
-    List<Map<String, dynamic>> userMarketItems = [];
-    List<Map<String, dynamic>> userLFItems = [];
-    bool historyLoaded = false;
-
-    final isLostFoundReport = report.targetType == 'lostfound';
-
-    // For user reports: match by email or user id directly.
-    // For listing reports: target_id is the listing id — resolve the owner below.
-    AdminUser? targetUser = widget.users.cast<AdminUser?>().firstWhere(
+  AdminUser? _findUser(AdminReport report) {
+    AdminUser? user = widget.users.cast<AdminUser?>().firstWhere(
       (u) => u?.email == report.targetId || u?.id.toString() == report.targetId,
       orElse: () => null,
     );
+    if (user != null) return user;
 
-    await showGeneralDialog(
-      context: context,
-      barrierDismissible: true, barrierLabel: 'Action',
-      barrierColor: Colors.black.withValues(alpha: 0.4),
-      transitionDuration: kMid,
-      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-      transitionBuilder: (ctx, anim, __, ___) => Opacity(
-        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
-        child: StatefulBuilder(builder: (ctx, setS) {
-          // Load listing details + resolve listing owner from seller/poster info
-          if ((report.targetType == 'listing' || report.targetType == 'lostfound') && !listingFetched) {
-            listingFetched = true;
-            listingDetails = _findListing(report.targetId, isLostFoundReport);
-            if (targetUser == null) {
-              if (isLostFoundReport) {
-                for (final item in widget.allLFItems) {
-                  if (item.id == report.targetId) {
-                    targetUser = widget.users.cast<AdminUser?>().firstWhere(
-                      (u) => u?.email.toLowerCase() == item.posterEmail.toLowerCase()
-                          || u?.username.toLowerCase() == item.posterUsername.toLowerCase(),
-                      orElse: () => null,
-                    );
-                    break;
-                  }
-                }
-              } else {
-                for (final item in widget.allListings) {
-                  if (item.id == report.targetId) {
-                    targetUser = widget.users.cast<AdminUser?>().firstWhere(
-                      (u) => u?.email.toLowerCase() == item.sellerEmail.toLowerCase()
-                          || u?.username.toLowerCase() == item.sellerUsername.toLowerCase(),
-                      orElse: () => null,
-                    );
-                    break;
-                  }
-                }
-              }
-            }
+    final isLostFound = report.targetType == 'lostfound';
+    if (report.targetType == 'listing' || isLostFound) {
+      if (isLostFound) {
+        for (final item in widget.allLFItems) {
+          if (item.id == report.targetId) {
+            return widget.users.cast<AdminUser?>().firstWhere(
+              (u) => u?.email.toLowerCase() == item.posterEmail.toLowerCase()
+                  || u?.username.toLowerCase() == item.posterUsername.toLowerCase(),
+              orElse: () => null,
+            );
           }
-
-          // Load user history once for user reports
-          if (report.targetType == 'user' && !historyLoaded && targetUser != null) {
-            historyLoaded = true;
-            Future.microtask(() async {
-              try {
-                final market = await getUserMarketListings(targetUser!.id);
-                final lf     = await getUserLostFoundListings(targetUser!.id);
-                if (ctx.mounted) setS(() { userMarketItems = market; userLFItems = lf; });
-              } catch (_) {}
-            });
+        }
+      } else {
+        for (final item in widget.allListings) {
+          if (item.id == report.targetId) {
+            return widget.users.cast<AdminUser?>().firstWhere(
+              (u) => u?.email.toLowerCase() == item.sellerEmail.toLowerCase()
+                  || u?.username.toLowerCase() == item.sellerUsername.toLowerCase(),
+              orElse: () => null,
+            );
           }
+        }
+      }
+    }
+    return null;
+  }
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: cBorder),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-                      // ── Header ──
-                      Row(children: [
-                        Container(width: 36, height: 36, decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.flag_rounded, color: cRed, size: 18)),
-                        const SizedBox(width: 12),
-                        const Text('Report Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: cText)),
-                        const Spacer(),
-                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                      ]),
-                      const SizedBox(height: 12),
-
-                      // ── Report summary ──
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Row(children: [
-                            _AdminBadge(label: report.targetType.toUpperCase(), color: cRed),
-                            const SizedBox(width: 8),
-                            _AdminBadge(label: report.reason.label, color: const Color(0xFF8E44AD)),
-                          ]),
-                          const SizedBox(height: 8),
-                          Text(report.targetTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
-                          const SizedBox(height: 4),
-                          Text('Reported by: ${report.reporterEmail}', style: const TextStyle(fontSize: 12, color: cMuted)),
-                          if (report.notes.isNotEmpty) ...[const SizedBox(height: 6), Text(report.notes, style: const TextStyle(fontSize: 12, color: cText, height: 1.5))],
-                        ]),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // ══════════════════════════════════════════
-                      // LISTING / LOSTFOUND REPORT ACTIONS
-                      // ══════════════════════════════════════════
-                      if (report.targetType == 'listing' || report.targetType == 'lostfound') ...[
-
-                        // ── Listing preview card ──
-                        const _AdminLabel('Reported Listing'),
-                        const SizedBox(height: 8),
-                        if (listingDetails == null)
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
-                            child: const Row(children: [
-                              Icon(Icons.info_outline_rounded, size: 16, color: cMuted),
-                              SizedBox(width: 10),
-                              Text('Listing details not available (may have been removed).', style: TextStyle(fontSize: 12, color: cMuted)),
-                            ]),
-                          )
-                        else
-                          Container(
-                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              // Image
-                              if ((listingDetails!['image']?.toString() ?? '').isNotEmpty)
-                                Image.network(
-                                  listingDetails!['image']?.toString() ?? '',
-                                  height: 140, width: double.infinity, fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(height: 80, color: cPlaceholder, child: const Center(child: Icon(Icons.image_not_supported, color: cMuted))),
-                                ),
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Text(listingDetails!['title']?.toString() ?? report.targetTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
-                                  const SizedBox(height: 4),
-                                  Text(listingDetails!['description']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: cMuted, height: 1.4)),
-                                  const SizedBox(height: 8),
-                                  Wrap(spacing: 8, runSpacing: 4, children: [
-                                    if ((listingDetails!['price']?.toString() ?? '0') != '0' && (listingDetails!['price']?.toString() ?? '') != '')
-                                      _AdminBadge(label: '\$${listingDetails!['price']}', color: cRed),
-                                    if ((listingDetails!['category']?.toString() ?? '').isNotEmpty)
-                                      _AdminBadge(label: listingDetails!['category'].toString(), color: cMuted),
-                                    if ((listingDetails!['location']?.toString() ?? '').isNotEmpty)
-                                      _AdminBadge(label: listingDetails!['location'].toString(), color: const Color(0xFF2980B9)),
-                                    _AdminBadge(
-                                      label: (listingDetails!['status']?.toString() ?? 'unknown').toUpperCase(),
-                                      color: listingDetails!['status'] == 'active' ? const Color(0xFF27AE60) : const Color(0xFFE67E22),
-                                    ),
-                                  ]),
-                                  const SizedBox(height: 6),
-                                  Text('By: ${listingDetails!['seller_username'] ?? listingDetails!['poster_username'] ?? 'Unknown'}', style: const TextStyle(fontSize: 11, color: cMuted)),
-                                ]),
-                              ),
-                            ]),
-                          ),
-                        const SizedBox(height: 16),
-
-                        const _AdminLabel('Choose an Action'),
-                        const SizedBox(height: 10),
-                        if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
-
-                        // Remove listing & notify user
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.remove_circle_outline_rounded, size: 16),
-                            label: const Text('Remove Listing & Notify User'),
-                            style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
-                            onPressed: loading ? null : () async {
-                              setS(() { loading = true; error = null; });
-                              try {
-                                await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFoundReport);
-                                await adminResolveReport(reportId: report.id);
-                                if (ctx.mounted) Navigator.pop(ctx);
-                                widget.onRefresh();
-                              } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Remove listing & issue warning
-                        if (targetUser != null && !targetUser!.hasWarning) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
-                              label: const Text('Remove Listing & Issue Warning'),
-                              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22)), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
-                              onPressed: loading ? null : () async {
-                                setS(() { loading = true; error = null; });
-                                try {
-                                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFoundReport);
-                                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
-                                  await adminResolveReport(reportId: report.id);
-                                  if (ctx.mounted) Navigator.pop(ctx);
-                                  widget.onRefresh();
-                                } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                        const SizedBox(height: 8),
-
-                        // Remove listing & ban user
-                        if (targetUser != null) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.gavel_rounded, size: 16),
-                              label: const Text('Remove Listing & Ban User'),
-                              style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade900, side: BorderSide(color: Colors.red.shade900), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
-                              onPressed: loading ? null : () async {
-                                setS(() { loading = true; error = null; });
-                                try {
-                                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFoundReport);
-                                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
-                                  await adminResolveReport(reportId: report.id);
-                                  if (ctx.mounted) Navigator.pop(ctx);
-                                  widget.onRefresh();
-                                } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-
-                        // Dismiss
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.check_rounded, size: 16),
-                            label: const Text('Dismiss (No Action)'),
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
-                            onPressed: loading ? null : () async {
-                              setS(() { loading = true; error = null; });
-                              try {
-                                await adminResolveReport(reportId: report.id);
-                                if (ctx.mounted) Navigator.pop(ctx);
-                                widget.onRefresh();
-                              } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                            },
-                          ),
-                        ),
-                      ],
-
-                      // ══════════════════════════════════════════
-                      // USER REPORT ACTIONS
-                      // ══════════════════════════════════════════
-                      if (report.targetType == 'user') ...[
-
-                        // User activity section
-                        if (targetUser != null) ...[
-                          const _AdminLabel('User Activity'),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              _UserInfoRow(label: 'Role',           value: targetUser!.role.label),
-                              _UserInfoRow(label: 'Registered',     value: formatDate(targetUser!.registeredAt)),
-                              _UserInfoRow(label: 'Total Listings', value: '${targetUser!.listingCount}'),
-                              _UserInfoRow(label: 'Warning Issued', value: targetUser!.hasWarning ? 'Yes' : 'No', highlight: targetUser!.hasWarning),
-                              _UserInfoRow(label: 'Status',         value: targetUser!.isBanned ? 'BANNED' : 'Active', highlight: targetUser!.isBanned),
-                            ]),
-                          ),
-                          const SizedBox(height: 10),
-
-                          const _AdminLabel('Marketplace Listings'),
-                          const SizedBox(height: 6),
-                          if (userMarketItems.isEmpty)
-                            const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('No marketplace listings.', style: TextStyle(fontSize: 12, color: cMuted)))
-                          else
-                            ...userMarketItems.take(3).map((m) => _HistoryTile(title: m['title']?.toString() ?? '', subtitle: '${m['category']} · \$${m['price']} · ${m['status']}', date: m['created_at']?.toString() ?? '', icon: Icons.storefront_rounded)),
-
-                          const _AdminLabel('Lost & Found Posts'),
-                          const SizedBox(height: 6),
-                          if (userLFItems.isEmpty)
-                            const Padding(padding: EdgeInsets.only(bottom: 8), child: Text('No lost & found posts.', style: TextStyle(fontSize: 12, color: cMuted)))
-                          else
-                            ...userLFItems.take(3).map((l) => _HistoryTile(title: l['title']?.toString() ?? '', subtitle: '${l['category']} · ${l['type']} · ${l['status']}', date: l['created_at']?.toString() ?? '', icon: Icons.search_rounded)),
-                          const SizedBox(height: 4),
-                        ],
-
-                        const _AdminLabel('Choose an Action'),
-                        const SizedBox(height: 10),
-                        if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
-
-                        // Issue warning
-                        if (targetUser != null && !targetUser!.isBanned && !targetUser!.hasWarning) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
-                              label: const Text('Issue Warning'),
-                              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22)), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
-                              onPressed: loading ? null : () async {
-                                setS(() { loading = true; error = null; });
-                                try {
-                                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
-                                  await adminResolveReport(reportId: report.id);
-                                  if (ctx.mounted) Navigator.pop(ctx);
-                                  widget.onRefresh();
-                                } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-
-                        // Warning already issued banner
-                        if (targetUser != null && targetUser!.hasWarning && !targetUser!.isBanned) ...[
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE082))),
-                            child: const Row(children: [
-                              Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFE67E22)),
-                              SizedBox(width: 8),
-                              Expanded(child: Text('Warning already issued. This user can now be banned.', style: TextStyle(fontSize: 12, color: Color(0xFF7B5800)))),
-                            ]),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-
-                        // Ban user
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.block_rounded, size: 16),
-                            label: const Text('Ban User'),
-                            style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark), padding: const EdgeInsets.symmetric(vertical: 12), alignment: Alignment.centerLeft),
-                            onPressed: loading ? null : () async {
-                              setS(() { loading = true; error = null; });
-                              try {
-                                if (targetUser != null) {
-                                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
-                                } else {
-                                  await adminBanUserByEmail(email: report.targetId);
-                                }
-                                await adminResolveReport(reportId: report.id);
-                                if (ctx.mounted) Navigator.pop(ctx);
-                                widget.onRefresh();
-                              } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Dismiss
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            icon: const Icon(Icons.check_rounded, size: 16),
-                            label: const Text('Dismiss (No Action)'),
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
-                            onPressed: loading ? null : () async {
-                              setS(() { loading = true; error = null; });
-                              try {
-                                await adminResolveReport(reportId: report.id);
-                                if (ctx.mounted) Navigator.pop(ctx);
-                                widget.onRefresh();
-                              } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                            },
-                          ),
-                        ),
-                      ],
-                    ]),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
+  Future<void> _doAction(Future<void> Function() action) async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      await action();
+      setState(() { _selected = null; _loading = false; });
+      widget.onRefresh();
+    } catch (e) {
+      setState(() { _loading = false; _error = e.toString(); });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final reports = _filtered;
+    final selected = _selected;
+
     return Column(children: [
-      const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 0), child: Align(alignment: Alignment.centerLeft, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Reports & Flags', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-        Text('User-submitted reports for review', style: TextStyle(fontSize: 12, color: cMuted)),
-      ]))),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), child: Row(children: [
-        _Chip(label: 'Open', selected: !_showResolved, onTap: () => setState(() => _showResolved = false)),
-        const SizedBox(width: 8),
-        _Chip(label: 'Resolved', selected: _showResolved, onTap: () => setState(() => _showResolved = true)),
-      ])),
+      // ── Header ──
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+        child: Row(children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Reports & Flags', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+            const Text('User-submitted reports for review', style: TextStyle(fontSize: 12, color: cMuted)),
+          ])),
+          _Chip(
+            label: 'Open (${widget.reports.where((r) => !r.isResolved).length})',
+            selected: !_showResolved,
+            onTap: () => setState(() { _showResolved = false; _selected = null; }),
+          ),
+          const SizedBox(width: 8),
+          _Chip(
+            label: 'Resolved (${widget.reports.where((r) => r.isResolved).length})',
+            selected: _showResolved,
+            onTap: () => setState(() { _showResolved = true; _selected = null; }),
+          ),
+        ]),
+      ),
+
+      // ── Two-column body ──
       Expanded(
-        child: reports.isEmpty
-            ? _AdminEmptyState(message: _showResolved ? 'No resolved reports' : 'No open reports', icon: Icons.flag_outlined)
-            : ListView.builder(padding: const EdgeInsets.all(12), itemCount: reports.length, itemBuilder: (_, i) {
-                final r = reports[i];
-                final typeColor = {'listing': cRed, 'user': const Color(0xFF2980B9), 'lostfound': const Color(0xFF27AE60)}[r.targetType] ?? cMuted;
-                return InkWell(
-                  onTap: r.isResolved ? null : () => _openAction(r), borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: r.isResolved ? cBorder : cRed.withValues(alpha: 0.25))),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(r.targetType.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5))),
-                        const SizedBox(width: 6),
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)), child: Text(r.reason.label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: cRed))),
-                        const Spacer(),
-                        if (r.isResolved) const _AdminBadge(label: 'RESOLVED', color: Color(0xFF27AE60)),
-                      ]),
-                      const SizedBox(height: 8),
-                      Text(r.targetTitle, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
-                      const SizedBox(height: 4),
-                      Text('Reported by: ${r.reporterEmail} · ${formatDate(r.reportedAt)}', style: const TextStyle(fontSize: 11, color: cMuted)),
-                      if (r.notes.isNotEmpty) ...[const SizedBox(height: 6), Text(r.notes, style: const TextStyle(fontSize: 12, color: cText, height: 1.5))],
-                      if (!r.isResolved) ...[
-                        const SizedBox(height: 10),
-                        Align(alignment: Alignment.centerRight, child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
-                          child: const Text('Tap to take action →', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cRed)),
-                        )),
-                      ],
-                    ]),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+          // ── Left: report list ──
+          SizedBox(
+            width: 300,
+            child: reports.isEmpty
+                ? _AdminEmptyState(
+                    message: _showResolved ? 'No resolved reports' : 'No open reports',
+                    icon: Icons.flag_outlined,
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 6, 12),
+                    itemCount: reports.length,
+                    itemBuilder: (_, i) {
+                      final r = reports[i];
+                      final isSelected = selected?.id == r.id;
+                      final typeColor = {
+                        'listing': cRed,
+                        'user': const Color(0xFF2980B9),
+                        'lostfound': const Color(0xFF27AE60),
+                      }[r.targetType] ?? cMuted;
+                      return GestureDetector(
+                        onTap: () => setState(() { _selected = r; _error = null; }),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? cRed.withValues(alpha: 0.04) : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? cRed.withValues(alpha: 0.4) : cBorder,
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(children: [
+                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Row(children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: typeColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(r.targetType.toUpperCase(),
+                                    style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5)),
+                                ),
+                                const SizedBox(width: 5),
+                                Expanded(child: Text(r.reason.label,
+                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: cMuted),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis)),
+                              ]),
+                              const SizedBox(height: 4),
+                              Text(r.targetTitle,
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isSelected ? cRed : cText),
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 2),
+                              Text(formatDate(r.reportedAt), style: const TextStyle(fontSize: 10, color: cMuted)),
+                            ])),
+                            if (!r.isResolved)
+                              Container(
+                                width: 6, height: 6,
+                                margin: const EdgeInsets.only(left: 8),
+                                decoration: const BoxDecoration(color: cRed, shape: BoxShape.circle),
+                              ),
+                          ]),
+                        ),
+                      );
+                    },
                   ),
-                );
-              }),
+          ),
+
+          // ── Divider ──
+          Container(width: 1, color: cBorder),
+
+          // ── Right: detail panel ──
+          Expanded(
+            child: selected == null
+                ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Container(
+                      width: 56, height: 56,
+                      decoration: const BoxDecoration(color: cRedLight, shape: BoxShape.circle),
+                      child: const Icon(Icons.flag_outlined, color: cRed, size: 24),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Select a report', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cMuted)),
+                    const SizedBox(height: 4),
+                    const Text('Choose a report from the left to review it', style: TextStyle(fontSize: 12, color: cMuted)),
+                  ]))
+                : _ReportDetailPane(
+                    key: ValueKey(selected.id),
+                    report: selected,
+                    listingDetails: _findListing(selected.targetId, selected.targetType == 'lostfound'),
+                    targetUser: _findUser(selected),
+                    loading: _loading,
+                    error: _error,
+                    onAction: _doAction,
+                  ),
+          ),
+        ]),
       ),
     ]);
+  }
+}
+
+// ── Detail pane (right side) ──
+class _ReportDetailPane extends StatelessWidget {
+  final AdminReport report;
+  final Map<String, dynamic>? listingDetails;
+  final AdminUser? targetUser;
+  final bool loading;
+  final String? error;
+  final Future<void> Function(Future<void> Function()) onAction;
+
+  const _ReportDetailPane({
+    super.key,
+    required this.report,
+    required this.listingDetails,
+    required this.targetUser,
+    required this.loading,
+    required this.error,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isLostFound = report.targetType == 'lostfound';
+    final typeColor = {
+      'listing': cRed,
+      'user': const Color(0xFF2980B9),
+      'lostfound': const Color(0xFF27AE60),
+    }[report.targetType] ?? cMuted;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+        // ── Report summary card ──
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cBorder),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                child: Text(report.targetType.toUpperCase(),
+                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor)),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: const Color(0xFF8E44AD).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                child: Text(report.reason.label,
+                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF8E44AD))),
+              ),
+              if (report.isResolved) ...[
+                const SizedBox(width: 6),
+                const _AdminBadge(label: 'RESOLVED', color: Color(0xFF27AE60)),
+              ],
+            ]),
+            const SizedBox(height: 8),
+            Text(report.targetTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cText)),
+            const SizedBox(height: 4),
+            Text('Reported by: ${report.reporterEmail} · ${formatDate(report.reportedAt)}',
+              style: const TextStyle(fontSize: 11, color: cMuted)),
+            if (report.notes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(8)),
+                child: Text(report.notes, style: const TextStyle(fontSize: 12, color: cText, height: 1.5)),
+              ),
+            ],
+          ]),
+        ),
+        const SizedBox(height: 12),
+
+        // ── Listing preview ──
+        if (report.targetType == 'listing' || report.targetType == 'lostfound') ...[
+          const _AdminLabel('Reported Content'),
+          const SizedBox(height: 8),
+          if (listingDetails == null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
+              child: const Row(children: [
+                Icon(Icons.info_outline_rounded, size: 14, color: cMuted),
+                SizedBox(width: 8),
+                Expanded(child: Text('Listing may have already been removed.', style: TextStyle(fontSize: 12, color: cMuted))),
+              ]),
+            )
+          else
+            Container(
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
+              clipBehavior: Clip.antiAlias,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if ((listingDetails!['image']?.toString() ?? '').isNotEmpty)
+                  Image.network(
+                    listingDetails!['image'].toString(),
+                    width: 90, height: 90, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(width: 90, height: 90, color: cPlaceholder,
+                      child: const Icon(Icons.image_not_supported, color: cMuted)),
+                  ),
+                Expanded(child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(listingDetails!['title']?.toString() ?? '',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+                    const SizedBox(height: 3),
+                    Text(listingDetails!['description']?.toString() ?? '',
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: cMuted, height: 1.4)),
+                    const SizedBox(height: 6),
+                    Wrap(spacing: 6, runSpacing: 4, children: [
+                      if ((listingDetails!['price']?.toString() ?? '') != '' && listingDetails!['price'] != '0')
+                        _AdminBadge(label: '\$${listingDetails!['price']}', color: cRed),
+                      if ((listingDetails!['category']?.toString() ?? '').isNotEmpty)
+                        _AdminBadge(label: listingDetails!['category'].toString(), color: cMuted),
+                      _AdminBadge(label: (listingDetails!['status']?.toString() ?? '').toUpperCase(), color: typeColor),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text('By: ${listingDetails!['seller_username'] ?? 'Unknown'}',
+                      style: const TextStyle(fontSize: 10, color: cMuted)),
+                  ]),
+                )),
+              ]),
+            ),
+          const SizedBox(height: 12),
+        ],
+
+        // ── Target user info ──
+        if (targetUser != null) ...[
+          const _AdminLabel('Reported User'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
+            child: Row(children: [
+              CircleAvatar(
+                backgroundColor: cRedLight, radius: 18,
+                child: Text(
+                  targetUser!.username.isNotEmpty ? targetUser!.username[0].toUpperCase() : 'U',
+                  style: const TextStyle(color: cRed, fontWeight: FontWeight.w900),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('@${targetUser!.username}',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+                Text(targetUser!.email, style: const TextStyle(fontSize: 11, color: cMuted)),
+              ])),
+              if (targetUser!.isBanned) const _AdminBadge(label: 'BANNED', color: cRed)
+              else if (targetUser!.hasWarning) const _AdminBadge(label: 'WARNED', color: Color(0xFFE67E22))
+              else _AdminBadge(label: targetUser!.role.label.toUpperCase(), color: cMuted),
+            ]),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        // ── Actions ──
+        if (!report.isResolved) ...[
+          const _AdminLabel('Actions'),
+          const SizedBox(height: 8),
+          if (error != null) ...[
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.3))),
+              child: Row(children: [
+                const Icon(Icons.error_outline_rounded, size: 14, color: cRed),
+                const SizedBox(width: 8),
+                Expanded(child: Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12))),
+              ]),
+            ),
+            const SizedBox(height: 8),
+          ],
+
+          if (report.targetType == 'listing' || report.targetType == 'lostfound') ...[
+            _ActionButton(
+              icon: Icons.remove_circle_outline_rounded,
+              label: 'Remove Listing & Notify User',
+              bgColor: const Color(0xFFFFF0F0),
+              borderColor: cRed.withValues(alpha: 0.3),
+              iconColor: cRed,
+              textColor: cRedDark,
+              loading: loading,
+              onTap: () => onAction(() async {
+                await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound);
+                await adminResolveReport(reportId: report.id);
+              }),
+            ),
+            const SizedBox(height: 6),
+            if (targetUser != null && !targetUser!.hasWarning) ...[
+              _ActionButton(
+                icon: Icons.warning_amber_rounded,
+                label: 'Remove Listing & Issue Warning',
+                bgColor: const Color(0xFFFFF8EC),
+                borderColor: const Color(0xFFE67E22).withValues(alpha: 0.35),
+                iconColor: const Color(0xFFE67E22),
+                textColor: const Color(0xFF92400E),
+                loading: loading,
+                onTap: () => onAction(() async {
+                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound);
+                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
+                  await adminResolveReport(reportId: report.id);
+                }),
+              ),
+              const SizedBox(height: 6),
+            ],
+            if (targetUser != null) ...[
+              _ActionButton(
+                icon: Icons.gavel_rounded,
+                label: 'Remove Listing & Ban User',
+                bgColor: const Color(0xFFFEF2F2),
+                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
+                iconColor: Colors.red.shade900,
+                textColor: Colors.red.shade900,
+                loading: loading,
+                onTap: () => onAction(() async {
+                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound);
+                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
+                  await adminResolveReport(reportId: report.id);
+                }),
+              ),
+              const SizedBox(height: 6),
+            ],
+          ],
+
+          if (report.targetType == 'user') ...[
+            if (targetUser != null && !targetUser!.isBanned && !targetUser!.hasWarning) ...[
+              _ActionButton(
+                icon: Icons.warning_amber_rounded,
+                label: 'Issue Warning',
+                bgColor: const Color(0xFFFFF8EC),
+                borderColor: const Color(0xFFE67E22).withValues(alpha: 0.35),
+                iconColor: const Color(0xFFE67E22),
+                textColor: const Color(0xFF92400E),
+                loading: loading,
+                onTap: () => onAction(() async {
+                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
+                  await adminResolveReport(reportId: report.id);
+                }),
+              ),
+              const SizedBox(height: 6),
+            ],
+            if (targetUser != null) ...[
+              _ActionButton(
+                icon: Icons.block_rounded,
+                label: 'Ban User',
+                bgColor: const Color(0xFFFEF2F2),
+                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
+                iconColor: Colors.red.shade900,
+                textColor: Colors.red.shade900,
+                loading: loading,
+                onTap: () => onAction(() async {
+                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
+                  await adminResolveReport(reportId: report.id);
+                }),
+              ),
+              const SizedBox(height: 6),
+            ],
+          ],
+
+          _ActionButton(
+            icon: Icons.check_circle_outline_rounded,
+            label: 'Dismiss (No Action)',
+            bgColor: const Color(0xFFF0FDF4),
+            borderColor: const Color(0xFF27AE60).withValues(alpha: 0.35),
+            iconColor: const Color(0xFF27AE60),
+            textColor: const Color(0xFF166534),
+            loading: loading,
+            onTap: () => onAction(() => adminResolveReport(reportId: report.id)),
+          ),
+        ],
+
+        if (report.isResolved)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF27AE60).withValues(alpha: 0.3)),
+            ),
+            child: const Row(children: [
+              Icon(Icons.check_circle_rounded, color: Color(0xFF27AE60), size: 16),
+              SizedBox(width: 8),
+              Text('This report has been resolved.',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF166534))),
+            ]),
+          ),
+      ]),
+    );
   }
 }
 
