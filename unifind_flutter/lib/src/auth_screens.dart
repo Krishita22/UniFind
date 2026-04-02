@@ -157,11 +157,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 },
                               ),
                               const SizedBox(height: 16),
-                              _StyledField(
-                                label: 'Password',
-                                hint: '••••••••',
-                                icon: Icons.lock_outline_rounded,
-                                obscure: true,
+                              _PasswordFieldSimple(
                                 onChanged: (v) => _password = v,
                                 textInputAction: TextInputAction.done,
                                 onFieldSubmitted: (_) => _submit(),
@@ -1395,6 +1391,65 @@ class _AuthButtonState extends State<_AuthButton> with SingleTickerProviderState
           ),
         ),
       ),
+    );
+  }
+}
+// ─── SIMPLE PASSWORD FIELD (eye toggle, no strength bar) ─────────────────────
+class _PasswordFieldSimple extends StatefulWidget {
+  final ValueChanged<String> onChanged;
+  final String? Function(String?)? validator;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextInputAction? textInputAction;
+
+  const _PasswordFieldSimple({
+    required this.onChanged,
+    this.validator,
+    this.onFieldSubmitted,
+    this.textInputAction,
+  });
+
+  @override
+  State<_PasswordFieldSimple> createState() => _PasswordFieldSimpleState();
+}
+
+class _PasswordFieldSimpleState extends State<_PasswordFieldSimple> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Password', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          obscureText: _obscure,
+          onChanged: widget.onChanged,
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+          onFieldSubmitted: widget.onFieldSubmitted,
+          textInputAction: widget.textInputAction,
+          validator: widget.validator,
+          decoration: InputDecoration(
+            hintText: '••••••••',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: cMuted),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                size: 18,
+                color: cMuted,
+              ),
+              onPressed: () => setState(() => _obscure = !_obscure),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
     );
   }
 }
