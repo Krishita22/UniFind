@@ -23,9 +23,13 @@ class _PostListingScreenState extends State<PostListingScreen> {
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
 
-  List<String> get _cats => _type == ListingType.marketplace
-      ? categories.where((c) => c != 'All').toList()
-      : lostFoundCategories.where((c) => c != 'All').toList();
+  List<String> get _cats {
+    if (_type == ListingType.marketplace) {
+      return categories.where((c) => c != 'All').toList();
+    } else {
+      return lostFoundCategories;
+    }
+  }
 
   @override
   void initState() {

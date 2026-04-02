@@ -48,6 +48,7 @@ void main() {
       condition: 'Good',
       image: 'https://example.com/image.png',
       seller: 'tester',
+      sellerEmail: 'tester@example.com',
       createdAt: DateTime(2026, 2, 26),
       location: 'Blanton Hall',
     );
@@ -58,6 +59,7 @@ void main() {
           body: MarketplaceScreen(
             items: [item],
             onListItem: _noop,
+            currentUserEmail: 'tester@example.com',
           ),
         ),
       ),
@@ -77,6 +79,7 @@ void main() {
           body: MarketplaceScreen(
             items: [],
             onListItem: _noop,
+            currentUserEmail: '',
           ),
         ),
       ),
@@ -98,6 +101,8 @@ void main() {
             onListItem: () {
               tapped = true;
             },
+            onEditMarketplace: (_, __) async {},
+            onEditLostFound: (_, __) async {},
           ),
         ),
       ),

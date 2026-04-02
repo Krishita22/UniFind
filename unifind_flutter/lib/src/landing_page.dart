@@ -5,6 +5,7 @@ class LandingPage extends StatelessWidget {
   const LandingPage({super.key, required this.onLogin});
 
   static final _aboutKey = GlobalKey();
+  static final _featuresKey = GlobalKey();
   static final _howKey = GlobalKey();
   static final _faqKey = GlobalKey();
   static final _contactKey = GlobalKey();
@@ -20,24 +21,33 @@ class LandingPage extends StatelessWidget {
       pageBuilder: (_, a, __) => FadeTransition(
         opacity: a,
         child: LoginScreen(
-          onLogin: (email, [userId, username]) {
-            onLogin(email, userId, username);
+          onLogin: (email, [userId, username, role, firstName]) {
+            onLogin(email, userId, username, role, firstName);
             Navigator.of(ctx).popUntil((r) => r.isFirst);
           },
         ),
       ),
     ));
   }
-
+  
   void _openRegister(BuildContext ctx) {
     Navigator.of(ctx).push(PageRouteBuilder(
       transitionDuration: kPage,
       pageBuilder: (_, a, __) => FadeTransition(
         opacity: a,
         child: RegistrationScreen(
-          onRegister: (email, [userId, username]) {
-            onLogin(email, userId, username);
-            Navigator.of(ctx).popUntil((r) => r.isFirst);
+          onRegister: (email, [userId, username, role, firstName]) {
+            onLogin(email, userId, username, role);
+            Navigator.of(ctx).pushReplacement(
+              MaterialPageRoute(
+                builder: (freshCtx) => WelcomeScreen(
+                  username: firstName,
+                  onContinue: () {
+                    Navigator.of(freshCtx).popUntil((r) => r.isFirst);
+                  },
+                ),
+              ),
+            );
           },
         ),
       ),
@@ -55,6 +65,7 @@ class LandingPage extends StatelessWidget {
             _LandingNav(
               onAbout: () => _scrollTo(_aboutKey),
               onHow: () => _scrollTo(_howKey),
+              onFeatures: () => _scrollTo(_featuresKey),
               onFaq: () => _scrollTo(_faqKey),
               onContact: () => _scrollTo(_contactKey),
               onLogin: () => _openLogin(context),
@@ -62,11 +73,11 @@ class LandingPage extends StatelessWidget {
             ),
             _HeroSection(onLogin: () => _openLogin(context), onRegister: () => _openRegister(context)),
             KeyedSubtree(key: _howKey, child: const _HowItWorksSection()),
-            const _FeaturesSection(),
+            KeyedSubtree(key: _featuresKey, child: const _FeaturesSection()),
             KeyedSubtree(key: _aboutKey, child: const _AboutSection()),
             KeyedSubtree(key: _faqKey, child: const _FaqSection()),
-            KeyedSubtree(key: _contactKey, child: const _ContactSection()), // ← Contact after FAQ
-            _ExclusiveBanner(onLogin: () => _openRegister(context)),         // ← Banner after Contact
+            KeyedSubtree(key: _contactKey, child: const _ContactSection()),
+            _ExclusiveBanner(onLogin: () => _openRegister(context)),
             const _Footer(),
           ],
         ),
@@ -77,21 +88,15 @@ class LandingPage extends StatelessWidget {
 
 // ─── LANDING NAV ─────────────────────────────────────────────────────────────
 class _LandingNav extends StatelessWidget {
-  final VoidCallback onAbout, onHow, onFaq, onContact, onLogin, onRegister;
-  const _LandingNav({
-    required this.onAbout,
-    required this.onHow,
-    required this.onFaq,
-    required this.onContact,
-    required this.onLogin,
-    required this.onRegister,
-  });
-
+  final VoidCallback onAbout, onHow, onFeatures, onFaq, onContact, onLogin, onRegister;
+  const _LandingNav({required this.onAbout, required this.onHow, required this.onFeatures, required this.onFaq, required this.onContact, required this.onLogin, required this.onRegister});
+  
   @override
   Widget build(BuildContext context) {
     final navItems = <MapEntry<String, VoidCallback>>[
-      MapEntry('About', onAbout),
       MapEntry('How It Works', onHow),
+      MapEntry('Features', onFeatures),
+      MapEntry('About', onAbout),
       MapEntry('FAQ', onFaq),
       MapEntry('Contact', onContact),
     ];
@@ -1130,6 +1135,320 @@ class _ExclusiveBanner extends StatelessWidget {
           const SizedBox(height: 32),
           _HeroButton(label: 'Join UniFind Today', primary: false, onTap: onLogin),
         ],
+      ),
+    );
+  }
+}
+
+// ─── CONTACT SECTION ─────────────────────────────────────────────────────────
+
+class _ContactSection extends StatefulWidget {
+  const _ContactSection();
+
+  @override
+  State<_ContactSection> createState() => _ContactSectionState();
+}
+
+class _ContactSectionState extends State<_ContactSection> {
+  final _formKey = GlobalKey<FormState>();
+  String _name = '';
+  String _email = '';
+  String _subject = '';
+  String _message = '';
+  bool _loading = false;
+  bool _submitted = false;
+
+  Future<void> _submit() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  setState(() => _loading = true);
+
+  try {
+    final response = await http.post(
+      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': _name,
+        'email': _email,
+        'subject': _subject,
+        'message': _message,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (mounted) {
+      setState(() {
+        _loading = false;
+        _submitted = data['success'] == true;
+      });
+    }
+
+    if (data['success'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(data['error'] ?? 'Something went wrong')),
+      );
+    }
+
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: cSurface,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 72),
+      child: Column(
+        children: [
+          _SectionLabel(label: 'CONTACT'),
+          const SizedBox(height: 12),
+          const Text('Get in touch', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.8)),
+          const SizedBox(height: 8),
+          const Text('Have a question or feedback? We\'d love to hear from you.', style: TextStyle(fontSize: 16, color: cMuted), textAlign: TextAlign.center),
+          const SizedBox(height: 52),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: _submitted
+                  ? _SuccessCard()
+                  : _FormCard(
+                      formKey: _formKey,
+                      loading: _loading,
+                      onNameChanged: (v) => _name = v,
+                      onEmailChanged: (v) => _email = v,
+                      onSubjectChanged: (v) => _subject = v,
+                      onMessageChanged: (v) => _message = v,
+                      onSubmit: _submit,
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FormCard extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final bool loading;
+  final ValueChanged<String> onNameChanged, onEmailChanged, onSubjectChanged, onMessageChanged;
+  final VoidCallback onSubmit;
+
+  const _FormCard({
+    required this.formKey,
+    required this.loading,
+    required this.onNameChanged,
+    required this.onEmailChanged,
+    required this.onSubjectChanged,
+    required this.onMessageChanged,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('form'),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: cSurface, borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cBorder),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
+      ),
+      child: Form(
+        key: formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth > 480;
+                final nameField = _ContactField(label: 'Your Name', hint: 'Jane Doe', icon: Icons.person_outline_rounded, onChanged: onNameChanged, textInputAction: TextInputAction.next, validator: (v) => (v == null || v.trim().isEmpty) ? 'Name is required' : null);
+                final emailField = _ContactField(label: 'Your Email', hint: 'you@example.com', icon: Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress, onChanged: onEmailChanged, textInputAction: TextInputAction.next, validator: (v) { if (v == null || v.trim().isEmpty) return 'Email is required'; if (!v.contains('@')) return 'Enter a valid email'; return null; });
+                if (wide) {
+                  return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: nameField), const SizedBox(width: 14), Expanded(child: emailField)]);
+                }
+                return Column(children: [nameField, const SizedBox(height: 16), emailField]);
+              },
+            ),
+            const SizedBox(height: 16),
+            _ContactField(label: 'Subject', hint: 'What\'s this about?', icon: Icons.subject_rounded, onChanged: onSubjectChanged, textInputAction: TextInputAction.next, validator: (v) => (v == null || v.trim().isEmpty) ? 'Subject is required' : null),
+            const SizedBox(height: 16),
+            _ContactMessageField(onChanged: onMessageChanged, validator: (v) { if (v == null || v.trim().isEmpty) return 'Message is required'; if (v.trim().length < 10) return 'Please write a bit more'; return null; }),
+            const SizedBox(height: 28),
+            _ContactSubmitButton(loading: loading, onTap: onSubmit),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuccessCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('success'),
+      padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 32),
+      decoration: BoxDecoration(
+        color: cSurface, borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cBorder),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight), shape: BoxShape.circle, boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))]),
+            child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+          ),
+          const SizedBox(height: 20),
+          const Text('Message sent!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText)),
+          const SizedBox(height: 8),
+          const Text('Thanks for reaching out.\nWe\'ll get back to you shortly.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: cMuted, height: 1.6)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── CONTACT FORM HELPERS ────────────────────────────────────────────────────
+
+class _ContactField extends StatelessWidget {
+  final String label, hint;
+  final IconData icon;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onChanged;
+  final TextInputAction? textInputAction;
+  final String? Function(String?)? validator;
+
+  const _ContactField({required this.label, required this.hint, required this.icon, this.keyboardType, this.onChanged, this.textInputAction, this.validator});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          keyboardType: keyboardType, onChanged: onChanged, textInputAction: textInputAction, validator: validator,
+          decoration: InputDecoration(
+            hintText: hint, hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: Icon(icon, size: 18, color: cMuted),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true, fillColor: cBg, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactMessageField extends StatelessWidget {
+  final ValueChanged<String>? onChanged;
+  final String? Function(String?)? validator;
+
+  const _ContactMessageField({this.onChanged, this.validator});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Message', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          onChanged: onChanged, validator: validator, maxLines: 5, minLines: 4, textInputAction: TextInputAction.newline,
+          decoration: InputDecoration(
+            hintText: 'Write your message here...', hintStyle: const TextStyle(color: cMuted, fontSize: 14), alignLabelWithHint: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true, fillColor: cBg, contentPadding: const EdgeInsets.all(16),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactSubmitButton extends StatefulWidget {
+  final bool loading;
+  final VoidCallback onTap;
+
+  const _ContactSubmitButton({required this.loading, required this.onTap});
+
+  @override
+  State<_ContactSubmitButton> createState() => _ContactSubmitButtonState();
+}
+
+class _ContactSubmitButtonState extends State<_ContactSubmitButton> with SingleTickerProviderStateMixin {
+  late AnimationController _c;
+  late Animation<double> _scale;
+  bool _hovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: kFast);
+    _scale = Tween(begin: 1.0, end: 0.97).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final AudioPlayer _player = AudioPlayer();
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) async {
+          _c.forward();
+          await _player.play(AssetSource('sounds/send.mp3'));
+        },
+
+        onTapUp: (_) {
+          _c.reverse();
+          widget.onTap();
+        },
+
+        onTapCancel: () {
+          _c.reverse();
+        },
+        child: ScaleTransition(
+          scale: _scale,
+          child: AnimatedScale(
+            scale: _hovered ? 1.015 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: Container(
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
+              ),
+              child: Center(
+                child: widget.loading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.send_rounded, color: Colors.white, size: 16), SizedBox(width: 8), Text('Send Message', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3))]),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
