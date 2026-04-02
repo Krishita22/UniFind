@@ -216,6 +216,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         const SizedBox(height: 20),
 
+        // ── Help & Docs section ─────────────────────────────────────────
+        _ProfileSectionHeader(label: 'Help & Docs'),
+        const SizedBox(height: 8),
+        _ProfileActionTile(
+          icon: Icons.menu_book_outlined,
+          label: 'Documentation',
+          subtitle: 'How to use UniFind',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DocumentationScreen()),
+          ),
+        ),
+        const SizedBox(height: 20),
+
         // ── Session section ─────────────────────────────────────────────
         _ProfileSectionHeader(label: 'Session'),
         const SizedBox(height: 8),
