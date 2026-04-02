@@ -717,8 +717,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.5"
-<<<<<<< HEAD
-=======
   uuid:
     dependency: transitive
     description:
@@ -727,7 +725,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.5.3"
->>>>>>> 99c641081936e218a535a20ef07927fb5e69c49a
   vector_math:
     dependency: transitive
     description:
