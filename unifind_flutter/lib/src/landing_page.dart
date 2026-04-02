@@ -21,8 +21,8 @@ class LandingPage extends StatelessWidget {
       pageBuilder: (_, a, __) => FadeTransition(
         opacity: a,
         child: LoginScreen(
-          onLogin: (email, [userId, username, role]) {
-            onLogin(email, userId, username, role);
+          onLogin: (email, [userId, username, role, firstName]) {
+            onLogin(email, userId, username, role, firstName);
             Navigator.of(ctx).popUntil((r) => r.isFirst);
           },
         ),
@@ -36,9 +36,18 @@ class LandingPage extends StatelessWidget {
       pageBuilder: (_, a, __) => FadeTransition(
         opacity: a,
         child: RegistrationScreen(
-          onRegister: (email, [userId, username, role]) {
+          onRegister: (email, [userId, username, role, firstName]) {
             onLogin(email, userId, username, role);
-            Navigator.of(ctx).popUntil((r) => r.isFirst);
+            Navigator.of(ctx).pushReplacement(
+              MaterialPageRoute(
+                builder: (freshCtx) => WelcomeScreen(
+                  username: firstName,
+                  onContinue: () {
+                    Navigator.of(freshCtx).popUntil((r) => r.isFirst);
+                  },
+                ),
+              ),
+            );
           },
         ),
       ),
@@ -1298,14 +1307,25 @@ class _ContactSubmitButtonState extends State<_ContactSubmitButton> with SingleT
 
   @override
   Widget build(BuildContext context) {
+    final AudioPlayer _player = AudioPlayer();
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTapDown: (_) => _c.forward(),
-        onTapUp: (_) { _c.reverse(); widget.onTap(); },
-        onTapCancel: () => _c.reverse(),
+        onTapDown: (_) async {
+          _c.forward();
+          await _player.play(AssetSource('sounds/send.mp3'));
+        },
+
+        onTapUp: (_) {
+          _c.reverse();
+          widget.onTap();
+        },
+
+        onTapCancel: () {
+          _c.reverse();
+        },
         child: ScaleTransition(
           scale: _scale,
           child: AnimatedScale(

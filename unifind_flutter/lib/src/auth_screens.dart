@@ -267,7 +267,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         _confirmPassword.isNotEmpty;
   }
 
-  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
     return _newPassword.length >= 6 &&
         !_newPassword.contains(' ') &&
@@ -429,12 +428,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                                _StyledField(
-                                  key: const ValueKey('forgot_email'),
-                                  label: 'MSU Email Address',
-                                  hint: 'you@montclair.edu',
-                                  icon: Icons.mail_outline_rounded,
-                                  initialValue: _email,
+                              _StyledField(
+                                key: const ValueKey('forgot_email'),
+                                label: 'MSU Email Address',
+                                hint: 'you@montclair.edu',
+                                icon: Icons.mail_outline_rounded,
+                                initialValue: _email,
                                 onChanged: (v) => _email = v,
                                 textInputAction: _codeSent
                                     ? TextInputAction.next
@@ -468,7 +467,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                // ── UPDATED validator: no max length, no spaces ──
                                 _PasswordField(
                                   key: const ValueKey('forgot_new_password'),
                                   label: 'New Password',
@@ -581,7 +579,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
-  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
     return _password.length >= 6 &&
         !_password.contains(' ') &&
@@ -626,6 +623,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           _email.trim().toLowerCase(),
           null,
           _username.trim(),
+          _role,
+          _firstName.trim(),
         );
       }
     } on ApiException catch (e) {
@@ -640,8 +639,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => LoginScreen(
-              onLogin: (email, [userId, username, role]) =>
-                widget.onRegister(email, userId, username, role),
+              onLogin: (email, [userId, username, role, firstName]) =>
+                  widget.onRegister(email, userId, username, role, firstName),
             ),
           ),
         );
@@ -1009,7 +1008,6 @@ class _PasswordFieldState extends State<_PasswordField> {
   String _value = '';
   bool _obscure = true;
 
-  // ── Rule checkers ──────────────────────────────────────────────────────────
   bool get _hasMinLength   => _value.length >= 6;
   bool get _hasNoSpaces    => !_value.contains(' ');
   bool get _hasUppercase   => RegExp(r'[A-Z]').hasMatch(_value);
@@ -1047,14 +1045,11 @@ class _PasswordFieldState extends State<_PasswordField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Field label ───────────────────────────────────────────────────
         Text(
           widget.label,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
         ),
         const SizedBox(height: 6),
-
-        // ── Text input ────────────────────────────────────────────────────
         TextFormField(
           obscureText: _obscure,
           onChanged: (v) {
@@ -1084,8 +1079,6 @@ class _PasswordFieldState extends State<_PasswordField> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
-
-        // ── Strength bar for password ───────────────────────
         if (true) ...[
           const SizedBox(height: 10),
           Row(
@@ -1112,8 +1105,6 @@ class _PasswordFieldState extends State<_PasswordField> {
               ),
             ],
           ),
-
-          // ── Rules checklist ───────────────────────────────────────────
           const SizedBox(height: 10),
           _PasswordRule(met: _hasMinLength,  text: 'At least 6 characters'),
           _PasswordRule(met: _hasUppercase,  text: 'At least one uppercase letter'),
@@ -1294,13 +1285,13 @@ class _AuthButtonState extends State<_AuthButton> with SingleTickerProviderState
               borderRadius: BorderRadius.circular(14),
               boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
             ),
-          child: Center(
-            child: widget.loading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+            child: Center(
+              child: widget.loading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+            ),
           ),
         ),
-      ),
       ),
     );
   }
