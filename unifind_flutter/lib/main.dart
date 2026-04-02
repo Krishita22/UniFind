@@ -1,31 +1,46 @@
 library unifind_app;
 
+import 'package:flutter/gestures.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+<<<<<<< HEAD
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+=======
+import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
+>>>>>>> 99c641081936e218a535a20ef07927fb5e69c49a
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
 part 'src/lost_found_screen.dart';
 part 'src/post_listing_screen.dart';
+part 'src/profile_screen.dart';
 part 'src/my_listings_screen.dart';
 part 'src/documentation_screen.dart';
 part 'src/item_detail_screen.dart';
 part 'src/ui_controls.dart';
 part 'src/ui_feedback.dart';
 part 'src/data.dart';
+part 'src/admin.dart';
+part 'src/welcome_screen.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
   int? userId,
   String? username,
+  String? role,
+  String? firstName,
 ]);
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -46,7 +61,84 @@ const Duration kMid = Duration(milliseconds: 320);
 const Duration kSlow = Duration(milliseconds: 520);
 const Duration kPage = Duration(milliseconds: 420);
 
-void main() => runApp(const UniFindApp());
+// ─── BREADCRUMB LABELS ───────────────────────────────────────────────────────
+const List<List<String>> _tabBreadcrumbs = [
+  ['Home', 'Marketplace'],
+  ['Home', 'Lost & Found'],
+  ['Home', 'Post Item'],
+  ['Home', 'My Listings'],
+  ['Home', 'Docs'],
+  ['Home', 'Profile'],
+];
+
+// ─── BREADCRUMB BAR ──────────────────────────────────────────────────────────
+class _BreadcrumbBar extends StatelessWidget {
+  final int tab;
+  final VoidCallback? onHome;
+  const _BreadcrumbBar({required this.tab, this.onHome});
+
+  @override
+  Widget build(BuildContext context) {
+    final crumbs = _tabBreadcrumbs[tab.clamp(0, _tabBreadcrumbs.length - 1)];
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: cRedLight,
+        border: Border(bottom: BorderSide(color: cBorder, width: 1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.home_outlined, size: 12, color: cMuted),
+          const SizedBox(width: 4),
+          for (int i = 0; i < crumbs.length; i++) ...[
+            if (i > 0) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded, size: 13, color: cMuted),
+              const SizedBox(width: 4),
+            ],
+            if (i == crumbs.length - 1)
+              Text(
+                crumbs[i],
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: cRed,
+                ),
+              )
+            else
+              GestureDetector(
+                onTap: i == 0 ? onHome : null,
+                child: Text(
+                  crumbs[i],
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: cMuted,
+                    decoration: i == 0 ? TextDecoration.underline : null,
+                    decorationColor: cMuted,
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+void main() {
+  HttpOverrides.global = _AllowBadCertificates();
+  runApp(const UniFindApp());
+}
+
+class _AllowBadCertificates extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (cert, host, port) => true;
+  }
+}
 
 // ─── ROOT ────────────────────────────────────────────────────────────────────
 class UniFindApp extends StatefulWidget {
@@ -63,6 +155,8 @@ class _UniFindAppState extends State<UniFindApp> {
   String _email = '';
   String _username = '';
   int? _userId;
+  String _role = '';
+  UserRole _userRole = UserRole.unknown;
   ListingType _postDefaultType = ListingType.marketplace;
 
   final List<MarketplaceItem> _market = [];
@@ -381,6 +475,7 @@ class _UniFindAppState extends State<UniFindApp> {
     final email = prefs.getString('logged_in_email') ?? '';
     final username = prefs.getString('logged_in_username') ?? '';
     final userId = prefs.getInt('logged_in_user_id');
+    final role = prefs.getString('logged_in_role') ?? '';
 
     if (!mounted) return;
     setState(() {
@@ -388,6 +483,8 @@ class _UniFindAppState extends State<UniFindApp> {
       _email = email;
       _username = username;
       _userId = userId;
+      _role = role;
+      _userRole = UserRoleExt.fromString(role);
       _sessionLoaded = true;
     });
 
@@ -408,19 +505,21 @@ class _UniFindAppState extends State<UniFindApp> {
   }
 
   Future<void> _addListing(NewListingInput in_) async {
-    try {
-      if (in_.type == ListingType.marketplace) {
-        _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
-        final res = await createListing(
-          title: in_.title,
-          description: in_.description,
-          price: in_.price,
-          category: in_.category,
-          condition: in_.condition,
-          location: in_.location,
-          email: _email,
-          image: in_.imageUrl,
-        );
+  try {
+    if (in_.type == ListingType.marketplace) {
+      _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
+      print('DEBUG _addListing: email=$_email, title=${in_.title}');
+      final res = await createListing(
+        title: in_.title,
+        description: in_.description,
+        price: in_.price,
+        category: in_.category,
+        condition: in_.condition,
+        location: in_.location,
+        email: _email,
+        image: in_.imageUrl,
+      );
+      print('DEBUG createListing response: $res');
         final id = _extractIdFromResponse(res);
         if (id.isNotEmpty) _myMarketIds.add(id);
       } else {
@@ -439,11 +538,12 @@ class _UniFindAppState extends State<UniFindApp> {
       }
       await _loadListings();
       await _loadLostFound();
-    } catch (_) {
+    } catch (e) {
+      print('DEBUG addListing error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not sync with database. Please try again.'),
+        SnackBar(
+          content: Text('Error: $e'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -595,14 +695,19 @@ class _UniFindAppState extends State<UniFindApp> {
     }
   }
 
-  void _login(String email, [int? userId, String? username]) {
-    setState(() {
-      _loggedIn = true;
-      _email = email;
-      _username = (username ?? '').trim();
-      _userId = userId;
-      _tab = 0;
-    });
+  void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
+  print('DEBUG _login called: role=$role');
+  print('DEBUG userRole will be: ${UserRoleExt.fromString(role ?? '')}');
+  setState(() {
+    _loggedIn = true;
+    _email = email;
+    _username = (username ?? '').trim();
+    _userId = userId;
+    _role = (role ?? '').trim();
+    _userRole = UserRoleExt.fromString(_role);
+    _tab = 0;
+  });
+  print('DEBUG _userRole after setState: $_userRole');
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
       prefs.setString('logged_in_email', email);
@@ -612,6 +717,7 @@ class _UniFindAppState extends State<UniFindApp> {
       } else {
         prefs.remove('logged_in_user_id');
       }
+      prefs.setString('logged_in_role', (role ?? '').trim());
     });
     _restoreSubmissionState(email);
     _loadListings();
@@ -623,6 +729,8 @@ class _UniFindAppState extends State<UniFindApp> {
         _email = '';
         _username = '';
         _userId = null;
+        _role = '';
+        _userRole = UserRole.unknown;
         _tab = 0;
         _submittedClaimItemIds.clear();
         _submittedMatchItemIds.clear();
@@ -634,6 +742,7 @@ class _UniFindAppState extends State<UniFindApp> {
       prefs.remove('logged_in_email');
       prefs.remove('logged_in_username');
       prefs.remove('logged_in_user_id');
+      prefs.remove('logged_in_role');
     });
   }
 
@@ -655,103 +764,33 @@ class _UniFindAppState extends State<UniFindApp> {
       theme: _buildTheme(),
       home: !_loggedIn
           ? LandingPage(onLogin: _login)
-          : Scaffold(
-              appBar: AppBar(
-                centerTitle: true,
-                title: Column(
-                  mainAxisSize: MainAxisSize.min, // keeps it centered vertically
-                  children: [
-                    Image.asset(
-                      'assets/images/whitelogo.png',
-                      height: 32,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 2), // small spacing
-                    Text(
-                      _username.isNotEmpty ? _username : _emailToHandle(_email),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white, // 👈 pure white
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  IconButton(
-                    tooltip: 'Log out',
-                    onPressed: () {
-                      _logout();
-                      _clearSession();
-                    },
-                    icon: const Icon(Icons.logout),
-                  ),
-                ],
-              ),
-              body: IndexedStack(
-                index: _tab,
-                children: [
-                  MarketplaceScreen(items: _market, onListItem: _goToPostTab),
-                  LostFoundScreen(
-                    items: _lostFound,
-                    onCreateLost: () => _goToPostTab(ListingType.lost),
-                    onCreateFound: () => _goToPostTab(ListingType.found),
-                    onClaimLost: _claimLostItem,
-                    onPostFoundMatch: _postFoundMatch,
-                    submittedClaimItemIds: _submittedClaimItemIds,
-                    submittedMatchItemIds: _submittedMatchItemIds,
-                  ),
-                  PostListingScreen(
-                    key: ValueKey(_postFormNonce),
-                    onPost: _addListing,
-                    initialType: _postDefaultType,
-                  ),
-                  MyListingsScreen(
-                    marketplaceItems: _market
-                        .where(_isMyMarketplaceItem)
-                        .toList(),
-                    lostFoundItems: _lostFound
-                        .where(_isMyLostFoundItem)
-                        .toList(),
-                    onListItem: _goToPostTab,
-                    onEditMarketplace: _editMarketplaceItem,
-                    onEditLostFound: _editLostFoundItem,
-                  ),
-                  const DocumentationScreen(),
-                ],
-              ),
-              bottomNavigationBar: NavigationBar(
-                selectedIndex: _tab,
-                onDestinationSelected: (index) {
-                  setState(() => _tab = index);
-                  if (index == 3 || index == 0 || index == 1) {
-                    _loadListings();
-                    _loadLostFound();
-                  }
-                },
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.storefront_outlined),
-                    label: 'Shop',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.search),
-                    label: 'Lost/Found',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.add_circle_outline),
-                    label: 'Post',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.inventory_2_outlined),
-                    label: 'My Listings',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.menu_book_outlined),
-                    label: 'Docs',
-                  ),
-                ],
-              ),
-            ),
+          : RoleAuthWrapper(
+              role: _userRole,
+              email: _email,
+              username: _username,
+              userId: _userId,
+              onLogout: () { _logout(); _clearSession(); },
+              market: _market,
+              lostFound: _lostFound,
+              tab: _tab,
+              postFormNonce: _postFormNonce,
+              postDefaultType: _postDefaultType,
+              submittedClaimItemIds: _submittedClaimItemIds,
+              submittedMatchItemIds: _submittedMatchItemIds,
+              goToPostTab: _goToPostTab,
+              addListing: _addListing,
+              claimLostItem: _claimLostItem,
+              postFoundMatch: _postFoundMatch,
+              editMarketplace: _editMarketplaceItem,
+              editLostFound: _editLostFoundItem,
+              onTabChanged: (index) {
+                setState(() => _tab = index);
+                if (index == 3 || index == 0 || index == 1) {
+                  _loadListings();
+                  _loadLostFound();
+                }
+              },
+          ),
     );
   }
 
@@ -771,6 +810,31 @@ class _UniFindAppState extends State<UniFindApp> {
         foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
+      ),
+      // ─── ADDED: Navigation bar theme ───────────────────────────────
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: cSurface,
+        indicatorColor: cRedLight,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: cRed,
+            );
+          }
+          return const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: cMuted,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: cRed, size: 22);
+          }
+          return const IconThemeData(color: cMuted, size: 22);
+        }),
       ),
     );
   }

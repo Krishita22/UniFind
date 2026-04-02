@@ -38,6 +38,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         return 'No account found for this username. Please sign up first.';
       case 'ACCOUNT_UNVERIFIED':
         return 'Your account is not verified yet. Please complete verification.';
+      case 'ACCOUNT_BANNED':
+        return 'Your account has been permanently banned from UniFind.';
       default:
         return e.message;
     }
@@ -53,6 +55,11 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     try {
       final data = await loginUser(_username.trim(), _password);
       final user = data['user'] as Map<String, dynamic>?;
+
+      print('DEBUG full response: $data');
+      print('DEBUG user map: $user');
+      print('DEBUG role value: ${user?['role']}');
+
       final loggedInEmail = (user?['email'] as String?) ?? _username.trim();
       final loggedInUserId = int.tryParse(
         (user?['id'] ??
@@ -71,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               as Object?)
           ?.toString()
           .trim();
+      final loggedInRole = (user?['role'] ?? data['role'] ?? '').toString().trim();
       if (!mounted) return;
       widget.onLogin(
         loggedInEmail,
@@ -78,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         (loggedInUsername == null || loggedInUsername.isEmpty)
             ? _username.trim()
             : loggedInUsername,
+        loggedInRole,
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -258,7 +267,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         _confirmPassword.isNotEmpty;
   }
 
-  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
     return _newPassword.length >= 6 &&
         !_newPassword.contains(' ') &&
@@ -426,7 +434,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                 hint: 'you@montclair.edu',
                                 icon: Icons.mail_outline_rounded,
                                 initialValue: _email,
-                                onChanged: (v) => setState(() => _email = v),
+                                onChanged: (v) => _email = v,
                                 textInputAction: _codeSent
                                     ? TextInputAction.next
                                     : TextInputAction.done,
@@ -459,7 +467,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                // ── UPDATED validator: no max length, no spaces ──
                                 _PasswordField(
                                   key: const ValueKey('forgot_new_password'),
                                   label: 'New Password',
@@ -628,6 +635,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           _email.trim().toLowerCase(),
           null,
           _username.trim(),
+          _role,
+          _firstName.trim(),
         );
       }
     } on ApiException catch (e) {
@@ -642,8 +651,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => LoginScreen(
-              onLogin: (email, [userId, username]) =>
-                  widget.onRegister(email, userId, username),
+              onLogin: (email, [userId, username, role, firstName]) =>
+                  widget.onRegister(email, userId, username, role, firstName),
             ),
           ),
         );
@@ -826,6 +835,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                     if (v == null || v.isEmpty) return 'Password is required';
                                     if (v.contains(' ')) return 'Password cannot contain spaces';
                                     if (v.length < 6) return 'Minimum 6 characters';
+                                    if (v.contains(' ')) return 'No spaces allowed';
                                     if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
                                     if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
                                     if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
@@ -931,11 +941,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: _canProceed ? _submit : () {},
+                                onTap: (!_codeSent || (_passwordStrong && _agreedToTerms))
+                                    ? _submit
+                                    : () {},
                                 label: _codeSent
                                     ? 'Verify & Create Account'
                                     : 'Send Verification Code',
-                                disabled: !_canProceed,
+                                disabled: _codeSent && (!_passwordStrong || !_agreedToTerms),
                               ),
                             ],
                           ),
@@ -1085,16 +1097,17 @@ class _PasswordFieldState extends State<_PasswordField> {
   String _value = '';
   bool _obscure = true;
 
-  // ── UPDATED: removed _hasMaxLength, added _hasNoSpaces ────────────────────
-  bool get _hasMinLength => _value.length >= 6;
-  bool get _hasUppercase => RegExp(r'[A-Z]').hasMatch(_value);
-  bool get _hasNumber    => RegExp(r'[0-9]').hasMatch(_value);
-  bool get _hasSpecial   => RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_value);
+  bool get _hasMinLength   => _value.length >= 6;
+  bool get _hasNoSpaces    => !_value.contains(' ');
+  bool get _hasUppercase   => RegExp(r'[A-Z]').hasMatch(_value);
+  bool get _hasNumber      => RegExp(r'[0-9]').hasMatch(_value);
+  bool get _hasSpecial     => RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_value);
 
   // Score is now out of 4
   int get _score {
     int s = 0;
     if (_hasMinLength) s++;
+    if (_hasNoSpaces && _value.isNotEmpty) s++;
     if (_hasUppercase) s++;
     if (_hasNumber)    s++;
     if (_hasSpecial)   s++;
@@ -1106,7 +1119,7 @@ class _PasswordFieldState extends State<_PasswordField> {
     if (_score <= 1) return const Color(0xFFE53935);
     if (_score == 2) return const Color(0xFFFB8C00);
     if (_score == 3) return const Color(0xFFFDD835);
-    return const Color(0xFF43A047); // all 4 met = Strong (green)
+    return const Color(0xFF43A047);
   }
 
   String get _strengthLabel {
@@ -1158,38 +1171,72 @@ class _PasswordFieldState extends State<_PasswordField> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: _value.isEmpty ? 0 : _score / 4, // out of 4 now
-                  minHeight: 6,
-                  backgroundColor: cBorder,
-                  valueColor: AlwaysStoppedAnimation<Color>(_barColor),
+        if (true) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: _value.isEmpty ? 0 : _score / 4,
+                    minHeight: 6,
+                    backgroundColor: cBorder,
+                    valueColor: AlwaysStoppedAnimation<Color>(_barColor),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              _strengthLabel,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: _barColor,
+              const SizedBox(width: 10),
+              Text(
+                _strengthLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: _barColor,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        // ── UPDATED rules: removed max-length rule ─────────────────────────
-        _PasswordRule(met: _hasMinLength, text: 'At least 6 characters'),
-        _PasswordRule(met: _hasUppercase, text: 'At least one uppercase letter'),
-        _PasswordRule(met: _hasNumber,    text: 'At least one number'),
-        _PasswordRule(met: _hasSpecial,   text: 'At least one special character (!@#\$%^&*...)'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _PasswordRule(met: _hasMinLength,  text: 'At least 6 characters'),
+          _PasswordRule(met: _hasUppercase,  text: 'At least one uppercase letter'),
+          _PasswordRule(met: _hasNumber,     text: 'At least one number'),
+          _PasswordRule(met: _hasSpecial,    text: 'At least one special character (!@#\$%^&*...)'),
+        ],
       ],
+    );
+  }
+}
+
+// ─── SINGLE RULE ROW ──────────────────────────────────────────────────────────
+class _PasswordRule extends StatelessWidget {
+  final bool met;
+  final String text;
+
+  const _PasswordRule({required this.met, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(
+            met ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 14,
+            color: met ? const Color(0xFF43A047) : cMuted,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: met ? const Color(0xFF43A047) : cMuted,
+              fontWeight: met ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1231,7 +1278,6 @@ class _ConfirmPasswordFieldState extends State<_ConfirmPasswordField> {
         const SizedBox(height: 6),
         TextFormField(
           obscureText: _obscure,
-          // ── Block spaces here too ──────────────────────────────────────────
           inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           textInputAction: widget.textInputAction,
           onChanged: (v) {
@@ -1288,39 +1334,6 @@ class _ConfirmPasswordFieldState extends State<_ConfirmPasswordField> {
   }
 }
 
-// ─── SINGLE RULE ROW ──────────────────────────────────────────────────────────
-class _PasswordRule extends StatelessWidget {
-  final bool met;
-  final String text;
-
-  const _PasswordRule({required this.met, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Icon(
-            met ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-            size: 14,
-            color: met ? const Color(0xFF43A047) : cMuted,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 11,
-              color: met ? const Color(0xFF43A047) : cMuted,
-              fontWeight: met ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── AUTH BUTTON ─────────────────────────────────────────────────────────────
 class _AuthButton extends StatefulWidget {
   final bool loading;
@@ -1358,44 +1371,25 @@ class _AuthButtonState extends State<_AuthButton> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTapDown: (_) => _c.forward(),
-        onTapUp: (_) { _c.reverse(); widget.onTap(); },
-        onTapCancel: () => _c.reverse(),
-        child: ScaleTransition(
-          scale: _scale,
-          child: AnimatedScale(
-            scale: _hovered && !widget.disabled ? 1.015 : 1.0,
-            duration: const Duration(milliseconds: 150),
-            curve: Curves.easeOut,
-            child: Opacity(
-              opacity: widget.disabled ? 0.4 : 1.0,
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [cRed, cRedDark],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: cRed.withValues(alpha: 0.4),
-                      blurRadius: 14,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: widget.loading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
-                ),
-              ),
+    return GestureDetector(
+      onTapDown: (_) => _c.forward(),
+      onTapUp: (_) { _c.reverse(); widget.onTap(); },
+      onTapCancel: () => _c.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Opacity(
+          opacity: widget.disabled ? 0.4 : 1.0,
+          child: Container(
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
+            ),
+            child: Center(
+              child: widget.loading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
             ),
           ),
         ),
