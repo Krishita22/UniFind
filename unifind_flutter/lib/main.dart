@@ -7,10 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
@@ -24,12 +26,14 @@ part 'src/ui_controls.dart';
 part 'src/ui_feedback.dart';
 part 'src/data.dart';
 part 'src/admin.dart';
+part 'src/welcome_screen.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
   int? userId,
   String? username,
   String? role,
+  String? firstName,
 ]);
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -684,7 +688,7 @@ class _UniFindAppState extends State<UniFindApp> {
     }
   }
 
-  void _login(String email, [int? userId, String? username, String? role]) {
+  void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
   print('DEBUG _login called: role=$role');
   print('DEBUG userRole will be: ${UserRoleExt.fromString(role ?? '')}');
   setState(() {
