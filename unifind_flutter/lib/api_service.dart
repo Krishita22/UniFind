@@ -55,12 +55,16 @@ Future<Map<String, dynamic>> loginUser(String email, String password) async {
 Future<Map<String, dynamic>> sendSignupVerificationCode({
   required String email,
   String? password,
+  String? firstName,
 }) async {
   final body = <String, dynamic>{
     'email': email,
   };
   if (password != null && password.isNotEmpty) {
     body['password'] = password;
+  }
+  if (firstName != null && firstName.isNotEmpty) {
+    body['first_name'] = firstName; 
   }
 
   final response = await http.post(
