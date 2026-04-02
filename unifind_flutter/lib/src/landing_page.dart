@@ -828,7 +828,7 @@ class _ContactSectionState extends State<_ContactSection> {
 
   try {
     final response = await http.post(
-      Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
+      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': _name,
@@ -1077,7 +1077,11 @@ class _ContactSubmitButtonState extends State<_ContactSubmitButton> with SingleT
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTapDown: (_) => _c.forward(),
+        onTapDown: (_) async {
+        _c.forward();
+        final player = AudioPlayer();
+        await player.play(AssetSource('sounds/sparkle.mp3'));
+      },
         onTapUp: (_) { _c.reverse(); widget.onTap(); },
         onTapCancel: () => _c.reverse(),
         child: ScaleTransition(

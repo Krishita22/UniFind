@@ -11,15 +11,12 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-<<<<<<< HEAD
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-=======
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
->>>>>>> 99c641081936e218a535a20ef07927fb5e69c49a
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
