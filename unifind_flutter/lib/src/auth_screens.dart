@@ -434,7 +434,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                 hint: 'you@montclair.edu',
                                 icon: Icons.mail_outline_rounded,
                                 initialValue: _email,
-                                onChanged: (v) => _email = v,
+                                onChanged: (v) => setState(() => _email = v),
                                 textInputAction: _codeSent
                                     ? TextInputAction.next
                                     : TextInputAction.done,
