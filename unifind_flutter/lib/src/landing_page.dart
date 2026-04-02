@@ -1139,3 +1139,19 @@ class _ExclusiveBanner extends StatelessWidget {
     );
   }
 }
+
+// ─── FOOTER ──────────────────────────────────────────────────────────────────
+class _Footer extends StatelessWidget {
+  const _Footer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF111111),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+      child: const Center(
+        child: Text('© 2026 UniFind · Montclair State University', style: TextStyle(color: Color(0xFF666666), fontSize: 12)),
+      ),
+    );
+  }
+}
