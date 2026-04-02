@@ -611,6 +611,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         await sendSignupVerificationCode(
           email: _email.trim().toLowerCase(),
           password: 'TempPass123!',
+          firstName: _firstName.trim(),
         );
         if (!mounted) return;
         setState(() => _codeSent = true);
