@@ -592,7 +592,7 @@ class _AdminDashboard extends StatelessWidget {
 
         // ── Hero Banner ──
         Container(
-          width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          width: double.infinity, padding: const EdgeInsets.fromLTRB(16, 14, 24, 14),
           decoration: BoxDecoration(
             gradient: const LinearGradient(colors: [cNavBg, cNavBgDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
             borderRadius: BorderRadius.circular(16),
@@ -622,7 +622,7 @@ class _AdminDashboard extends StatelessWidget {
         const SizedBox(height: 12),
 
         // ── Stat Cards ──
-        const Text('OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
+        const Text('   OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -645,8 +645,8 @@ class _AdminDashboard extends StatelessWidget {
           // ── Activity Feed ──
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
+                padding: const EdgeInsets.fromLTRB(12, 18, 18, 18),
+                decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: cBorder),
@@ -700,7 +700,7 @@ class _AdminDashboard extends StatelessWidget {
           // ── Quick Actions ──
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.fromLTRB(12, 18, 18, 18),
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
