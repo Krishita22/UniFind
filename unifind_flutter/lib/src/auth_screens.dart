@@ -157,11 +157,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                 },
                               ),
                               const SizedBox(height: 16),
-                              _StyledField(
-                                label: 'Password',
-                                hint: '••••••••',
-                                icon: Icons.lock_outline_rounded,
-                                obscure: true,
+                              _PasswordFieldSimple(
                                 onChanged: (v) => _password = v,
                                 textInputAction: TextInputAction.done,
                                 onFieldSubmitted: (_) => _submit(),
@@ -267,7 +263,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         _confirmPassword.isNotEmpty;
   }
 
-  // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
     return _newPassword.length >= 6 &&
         !_newPassword.contains(' ') &&
@@ -429,13 +424,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                                _StyledField(
-                                  key: const ValueKey('forgot_email'),
-                                  label: 'MSU Email Address',
-                                  hint: 'you@montclair.edu',
-                                  icon: Icons.mail_outline_rounded,
-                                  initialValue: _email,
-                                onChanged: (v) => _email = v,
+                              _StyledField(
+                                key: const ValueKey('forgot_email'),
+                                label: 'MSU Email Address',
+                                hint: 'you@montclair.edu',
+                                icon: Icons.mail_outline_rounded,
+                                initialValue: _email,
+                                onChanged: (v) => setState(() => _email = v),
                                 textInputAction: _codeSent
                                     ? TextInputAction.next
                                     : TextInputAction.done,
@@ -457,7 +452,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   label: 'Reset Code',
                                   hint: 'Enter code from your email',
                                   icon: Icons.verified_outlined,
-                                  onChanged: (v) => _code = v,
+                                  onChanged: (v) => setState(() => _code = v),
                                   textInputAction: TextInputAction.next,
                                   validator: (v) {
                                     if (!_codeSent) return null;
@@ -468,7 +463,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                // ── UPDATED validator: no max length, no spaces ──
                                 _PasswordField(
                                   key: const ValueKey('forgot_new_password'),
                                   label: 'New Password',
@@ -510,8 +504,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: _submit,
+                                onTap: _resetReady ? _submit : () {},
                                 label: _codeSent ? 'Reset Password' : 'Send Reset Code',
+                                disabled: !_resetReady,
                               ),
                             ],
                           ),
@@ -581,6 +576,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   @override
   void dispose() { _c.dispose(); super.dispose(); }
 
+  bool get _ageValid {
+    final parsed = int.tryParse(_age.trim());
+    return parsed != null && parsed >= 18;
+  }
+
   // ── UPDATED: no max length, no spaces ──────────────────────────────────────
   bool get _passwordStrong {
     return _password.length >= 6 &&
@@ -588,6 +588,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         RegExp(r'[A-Z]').hasMatch(_password) &&
         RegExp(r'[0-9]').hasMatch(_password) &&
         RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_password);
+  }
+
+  bool get _canProceed {
+    if (!_codeSent) return _ageValid;
+    return _passwordStrong && _agreedToTerms;
   }
 
   Future<void> _submit() async {
@@ -602,6 +607,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         await sendSignupVerificationCode(
           email: _email.trim().toLowerCase(),
           password: 'TempPass123!',
+          firstName: _firstName.trim(),
         );
         if (!mounted) return;
         setState(() => _codeSent = true);
@@ -626,6 +632,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           _email.trim().toLowerCase(),
           null,
           _username.trim(),
+          _role,
+          _firstName.trim(),
         );
       }
     } on ApiException catch (e) {
@@ -640,8 +648,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => LoginScreen(
-              onLogin: (email, [userId, username, role]) =>
-                widget.onRegister(email, userId, username, role),
+              onLogin: (email, [userId, username, role, firstName]) =>
+                  widget.onRegister(email, userId, username, role, firstName),
             ),
           ),
         );
@@ -713,7 +721,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                             children: [
 
                               if (!_codeSent) ...[
-                                // ── Step 1: profile info ──────────────────
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -764,15 +771,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   onChanged: (v) => _username = v,
                                   validator: (v) {
                                     if (v == null || v.trim().isEmpty) return 'Username is required';
-                                    if (v.trim().length < 3) return 'At least 3 characters';
-                                    if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v.trim())) {
-                                      return 'Letters, numbers, and underscores only';
+                                    if (v.trim().length < 6) return 'Username must be at least 6 characters';
+                                    if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v.trim())) {
+                                      return 'Letters, numbers, underscores, and periods only';
                                     }
                                     return null;
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                // Role picker
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
@@ -801,29 +807,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-                                _StyledField(
-                                  key: const ValueKey('signup_age'),
-                                  label: 'Age',
-                                  hint: '20',
-                                  icon: Icons.cake_outlined,
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (v) => _age = v,
-                                  textInputAction: TextInputAction.done,
-                                  onFieldSubmitted: (_) {
-                                    if (!_codeSent) _submit();
-                                  },
+                                _AgeField(
+                                  onChanged: (v) => setState(() => _age = v),
                                   validator: (v) {
                                     if (v == null || v.trim().isEmpty) return 'Age is required';
                                     final parsed = int.tryParse(v.trim());
                                     if (parsed == null) return 'Enter a valid age';
-                                    if (parsed < 16 || parsed > 120) return 'Enter a realistic age';
+                                    if (parsed < 18) return 'You must be 18 or older to register';
+                                    if (parsed > 120) return 'Enter a realistic age';
                                     return null;
                                   },
                                 ),
                               ],
 
                               if (_codeSent) ...[
-                                // ── Step 2: password + verification code ──
+                                // ── UPDATED validator: no max length, no spaces ──
                                 _PasswordField(
                                   key: const ValueKey('signup_password'),
                                   onChanged: (v) => setState(() => _password = v),
@@ -832,6 +830,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                       FocusScope.of(context).nextFocus(),
                                   validator: (v) {
                                     if (v == null || v.isEmpty) return 'Password is required';
+                                    if (v.contains(' ')) return 'Password cannot contain spaces';
                                     if (v.length < 6) return 'Minimum 6 characters';
                                     if (v.contains(' ')) return 'No spaces allowed';
                                     if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
@@ -841,18 +840,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                _StyledField(
+                                _ConfirmPasswordField(
                                   key: const ValueKey('signup_confirm_password'),
-                                  label: 'Confirm Password',
-                                  hint: '••••••••',
-                                  icon: Icons.lock_outline_rounded,
-                                  obscure: true,
+                                  newPassword: _password,
+                                  onChanged: (v) => setState(() {}),
                                   textInputAction: TextInputAction.next,
-                                  validator: (v) {
-                                    if (v == null || v.isEmpty) return 'Please confirm your password';
-                                    if (v != _password) return 'Passwords do not match';
-                                    return null;
-                                  },
                                 ),
                                 const SizedBox(height: 16),
                                 _StyledField(
@@ -984,6 +976,99 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   }
 }
 
+// ─── AGE FIELD WITH INLINE RESTRICTION ERROR ──────────────────────────────────
+class _AgeField extends StatefulWidget {
+  final ValueChanged<String> onChanged;
+  final String? Function(String?)? validator;
+
+  const _AgeField({required this.onChanged, this.validator});
+
+  @override
+  State<_AgeField> createState() => _AgeFieldState();
+}
+
+class _AgeFieldState extends State<_AgeField> {
+  String _value = '';
+
+  bool get _tooYoung {
+    final parsed = int.tryParse(_value.trim());
+    return parsed != null && parsed < 18;
+  }
+
+  bool get _tooOld {
+    final parsed = int.tryParse(_value.trim());
+    return parsed != null && parsed > 120;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Age',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
+        ),
+        const SizedBox(height: 6),
+        TextFormField(
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          onChanged: (v) {
+            setState(() => _value = v);
+            widget.onChanged(v);
+          },
+          validator: widget.validator,
+          decoration: InputDecoration(
+            hintText: '20',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: const Icon(Icons.cake_outlined, size: 18, color: cMuted),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: cBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: (_tooYoung || _tooOld) ? cRedDark : cBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: (_tooYoung || _tooOld) ? cRedDark : cRed, width: 2),
+            ),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+        if (_tooYoung) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 13, color: cRedDark),
+              SizedBox(width: 4),
+              Text(
+                'You must be 18 or older to register',
+                style: TextStyle(fontSize: 11, color: cRedDark, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ] else if (_tooOld) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 13, color: cRedDark),
+              SizedBox(width: 4),
+              Text(
+                'Enter a realistic age',
+                style: TextStyle(fontSize: 11, color: cRedDark, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 // ─── PASSWORD FIELD WITH STRENGTH INDICATOR ───────────────────────────────────
 class _PasswordField extends StatefulWidget {
   final ValueChanged<String> onChanged;
@@ -1009,13 +1094,13 @@ class _PasswordFieldState extends State<_PasswordField> {
   String _value = '';
   bool _obscure = true;
 
-  // ── Rule checkers ──────────────────────────────────────────────────────────
   bool get _hasMinLength   => _value.length >= 6;
   bool get _hasNoSpaces    => !_value.contains(' ');
   bool get _hasUppercase   => RegExp(r'[A-Z]').hasMatch(_value);
   bool get _hasNumber      => RegExp(r'[0-9]').hasMatch(_value);
   bool get _hasSpecial     => RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_value);
 
+  // Score is now out of 4
   int get _score {
     int s = 0;
     if (_hasMinLength) s++;
@@ -1047,16 +1132,15 @@ class _PasswordFieldState extends State<_PasswordField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Field label ───────────────────────────────────────────────────
         Text(
           widget.label,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
         ),
         const SizedBox(height: 6),
-
-        // ── Text input ────────────────────────────────────────────────────
         TextFormField(
           obscureText: _obscure,
+          // ── Block spaces from being typed or pasted ────────────────────────
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
           onChanged: (v) {
             setState(() => _value = v);
             widget.onChanged(v);
@@ -1084,8 +1168,6 @@ class _PasswordFieldState extends State<_PasswordField> {
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
-
-        // ── Strength bar for password ───────────────────────
         if (true) ...[
           const SizedBox(height: 10),
           Row(
@@ -1112,8 +1194,6 @@ class _PasswordFieldState extends State<_PasswordField> {
               ),
             ],
           ),
-
-          // ── Rules checklist ───────────────────────────────────────────
           const SizedBox(height: 10),
           _PasswordRule(met: _hasMinLength,  text: 'At least 6 characters'),
           _PasswordRule(met: _hasUppercase,  text: 'At least one uppercase letter'),
@@ -1257,7 +1337,13 @@ class _AuthButton extends StatefulWidget {
   final VoidCallback onTap;
   final String label;
   final bool disabled;
-  const _AuthButton({required this.loading, required this.onTap, required this.label, this.disabled = false});
+
+  const _AuthButton({
+    required this.loading,
+    required this.onTap,
+    required this.label,
+    this.disabled = false,
+  });
 
   @override
   State<_AuthButton> createState() => _AuthButtonState();
@@ -1266,12 +1352,15 @@ class _AuthButton extends StatefulWidget {
 class _AuthButtonState extends State<_AuthButton> with SingleTickerProviderStateMixin {
   late AnimationController _c;
   late Animation<double> _scale;
+  bool _hovered = false;
 
   @override
   void initState() {
     super.initState();
     _c = AnimationController(vsync: this, duration: kFast);
-    _scale = Tween(begin: 1.0, end: 0.97).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
+    _scale = Tween(begin: 1.0, end: 0.97).animate(
+      CurvedAnimation(parent: _c, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -1294,14 +1383,73 @@ class _AuthButtonState extends State<_AuthButton> with SingleTickerProviderState
               borderRadius: BorderRadius.circular(14),
               boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 5))],
             ),
-          child: Center(
-            child: widget.loading
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+            child: Center(
+              child: widget.loading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+            ),
           ),
         ),
       ),
-      ),
+    );
+  }
+}
+// ─── SIMPLE PASSWORD FIELD (eye toggle, no strength bar) ─────────────────────
+class _PasswordFieldSimple extends StatefulWidget {
+  final ValueChanged<String> onChanged;
+  final String? Function(String?)? validator;
+  final ValueChanged<String>? onFieldSubmitted;
+  final TextInputAction? textInputAction;
+
+  const _PasswordFieldSimple({
+    required this.onChanged,
+    this.validator,
+    this.onFieldSubmitted,
+    this.textInputAction,
+  });
+
+  @override
+  State<_PasswordFieldSimple> createState() => _PasswordFieldSimpleState();
+}
+
+class _PasswordFieldSimpleState extends State<_PasswordFieldSimple> {
+  bool _obscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Password', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          obscureText: _obscure,
+          onChanged: widget.onChanged,
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+          onFieldSubmitted: widget.onFieldSubmitted,
+          textInputAction: widget.textInputAction,
+          validator: widget.validator,
+          decoration: InputDecoration(
+            hintText: '••••••••',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: cMuted),
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                size: 18,
+                color: cMuted,
+              ),
+              onPressed: () => setState(() => _obscure = !_obscure),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
     );
   }
 }

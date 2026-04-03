@@ -55,12 +55,16 @@ Future<Map<String, dynamic>> loginUser(String email, String password) async {
 Future<Map<String, dynamic>> sendSignupVerificationCode({
   required String email,
   String? password,
+  String? firstName,
 }) async {
   final body = <String, dynamic>{
     'email': email,
   };
   if (password != null && password.isNotEmpty) {
     body['password'] = password;
+  }
+  if (firstName != null && firstName.isNotEmpty) {
+    body['first_name'] = firstName; 
   }
 
   final response = await http.post(
@@ -824,5 +828,16 @@ Future<List<Map<String, dynamic>>> getUserLostFoundListings(int userId) async {
     return List<Map<String, dynamic>>.from(data['data'] ?? []);
   }
   throw ApiException(data['error']?.toString() ?? 'Failed to load lost & found.');
+}
+
+// Revoke User warning
+Future<void> adminRevokeWarning({required int userId}) async {
+  final resp = await http.post(
+    Uri.parse('$_baseUrl/admin/revoke_warning.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'user_id': userId}),
+  );
+  final data = jsonDecode(resp.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to revoke warning');
 }
 

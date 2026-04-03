@@ -10,9 +10,10 @@ dependencies:
     sdk: flutter
   http: ^1.2.0
   image_picker: ^1.0.7
-  flutter_image_compress: ^2.1.0 
+  flutter_image_compress: ^2.1.0
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.2
+  audioplayers: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +24,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/sounds/

@@ -7,10 +7,16 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
@@ -24,12 +30,14 @@ part 'src/ui_controls.dart';
 part 'src/ui_feedback.dart';
 part 'src/data.dart';
 part 'src/admin.dart';
+part 'src/welcome_screen.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
   int? userId,
   String? username,
   String? role,
+  String? firstName,
 ]);
 
 // ─── THEME ───────────────────────────────────────────────────────────────────
@@ -684,19 +692,19 @@ class _UniFindAppState extends State<UniFindApp> {
     }
   }
 
-  void _login(String email, [int? userId, String? username, String? role]) {
-    print('DEBUG _login called: role=$role');
-    print('DEBUG userRole will be: ${UserRoleExt.fromString(role ?? '')}');
-    setState(() {
-      _loggedIn = true;
-      _email = email;
-      _username = (username ?? '').trim();
-      _userId = userId;
-      _role = (role ?? '').trim();
-      _userRole = UserRoleExt.fromString(_role);
-      _tab = 0;
-    });
-    print('DEBUG _userRole after setState: $_userRole');
+  void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
+  print('DEBUG _login called: role=$role');
+  print('DEBUG userRole will be: ${UserRoleExt.fromString(role ?? '')}');
+  setState(() {
+    _loggedIn = true;
+    _email = email;
+    _username = (username ?? '').trim();
+    _userId = userId;
+    _role = (role ?? '').trim();
+    _userRole = UserRoleExt.fromString(_role);
+    _tab = 0;
+  });
+  print('DEBUG _userRole after setState: $_userRole');
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
       prefs.setString('logged_in_email', email);

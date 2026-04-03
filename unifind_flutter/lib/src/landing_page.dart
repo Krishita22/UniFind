@@ -21,28 +21,39 @@ class LandingPage extends StatelessWidget {
       pageBuilder: (_, a, __) => FadeTransition(
         opacity: a,
         child: LoginScreen(
-          onLogin: (email, [userId, username, role]) {
-            onLogin(email, userId, username, role);
+          onLogin: (email, [userId, username, role, firstName]) {
+            onLogin(email, userId, username, role, firstName);
             Navigator.of(ctx).popUntil((r) => r.isFirst);
           },
         ),
       ),
     ));
   }
-void _openRegister(BuildContext ctx) {
-  Navigator.of(ctx).push(PageRouteBuilder(
-    transitionDuration: kPage,
-    pageBuilder: (_, a, __) => FadeTransition(
-      opacity: a,
-      child: RegistrationScreen(
-        onRegister: (email, [userId, username, role]) {
-          onLogin(email, userId, username, role);
-          Navigator.of(ctx).popUntil((r) => r.isFirst);
-        },
+  
+  void _openRegister(BuildContext ctx) {
+    Navigator.of(ctx).push(PageRouteBuilder(
+      transitionDuration: kPage,
+      pageBuilder: (_, a, __) => FadeTransition(
+        opacity: a,
+        child: RegistrationScreen(
+          onRegister: (email, [userId, username, role, firstName]) {
+            onLogin(email, userId, username, role);
+            Navigator.of(ctx).pushReplacement(
+              MaterialPageRoute(
+                builder: (freshCtx) => WelcomeScreen(
+                  username: firstName,
+                  onContinue: () {
+                    Navigator.of(freshCtx).popUntil((r) => r.isFirst);
+                  },
+                ),
+              ),
+            );
+          },
+        ),
       ),
-    ),
-  ));
-}
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -188,10 +199,7 @@ class _PillButtonState extends State<_PillButton> with SingleTickerProviderState
   }
 
   @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
+  void dispose() { _c.dispose(); super.dispose(); }
 
   @override
   Widget build(BuildContext context) {
@@ -201,10 +209,7 @@ class _PillButtonState extends State<_PillButton> with SingleTickerProviderState
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTapDown: (_) => _c.forward(),
-        onTapUp: (_) {
-          _c.reverse();
-          widget.onTap();
-        },
+        onTapUp: (_) { _c.reverse(); widget.onTap(); },
         onTapCancel: () => _c.reverse(),
         child: ScaleTransition(
           scale: _scale,
@@ -212,27 +217,16 @@ class _PillButtonState extends State<_PillButton> with SingleTickerProviderState
             duration: kFast,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: _hovered
-                  ? Colors.white.withValues(alpha: 0.30)
-                  : Colors.white.withValues(alpha: 0.15),
+              color: _hovered ? Colors.white.withValues(alpha: 0.30) : Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: _hovered ? 0.6 : 0.3),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: _hovered ? 0.6 : 0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(widget.icon, size: 14, color: Colors.white),
                 const SizedBox(width: 6),
-                Text(
-                  widget.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(widget.label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -262,11 +256,7 @@ class _AnimatedLogoState extends State<_AnimatedLogo> {
         curve: Curves.easeOutCubic,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          child: Image.asset(
-            'assets/images/whitelogo.png',
-            height: 44,
-            fit: BoxFit.contain,
-          ),
+          child: Image.asset('assets/images/whitelogo.png', height: 44, fit: BoxFit.contain),
         ),
       ),
     );
@@ -304,89 +294,26 @@ class _HeroSectionState extends State<_HeroSection> with TickerProviderStateMixi
       animation: _ctrl,
       builder: (_, child) => Opacity(
         opacity: _fade.value,
-        child: Transform.translate(
-          offset: Offset(0, _slide.value),
-          child: Transform.scale(scale: _scale.value, child: child),
-        ),
+        child: Transform.translate(offset: Offset(0, _slide.value), child: Transform.scale(scale: _scale.value, child: child)),
       ),
       child: Stack(
         children: [
-          // Background decoration
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFF5F5), Color(0xFFFCECEC), Color(0xFFFFF8F8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-          ),
-          // Decorative circle
-          Positioned(
-            right: -60,
-            top: -40,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent]),
-              ),
-            ),
-          ),
-          Positioned(
-            left: -40,
-            bottom: -20,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.06), Colors.transparent]),
-              ),
-            ),
-          ),
+          Positioned.fill(child: Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFF5F5), Color(0xFFFCECEC), Color(0xFFFFF8F8)], begin: Alignment.topLeft, end: Alignment.bottomRight)))),
+          Positioned(right: -60, top: -40, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
+          Positioned(left: -40, bottom: -20, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.06), Colors.transparent])))),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
             child: Column(
               children: [
-                // Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: cRedLight,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: cBorder),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.school_rounded, size: 14, color: cRed),
-                      SizedBox(width: 6),
-                      Text('MSU Campus Exclusive', style: TextStyle(color: cRed, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
-                    ],
-                  ),
+                  decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.school_rounded, size: 14, color: cRed), SizedBox(width: 6), Text('MSU Campus Exclusive', style: TextStyle(color: cRed, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3))]),
                 ),
                 const SizedBox(height: 28),
-                const Text(
-                  'Your Campus.\nYour Marketplace.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 52,
-                    fontWeight: FontWeight.w900,
-                    color: cText,
-                    height: 1.15,
-                    letterSpacing: -1.5,
-                  ),
-                ),
+                const Text('Your Campus.\nYour Marketplace.', textAlign: TextAlign.center, style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: cText, height: 1.15, letterSpacing: -1.5)),
                 const SizedBox(height: 20),
-                const Text(
-                  'Buy, sell, and reunite with lost items within the\nMontclair State University community.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 17, color: cMuted, height: 1.7),
-                ),
+                const Text('Buy, sell, and reunite with lost items within the\nMontclair State University community.', textAlign: TextAlign.center, style: TextStyle(fontSize: 17, color: cMuted, height: 1.7)),
                 const SizedBox(height: 40),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -396,7 +323,6 @@ class _HeroSectionState extends State<_HeroSection> with TickerProviderStateMixi
                     _HeroButton(label: 'Log In', primary: false, onTap: widget.onLogin),
                   ],
                 ),
-
               ],
             ),
           ),
@@ -447,29 +373,13 @@ class _HeroButtonState extends State<_HeroButton> with SingleTickerProviderState
             duration: kFast,
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             decoration: BoxDecoration(
-              gradient: widget.primary
-                  ? LinearGradient(
-                      colors: _hovered ? [cRedDark, Color(0xFF5A0A0A)] : [cRed, cRedDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
+              gradient: widget.primary ? LinearGradient(colors: _hovered ? [cRedDark, Color(0xFF5A0A0A)] : [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
               color: widget.primary ? null : (_hovered ? cRedLight : cSurface),
               borderRadius: BorderRadius.circular(32),
               border: widget.primary ? null : Border.all(color: cRed, width: 2),
-              boxShadow: widget.primary
-                  ? [BoxShadow(color: cRed.withValues(alpha: _hovered ? 0.55 : 0.35), blurRadius: _hovered ? 24 : 16, offset: const Offset(0, 6))]
-                  : null,
+              boxShadow: widget.primary ? [BoxShadow(color: cRed.withValues(alpha: _hovered ? 0.55 : 0.35), blurRadius: _hovered ? 24 : 16, offset: const Offset(0, 6))] : null,
             ),
-            child: Text(
-              widget.label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: widget.primary ? Colors.white : cRed,
-                letterSpacing: 0.3,
-              ),
-            ),
+            child: Text(widget.label, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: widget.primary ? Colors.white : cRed, letterSpacing: 0.3)),
           ),
         ),
       ),
@@ -516,16 +426,10 @@ class _HowItWorksSectionState extends State<_HowItWorksSection> with SingleTicke
           const Text('to get started on UniFind.', style: TextStyle(fontSize: 16, color: cMuted)),
           const SizedBox(height: 52),
           Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            alignment: WrapAlignment.center,
+            spacing: 20, runSpacing: 20, alignment: WrapAlignment.center,
             children: List.generate(steps.length, (i) {
               final s = steps[i];
-              final delay = Duration(milliseconds: 120 * i);
-              return ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 200),
-                child: _StepCard(icon: s.icon, title: s.title, desc: s.desc, delay: delay),
-              );
+              return ConstrainedBox(constraints: const BoxConstraints(minHeight: 200), child: _StepCard(icon: s.icon, title: s.title, desc: s.desc, delay: Duration(milliseconds: 120 * i)));
             }),
           ),
         ],
@@ -581,9 +485,7 @@ class _StepCardState extends State<_StepCard> with SingleTickerProviderStateMixi
       child: ScaleTransition(
         scale: _scale,
         child: AnimatedContainer(
-          duration: kMid,
-          width: 270,
-          padding: const EdgeInsets.all(28),
+          duration: kMid, width: 270, padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
             color: _hovered ? cRedLight : cSurface,
             borderRadius: BorderRadius.circular(20),
@@ -591,19 +493,9 @@ class _StepCardState extends State<_StepCard> with SingleTickerProviderStateMixi
             boxShadow: [BoxShadow(color: _hovered ? cRed.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06), blurRadius: _hovered ? 20 : 10, offset: const Offset(0, 4))],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center, mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
-                ),
-                child: Icon(widget.icon, color: Colors.white, size: 24),
-              ),
+              Container(width: 52, height: 52, decoration: BoxDecoration(gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))]), child: Icon(widget.icon, color: Colors.white, size: 24)),
               const SizedBox(height: 16),
               Text(widget.title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: cText)),
               const SizedBox(height: 8),
@@ -634,7 +526,6 @@ class _FeaturesSection extends StatelessWidget {
       _FeatureData(Icons.bolt_rounded, 'Post in Seconds', 'Create a listing with a title, photo, price, and category in just a few clicks.'),
       _FeatureData(Icons.verified_user_rounded, 'MSU Community Only', 'Exclusively for Montclair State University members — a trusted, verified space you can rely on.'),
     ];
-
     return Container(
       color: const Color(0xFFF8F2F2),
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 72),
@@ -646,12 +537,7 @@ class _FeaturesSection extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('for campus life, simplified.', style: TextStyle(fontSize: 16, color: cMuted)),
           const SizedBox(height: 52),
-          Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            alignment: WrapAlignment.center,
-            children: features.map((f) => _FeatureCard(icon: f.icon, title: f.title, desc: f.desc)).toList(),
-          ),
+          Wrap(spacing: 20, runSpacing: 20, alignment: WrapAlignment.center, children: features.map((f) => _FeatureCard(icon: f.icon, title: f.title, desc: f.desc)).toList()),
         ],
       ),
     );
@@ -691,12 +577,9 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
         animation: _lift,
         builder: (_, child) => Transform.translate(offset: Offset(0, _lift.value), child: child),
         child: AnimatedContainer(
-          duration: kMid,
-          width: 270,
-          padding: const EdgeInsets.all(26),
+          duration: kMid, width: 270, padding: const EdgeInsets.all(26),
           decoration: BoxDecoration(
-            color: cSurface,
-            borderRadius: BorderRadius.circular(20),
+            color: cSurface, borderRadius: BorderRadius.circular(20),
             border: Border.all(color: _hov ? cRed.withValues(alpha: 0.3) : cBorder),
             boxShadow: [BoxShadow(color: _hov ? cRed.withValues(alpha: 0.14) : Colors.black.withValues(alpha: 0.07), blurRadius: _hov ? 24 : 12, offset: const Offset(0, 4))],
           ),
@@ -704,15 +587,8 @@ class _FeatureCardState extends State<_FeatureCard> with SingleTickerProviderSta
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               AnimatedContainer(
-                duration: kMid,
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: _hov
-                      ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight)
-                      : const LinearGradient(colors: [cRedLight, cRedLight]),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+                duration: kMid, width: 50, height: 50,
+                decoration: BoxDecoration(gradient: _hov ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight) : const LinearGradient(colors: [cRedLight, cRedLight]), borderRadius: BorderRadius.circular(14)),
                 child: Icon(widget.icon, color: _hov ? Colors.white : cRed, size: 24),
               ),
               const SizedBox(height: 16),
@@ -758,9 +634,7 @@ class _AboutSection extends StatelessWidget {
           const SizedBox(height: 52),
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
-            child: Column(
-              children: items.map((i) => _AboutRow(icon: i.icon, title: i.title, desc: i.desc, shaded: i.shaded)).toList(),
-            ),
+            child: Column(children: items.map((i) => _AboutRow(icon: i.icon, title: i.title, desc: i.desc, shaded: i.shaded)).toList()),
           ),
         ],
       ),
@@ -790,72 +664,27 @@ class _AboutRowState extends State<_AboutRow> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        transform: _hovered
-            ? Matrix4.translationValues(0, -8, 0)
-            : Matrix4.identity(),
+        transform: _hovered ? Matrix4.translationValues(0, -8, 0) : Matrix4.identity(),
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: widget.shaded ? cRedLight : cSurface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _hovered ? cRed.withValues(alpha: 0.4) : cBorder,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _hovered
-                  ? cRed.withValues(alpha: 0.18)
-                  : Colors.black.withValues(alpha: 0.06),
-              blurRadius: _hovered ? 24 : 10,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          border: Border.all(color: _hovered ? cRed.withValues(alpha: 0.4) : cBorder),
+          boxShadow: [BoxShadow(color: _hovered ? cRed.withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.06), blurRadius: _hovered ? 24 : 10, offset: const Offset(0, 6))],
         ),
         child: Row(
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [cRed, cRedDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: cRed.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Icon(widget.icon, color: Colors.white, size: 22),
-            ),
+            Container(width: 52, height: 52, decoration: BoxDecoration(gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight), borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))]), child: Icon(widget.icon, color: Colors.white, size: 22)),
             const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: cRed,
-                    ),
-                  ),
+                  Text(widget.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cRed)),
                   const SizedBox(height: 6),
-                  Text(
-                    widget.desc,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: cMuted,
-                      height: 1.6,
-                    ),
-                  ),
+                  Text(widget.desc, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.6)),
                 ],
               ),
             ),
@@ -955,72 +784,20 @@ class _FaqTileState extends State<_FaqTile> with SingleTickerProviderStateMixin 
               child: Row(
                 children: [
                   Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: _open ? cRed : cRedLight,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: RotationTransition(
-                      turns: _rotate,
-                      child: Icon(Icons.keyboard_arrow_down_rounded, color: _open ? Colors.white : cRed, size: 20),
-                    ),
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(color: _open ? cRed : cRedLight, borderRadius: BorderRadius.circular(8)),
+                    child: RotationTransition(turns: _rotate, child: Icon(Icons.keyboard_arrow_down_rounded, color: _open ? Colors.white : cRed, size: 20)),
                   ),
                   const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(widget.question, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _open ? cRed : cText)),
-                  ),
+                  Expanded(child: Text(widget.question, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _open ? cRed : cText))),
                 ],
               ),
             ),
           ),
           SizeTransition(
             sizeFactor: _expand,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(64, 0, 18, 18),
-              child: Text(widget.answer, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.7)),
-            ),
+            child: Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(64, 0, 18, 18), child: Text(widget.answer, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.7))),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── EXCLUSIVE BANNER ────────────────────────────────────────────────────────
-class _ExclusiveBanner extends StatelessWidget {
-  final VoidCallback onLogin;
-  const _ExclusiveBanner({required this.onLogin});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [cNavBg, cNavBgDark, Color(0xFF4A0A0A)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 64),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2),
-            ),
-            child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
-          ),
-          const SizedBox(height: 20),
-          const Text('Made for the Red Hawk Community', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-          const SizedBox(height: 14),
-          Text('UniFind is designed solely for MSU — a safe, verified space to sell and connect.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 15, height: 1.6)),
-          const SizedBox(height: 32),
-          _HeroButton(label: 'Join UniFind Today', primary: false, onTap: onLogin),
         ],
       ),
     );
@@ -1028,7 +805,6 @@ class _ExclusiveBanner extends StatelessWidget {
 }
 
 // ─── CONTACT SECTION ─────────────────────────────────────────────────────────
-
 class _ContactSection extends StatefulWidget {
   const _ContactSection();
 
@@ -1301,7 +1077,11 @@ class _ContactSubmitButtonState extends State<_ContactSubmitButton> with SingleT
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
-        onTapDown: (_) => _c.forward(),
+        onTapDown: (_) async {
+        _c.forward();
+        final player = AudioPlayer();
+        await player.play(AssetSource('sounds/sparkle.mp3'));
+      },
         onTapUp: (_) { _c.reverse(); widget.onTap(); },
         onTapCancel: () => _c.reverse(),
         child: ScaleTransition(
@@ -1325,6 +1105,40 @@ class _ContactSubmitButtonState extends State<_ContactSubmitButton> with SingleT
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── EXCLUSIVE BANNER ────────────────────────────────────────────────────────
+class _ExclusiveBanner extends StatelessWidget {
+  final VoidCallback onLogin;
+  const _ExclusiveBanner({required this.onLogin});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: [cNavBg, cNavBgDark, Color(0xFF4A0A0A)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 64),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.12), shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 2)),
+            child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(height: 20),
+          const Text('Made for the Red Hawk Community', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+          const SizedBox(height: 14),
+          Text('UniFind is designed solely for MSU — a safe, verified space to sell and connect.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 15, height: 1.6)),
+          const SizedBox(height: 32),
+          _HeroButton(label: 'Join UniFind Today', primary: false, onTap: onLogin),
+        ],
       ),
     );
   }

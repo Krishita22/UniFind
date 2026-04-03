@@ -89,7 +89,69 @@ class _PostListingScreenState extends State<PostListingScreen> {
       ),
     );
   }
-
+  
+  void _showSuccessCard() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 32),
+        decoration: BoxDecoration(
+          color: cSurface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: cBorder),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+              ),
+              child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+            ),
+            const SizedBox(height: 20),
+            const Text('Listing Posted!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText)),
+            const SizedBox(height: 8),
+            const Text('Your item has been submitted\nand is pending review.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: cMuted, height: 1.6)),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cRed,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    _title = '';
+                    _desc = '';
+                    _cat = '';
+                    _cond = 'Good';
+                    _loc = '';
+                    _price = 0;
+                    _selectedImage = null;
+                    _selectedImageBytes = null;
+                    _formKey.currentState?.reset();
+                  });
+                },
+                child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -282,36 +344,8 @@ class _PostListingScreenState extends State<PostListingScreen> {
         imageUrl: imageUrl,
       ));
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 10),
-              Text(
-                'Item posted successfully!',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          backgroundColor: cRed,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(12),
-        ),
-      );
+      _showSuccessCard();
 
-      setState(() {
-        _title = '';
-        _desc = '';
-        _cat = '';
-        _cond = 'Good';
-        _loc = '';
-        _price = 0;
-        _selectedImage = null;
-        _selectedImageBytes = null;
-        _formKey.currentState?.reset();
-      });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
