@@ -193,9 +193,16 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                       ),
                       const SizedBox(height: 20),
                       TextButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        child: const Text('← Back to homepage', style: TextStyle(color: cMuted, fontSize: 13)),
-                      ),
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, size: 14, color: cMuted),
+                              SizedBox(width: 6),
+                              Text('Back to homepage', style: TextStyle(color: cMuted, fontSize: 13)),
+                            ],
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -950,19 +957,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: TextButton(
-                          onPressed: () => Navigator.of(context).maybePop(),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.arrow_back, size: 14, color: cMuted),
-                              SizedBox(width: 6),
-                              Text('Back to login', style: TextStyle(color: cMuted, fontSize: 13)),
-                            ],
+                      const SizedBox(height: 5),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Already have an account? ',
+                            style: TextStyle(fontSize: 13, color: cMuted),
                           ),
-                        ),
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => LoginScreen(
+                                    onLogin: (email, [userId, username, role, firstName]) =>
+                                        widget.onRegister(email, userId, username, role, firstName),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Log in',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: cRed,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
