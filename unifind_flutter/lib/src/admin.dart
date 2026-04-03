@@ -863,16 +863,9 @@ class _StatCardState extends State<_StatCard> {
   }
 }
 
-class _ActivityTile extends StatefulWidget {
+class _ActivityTile extends StatelessWidget {
   final ActivityEntry entry;
   const _ActivityTile({required this.entry});
-
-  @override
-  State<_ActivityTile> createState() => _ActivityTileState();
-}
-
-class _ActivityTileState extends State<_ActivityTile> {
-  bool _hovered = false;
 
   String _timeAgo(DateTime dt) {
     final d = DateTime.now().difference(dt);
@@ -885,29 +878,22 @@ class _ActivityTileState extends State<_ActivityTile> {
   Widget build(BuildContext context) {
     final icons  = {'listing': Icons.storefront_rounded, 'user': Icons.person_rounded, 'report': Icons.flag_rounded, 'lostfound': Icons.search_rounded};
     final colors = {'listing': cRed, 'user': const Color(0xFF2980B9), 'report': const Color(0xFF8E44AD), 'lostfound': const Color(0xFF27AE60)};
-    final icon  = icons[widget.entry.type]  ?? Icons.circle;
-    final color = colors[widget.entry.type] ?? cMuted;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: _hovered ? cBg : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cBorder),
-          boxShadow: [],
-        ),
-        child: Row(children: [
-          Container(width: 34, height: 34, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 16)),
-          const SizedBox(width: 12),
-          Expanded(child: Text(widget.entry.description, style: const TextStyle(fontSize: 13, color: cText))),
-          Text(_timeAgo(widget.entry.timestamp), style: const TextStyle(fontSize: 11, color: cMuted)),
-        ]),
+    final icon  = icons[entry.type]  ?? Icons.circle;
+    final color = colors[entry.type] ?? cMuted;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cBorder),
       ),
+      child: Row(children: [
+        Container(width: 34, height: 34, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 16)),
+        const SizedBox(width: 12),
+        Expanded(child: Text(entry.description, style: const TextStyle(fontSize: 13, color: cText))),
+        Text(_timeAgo(entry.timestamp), style: const TextStyle(fontSize: 11, color: cMuted)),
+      ]),
     );
   }
 }
