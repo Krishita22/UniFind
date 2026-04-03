@@ -185,7 +185,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                                     ),
                                   );
                                 },
-                                child: const Text('Forgot Password?'),
+                                child: const Text('Forgot Password?',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: cRed,
+                                    fontWeight: FontWeight.w700,  
+                                  ),
+                                ),
                               ),
                             ],
                           ),
