@@ -180,7 +180,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Post an Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-                      Text('Create a new listing', style: TextStyle(fontSize: 12, color: cMuted)),
+                      Text('Create a new listing', style: TextStyle(fontSize: 15, color: cMuted)),
                     ],
                   ),
                 ],

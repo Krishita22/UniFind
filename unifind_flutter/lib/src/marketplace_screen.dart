@@ -604,8 +604,9 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
               width: 240,
               decoration: BoxDecoration(
                 color: cSurface,
-                // Border always present — acts as a permanent divider line
-                border: const Border(right: BorderSide(color: cBorder)),
+                border: _widthAnim.value > 0
+                    ? const Border(right: BorderSide(color: cBorder))
+                    : null,
               ),
               child: child,
             ),
