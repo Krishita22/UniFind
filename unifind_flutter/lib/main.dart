@@ -630,27 +630,27 @@ class _UniFindAppState extends State<UniFindApp> {
         email: _email,
         imageUrl: update.imageUrl,
       );
-      await _loadListings();
-    } catch (_) {
       setState(() {
-        final idx = _market.indexWhere((m) => m.id == item.id);
-        if (idx == -1) return;
-        final old = _market[idx];
-        _market[idx] = MarketplaceItem(
-          id: old.id,
-          title: update.title,
-          price: update.price,
-          description: update.description,
-          category: update.category,
-          condition: update.condition,
-          image: update.imageUrl ?? old.image,
-          seller: old.seller,
-          sellerEmail: old.sellerEmail,
-          sellerId: old.sellerId,
-          createdAt: old.createdAt,
-          location: update.location,
-        );
+        _market.removeWhere((m) => m.id == item.id);
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Listing updated and sent for admin approval.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      await _loadListings();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -668,27 +668,27 @@ class _UniFindAppState extends State<UniFindApp> {
         email: _email,
         imageUrl: update.imageUrl,
       );
-      await _loadLostFound();
-    } catch (_) {
       setState(() {
-        final idx = _lostFound.indexWhere((m) => m.id == item.id);
-        if (idx == -1) return;
-        final old = _lostFound[idx];
-        _lostFound[idx] = LostFoundItem(
-          id: old.id,
-          title: update.title,
-          description: update.description,
-          category: update.category,
-          type: old.type,
-          image: update.imageUrl ?? old.image,
-          poster: old.poster,
-          posterEmail: old.posterEmail,
-          posterId: old.posterId,
-          createdAt: old.createdAt,
-          location: update.location,
-          status: old.status,
-        );
+        _lostFound.removeWhere((m) => m.id == item.id);
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Post updated and sent for admin approval.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      await _loadLostFound();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
