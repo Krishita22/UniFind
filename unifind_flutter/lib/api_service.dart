@@ -884,3 +884,18 @@ Future<Map<String, dynamic>> adminResolveMatch({
   throw ApiException(data['error']?.toString() ?? 'Failed to resolve match.');
 }
 
+Future<Map<String, dynamic>> adminUnmatch({
+  required String matchId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/unmatch.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'match_id': matchId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to unmatch items.');
+}
+
