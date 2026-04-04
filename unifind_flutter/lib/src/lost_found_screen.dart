@@ -136,10 +136,12 @@ void _showLostFoundPopup(
   required Future<void> Function(FoundMatchInput) onPostFoundMatch,
   required bool claimSubmittedByMe,
   required bool matchSubmittedByMe,
+  required String currentUserEmail,
 }) {
   final isLost = item.type == LostFoundType.lost;
   final typeColor = isLost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60);
   final typeBg   = isLost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0);
+  final isOwner = currentUserEmail.trim().toLowerCase() == item.posterEmail.trim().toLowerCase();
 
   showGeneralDialog(
     context: context,
@@ -175,64 +177,81 @@ void _showLostFoundPopup(
                       // -- Tappable image header --
                       Stack(
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                PageRouteBuilder(
-                                  opaque: false,
-                                  barrierColor: Colors.black,
-                                  pageBuilder: (_, __, ___) =>
-                                      _FullScreenImagePage(imageUrl: item.image),
-                                  transitionsBuilder: (_, anim, __, child) =>
-                                      FadeTransition(opacity: anim, child: child),
-                                  transitionDuration: kMid,
-                                ),
-                              );
-                            },
-                            child: Stack(
-                              children: [
-                                Image.network(
-                                  item.image,
-                                  width: double.infinity,
-                                  height: 160,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                          if (isOwner)
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  PageRouteBuilder(
+                                    opaque: false,
+                                    barrierColor: Colors.black,
+                                    pageBuilder: (_, __, ___) =>
+                                        _FullScreenImagePage(imageUrl: item.image),
+                                    transitionsBuilder: (_, anim, __, child) =>
+                                        FadeTransition(opacity: anim, child: child),
+                                    transitionDuration: kMid,
+                                  ),
+                                );
+                              },
+                              child: Stack(
+                                children: [
+                                  Image.network(
+                                    item.image,
+                                    width: double.infinity,
                                     height: 160,
-                                    color: cPlaceholder,
-                                    child: const Center(
-                                      child: Icon(Icons.image_not_supported,
-                                          color: cMuted, size: 36),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      height: 160,
+                                      color: cPlaceholder,
+                                      child: const Center(
+                                        child: Icon(Icons.image_not_supported,
+                                            color: cMuted, size: 36),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                // Expand affordance badge
-                                Positioned(
-                                  bottom: 8, right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.5),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.open_in_full_rounded,
-                                            size: 11, color: Colors.white),
-                                        SizedBox(width: 4),
-                                        Text('Tap to expand',
-                                            style: TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600)),
-                                      ],
+                                  // Expand affordance badge
+                                  Positioned(
+                                    bottom: 8, right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.5),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.open_in_full_rounded,
+                                              size: 11, color: Colors.white),
+                                          SizedBox(width: 4),
+                                          Text('Tap to expand',
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
                                     ),
                                   ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 160,
+                              color: cPlaceholder,
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.visibility_off, color: cMuted, size: 36),
+                                    SizedBox(height: 6),
+                                    Text('Image hidden', style: TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600)),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
                           // Lost / Found type badge
                           Positioned(
                             top: 10, left: 10,
@@ -709,6 +728,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
     final typeBg =
         isLost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0);
 
+    final isOwner = widget.currentUserEmail.trim().toLowerCase() == widget.item.posterEmail.trim().toLowerCase();
     return GestureDetector(
       onTapDown: (_) => _c.forward(),
       onTapUp: (_) {
@@ -720,6 +740,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
           onPostFoundMatch: widget.onPostFoundMatch,
           claimSubmittedByMe: isSubmitted,
           matchSubmittedByMe: isMatchSubmitted,
+          currentUserEmail: widget.currentUserEmail,
         );
       },
       onTapCancel: () => _c.reverse(),
@@ -740,57 +761,77 @@ class _LostFoundCardState extends State<_LostFoundCard>
           ),
           child: Row(
             children: [
-              // -- Thumbnail -- tap opens full-screen image directly --
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  PageRouteBuilder(
-                    opaque: false,
-                    barrierColor: Colors.black,
-                    pageBuilder: (_, __, ___) =>
-                        _FullScreenImagePage(imageUrl: widget.item.image),
-                    transitionsBuilder: (_, anim, __, child) =>
-                        FadeTransition(opacity: anim, child: child),
-                    transitionDuration: kMid,
+              // -- Thumbnail --
+              if (isOwner)
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    PageRouteBuilder(
+                      opaque: false,
+                      barrierColor: Colors.black,
+                      pageBuilder: (_, __, ___) =>
+                          _FullScreenImagePage(imageUrl: widget.item.image),
+                      transitionsBuilder: (_, anim, __, child) =>
+                          FadeTransition(opacity: anim, child: child),
+                      transitionDuration: kMid,
+                    ),
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        widget.item.image,
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox(
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          widget.item.image,
                           width: 72,
                           height: 72,
-                          child: ColoredBox(
-                            color: cPlaceholder,
-                            child: Center(
-                              child: Icon(Icons.image_not_supported,
-                                  color: cMuted, size: 20),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const SizedBox(
+                            width: 72,
+                            height: 72,
+                            child: ColoredBox(
+                              color: cPlaceholder,
+                              child: Center(
+                                child: Icon(Icons.image_not_supported,
+                                    color: cMuted, size: 20),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    // Small expand icon hint on thumbnail
-                    Positioned(
-                      bottom: 3, right: 3,
-                      child: Container(
-                        width: 18, height: 18,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(5),
+                      // Small expand icon hint on thumbnail
+                      Positioned(
+                        bottom: 3, right: 3,
+                        child: Container(
+                          width: 18, height: 18,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: const Icon(Icons.open_in_full_rounded,
+                              size: 10, color: Colors.white),
                         ),
-                        child: const Icon(Icons.open_in_full_rounded,
-                            size: 10, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    color: cPlaceholder,
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.visibility_off, color: cMuted, size: 20),
+                          SizedBox(height: 2),
+                          Text('Image hidden', style: TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

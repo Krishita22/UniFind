@@ -841,3 +841,46 @@ Future<void> adminRevokeWarning({required int userId}) async {
   if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to revoke warning');
 }
 
+// ─── ADMIN: CREATE MATCH ────────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminCreateMatch({
+  required String lostItemId,
+  required String foundItemId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/create_match.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'lost_item_id': lostItemId, 'found_item_id': foundItemId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to create match.');
+}
+
+// ─── ADMIN: GET MATCHES ─────────────────────────────────────────────────────
+Future<List<Map<String, dynamic>>> adminGetMatches() async {
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_matches.php'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load matches.');
+}
+
+// ─── ADMIN: RESOLVE MATCH ───────────────────────────────────────────────────
+Future<Map<String, dynamic>> adminResolveMatch({
+  required String matchId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/resolve_match.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'match_id': matchId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to resolve match.');
+}
+
