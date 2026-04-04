@@ -284,7 +284,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
     if (raw.isEmpty || raw.contains('@') || raw.contains(' ')) return 'Student';
     return raw;
   }
-  final isOwner = currentUserEmail.trim().toLowerCase() == item.sellerEmail.trim().toLowerCase();
+  // Marketplace images are always visible after admin approval
   showGeneralDialog(
     context: context,
     barrierDismissible: true,
@@ -320,43 +320,42 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                       // -- Tappable image header --
                       Stack(
                         children: [
-                          if (isOwner)
-                            GestureDetector(
-                              onTap: () => Navigator.of(context).push(
-                                PageRouteBuilder(
-                                  opaque: false,
-                                  barrierColor: Colors.black,
-                                  pageBuilder: (_, __, ___) => _FullScreenImagePage(imageUrl: item.image),
-                                  transitionsBuilder: (_, anim, __, child) =>
-                                      FadeTransition(opacity: anim, child: child),
-                                  transitionDuration: kMid,
-                                ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              PageRouteBuilder(
+                                opaque: false,
+                                barrierColor: Colors.black,
+                                pageBuilder: (_, __, ___) => _FullScreenImagePage(imageUrl: item.image),
+                                transitionsBuilder: (_, anim, __, child) =>
+                                    FadeTransition(opacity: anim, child: child),
+                                transitionDuration: kMid,
                               ),
-                              child: Stack(
-                                children: [
-                                  Image.network(
-                                    item.image,
-                                    width: double.infinity,
+                            ),
+                            child: Stack(
+                              children: [
+                                Image.network(
+                                  item.image,
+                                  width: double.infinity,
+                                  height: 200,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
                                     height: 200,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      height: 200,
-                                      color: cPlaceholder,
-                                      child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
-                                    ),
+                                    color: cPlaceholder,
+                                    child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
                                   ),
-                                  // Expand affordance badge
-                                  Positioned(
-                                    bottom: 8, right: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.5),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
+                                ),
+                                // Expand affordance badge
+                                Positioned(
+                                  bottom: 8, right: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
                                           Icon(Icons.open_in_full_rounded, size: 11, color: Colors.white),
                                           SizedBox(width: 4),
                                           Text('Tap to expand', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
@@ -365,22 +364,6 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                     ),
                                   ),
                                 ],
-                              ),
-                            )
-                          else
-                            Container(
-                              width: double.infinity,
-                              height: 200,
-                              color: cPlaceholder,
-                              child: const Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.visibility_off, color: cMuted, size: 36),
-                                    SizedBox(height: 6),
-                                    Text('Image hidden', style: TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600)),
-                                  ],
-                                ),
                               ),
                             ),
                           // Category badge
@@ -1127,7 +1110,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
-    final isOwner = widget.currentUserEmail.trim().toLowerCase() == widget.item.sellerEmail.trim().toLowerCase();
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
@@ -1157,32 +1140,13 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                   flex: 3,
                   child: Stack(
                     children: [
-                      if (isOwner)
-                        Image.network(
-                          widget.item.image,
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20))),
-                        )
-                      else
-                        const ColoredBox(
-                          color: cPlaceholder,
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: double.infinity,
-                            child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.visibility_off, color: cMuted, size: 20),
-                                  SizedBox(height: 4),
-                                  Text('Image hidden', style: TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+                      Image.network(
+                        widget.item.image,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20))),
+                      ),
                       Positioned(
                         top: 6, left: 6,
                         child: Container(
