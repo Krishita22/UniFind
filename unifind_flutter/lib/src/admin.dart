@@ -1227,6 +1227,143 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
   String? _selectedFoundId;
   bool _creating = false;
 
+  // ── View claims on an item ──
+  void _showItemDetail(AdminLostFoundItem item) {
+    final isLost = item.type == 'lost';
+    final typeColor = isLost ? _cLost : _cFound;
+    showGeneralDialog(
+      context: context, barrierDismissible: true, barrierLabel: 'Detail',
+      barrierColor: Colors.black.withValues(alpha: 0.45), transitionDuration: kMid,
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim, __, ___) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return Opacity(
+          opacity: curved.value,
+          child: Transform.scale(
+            scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
+            child: Center(
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 480, maxHeight: 620),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                  child: Material(color: Colors.transparent, child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    // ── Image header ──
+                    Stack(children: [
+                      Image.network(item.image, width: double.infinity, height: 150, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(height: 150, color: cPlaceholder, child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)))),
+                      Positioned(top: 10, left: 10, child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(color: typeColor, borderRadius: BorderRadius.circular(7)),
+                        child: Text(item.type.toUpperCase(), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.5)),
+                      )),
+                      Positioned(top: 8, right: 8, child: GestureDetector(
+                        onTap: () => Navigator.pop(ctx),
+                        child: Container(width: 30, height: 30, decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
+                          child: const Icon(Icons.close_rounded, color: Colors.white, size: 16)),
+                      )),
+                    ]),
+                    // ── Content ──
+                    Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(item.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.3)),
+                      const SizedBox(height: 8),
+                      // Info chips
+                      Wrap(spacing: 6, runSpacing: 4, children: [
+                        _DetailChip(Icons.category_outlined, item.category),
+                        _DetailChip(Icons.location_on_outlined, item.location),
+                        _DetailChip(Icons.access_time_rounded, formatDate(item.createdAt)),
+                      ]),
+                      const SizedBox(height: 12),
+                      // Description
+                      Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.55)),
+                      const SizedBox(height: 16),
+                      // ── Posted by ──
+                      Container(
+                        width: double.infinity, padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
+                        child: Row(children: [
+                          const Icon(Icons.person_outline_rounded, size: 16, color: cMuted),
+                          const SizedBox(width: 8),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(item.posterUsername, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText)),
+                            Text(item.posterEmail, style: const TextStyle(fontSize: 11, color: cMuted)),
+                          ])),
+                        ]),
+                      ),
+                      const SizedBox(height: 16),
+                      // ── Claims section ──
+                      Row(children: [
+                        Icon(Icons.volunteer_activism_outlined, size: 16, color: item.claims.isNotEmpty ? _cOrange : cMuted),
+                        const SizedBox(width: 6),
+                        Text('Claims (${item.claims.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
+                      ]),
+                      const SizedBox(height: 8),
+                      if (item.claims.isEmpty)
+                        const Text('No claims submitted.', style: TextStyle(fontSize: 12, color: cMuted))
+                      else
+                        ...item.claims.map((c) {
+                          final cColor = c.status == 'pending' ? _cOrange : c.status == 'approved' ? _cGreen : _cLost;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: cColor.withValues(alpha: 0.04), borderRadius: BorderRadius.circular(10), border: Border.all(color: cColor.withValues(alpha: 0.2))),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Row(children: [
+                                const Icon(Icons.person_outline_rounded, size: 13, color: cMuted),
+                                const SizedBox(width: 4),
+                                Expanded(child: Text(c.claimantEmail, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText))),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(color: cColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                                  child: Text(c.status.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: cColor)),
+                                ),
+                              ]),
+                              const SizedBox(height: 6),
+                              const Text('Proof:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cMuted)),
+                              const SizedBox(height: 2),
+                              Text(c.proofDetails, style: const TextStyle(fontSize: 12, color: cText, height: 1.5)),
+                              const SizedBox(height: 4),
+                              Text(formatDate(c.submittedAt), style: const TextStyle(fontSize: 10, color: cMuted)),
+                            ]),
+                          );
+                        }),
+                      // ── Select for matching button ──
+                      const SizedBox(height: 16),
+                      SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            if (isLost) {
+                              _selectedLostId = _selectedLostId == item.id ? null : item.id;
+                            } else {
+                              _selectedFoundId = _selectedFoundId == item.id ? null : item.id;
+                            }
+                          });
+                          Navigator.pop(ctx);
+                        },
+                        icon: Icon(
+                          (isLost ? _selectedLostId == item.id : _selectedFoundId == item.id) ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
+                          size: 16,
+                        ),
+                        label: Text(
+                          (isLost ? _selectedLostId == item.id : _selectedFoundId == item.id) ? 'Deselect for Matching' : 'Select for Matching',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: typeColor, side: BorderSide(color: typeColor),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      )),
+                    ]))),
+                  ])),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // ── Create match ──
   Future<void> _createMatch() async {
     if (_selectedLostId == null || _selectedFoundId == null) return;
@@ -1365,8 +1502,10 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                           itemBuilder: (_, i) {
                             final item = widget.lostItems[i];
                             final sel = _selectedLostId == item.id;
+                            final hasClaims = item.claims.isNotEmpty;
                             return GestureDetector(
-                              onTap: () => setState(() => _selectedLostId = sel ? null : item.id),
+                              onTap: () => _showItemDetail(item),
+                              onLongPress: () => setState(() => _selectedLostId = sel ? null : item.id),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -1386,7 +1525,17 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                     padding: const EdgeInsets.symmetric(vertical: 8),
                                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                       Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
+                                      Row(children: [
+                                        Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
+                                        if (hasClaims) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                            decoration: BoxDecoration(color: _cOrange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
+                                            child: Text('${item.claims.length} claim${item.claims.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cOrange)),
+                                          ),
+                                        ],
+                                      ]),
                                     ]),
                                   )),
                                   if (sel) const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: _cLost, size: 20)),
@@ -1420,8 +1569,10 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                           itemBuilder: (_, i) {
                             final item = widget.foundItems[i];
                             final sel = _selectedFoundId == item.id;
+                            final hasClaims = item.claims.isNotEmpty;
                             return GestureDetector(
-                              onTap: () => setState(() => _selectedFoundId = sel ? null : item.id),
+                              onTap: () => _showItemDetail(item),
+                              onLongPress: () => setState(() => _selectedFoundId = sel ? null : item.id),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
                                 margin: const EdgeInsets.only(bottom: 8),
@@ -1441,7 +1592,17 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                     padding: const EdgeInsets.symmetric(vertical: 8),
                                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                       Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
+                                      Row(children: [
+                                        Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
+                                        if (hasClaims) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                            decoration: BoxDecoration(color: _cOrange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
+                                            child: Text('${item.claims.length} claim${item.claims.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cOrange)),
+                                          ),
+                                        ],
+                                      ]),
                                     ]),
                                   )),
                                   if (sel) const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: _cFound, size: 20)),
@@ -1592,6 +1753,24 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                 ),
         ),
     ]);
+  }
+}
+
+class _DetailChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _DetailChip(this.icon, this.label);
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(7), border: Border.all(color: cBorder)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 11, color: cMuted),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cMuted)),
+      ]),
+    );
   }
 }
 

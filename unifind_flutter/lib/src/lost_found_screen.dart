@@ -340,10 +340,10 @@ void _showLostFoundPopup(
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              // Hint to use card buttons
+                              // Hint
                               Text(
                                 isLost
-                                    ? (matchSubmittedByMe ? 'You already submitted a match for this item.' : 'Close this popup and tap "Match" on the card to submit a match.')
+                                    ? 'If you found this item, post a "Found" listing and the admin will match them.'
                                     : (claimSubmittedByMe ? 'You already submitted a claim for this item.' : item.status.toLowerCase() == 'claimed' ? 'This item has already been claimed.' : 'Close this popup and tap "Claim" on the card to claim this item.'),
                                 style: const TextStyle(fontSize: 11, color: cMuted, fontStyle: FontStyle.italic),
                               ),
@@ -416,15 +416,10 @@ class _LostFoundCardState extends State<_LostFoundCard>
   late AnimationController _c;
   late Animation<double> _scale;
   bool _claiming = false;
-  bool _postingMatch = false;
   final _proofCtrl = TextEditingController();
   final _identCtrl = TextEditingController();
   final _lastSeenCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
-  final _foundWhereCtrl = TextEditingController();
-  final _foundWhenCtrl = TextEditingController();
-  final _foundDetailsCtrl = TextEditingController();
-  final _foundContactCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -441,10 +436,6 @@ class _LostFoundCardState extends State<_LostFoundCard>
     _identCtrl.dispose();
     _lastSeenCtrl.dispose();
     _contactCtrl.dispose();
-    _foundWhereCtrl.dispose();
-    _foundWhenCtrl.dispose();
-    _foundDetailsCtrl.dispose();
-    _foundContactCtrl.dispose();
     super.dispose();
   }
 
@@ -572,102 +563,6 @@ class _LostFoundCardState extends State<_LostFoundCard>
                     identifyingDetails: _identCtrl.text.trim(),
                     lastSeenContext: _lastSeenCtrl.text.trim(),
                     contactNote: _contactCtrl.text.trim(),
-                  ));
-                },
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
-  Future<FoundMatchInput?> _openFoundMatchSheet() async {
-    _foundWhereCtrl.clear();
-    _foundWhenCtrl.clear();
-    _foundDetailsCtrl.clear();
-    _foundContactCtrl.clear();
-    String? error;
-    return _openCenteredDialog<FoundMatchInput>((ctx, setModalState) {
-      return SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Match',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            Text('Submit a match request for "${widget.item.title}".',
-                style: const TextStyle(fontSize: 12, color: cMuted)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _foundWhereCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Where did you find it? *'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _foundWhenCtrl,
-              decoration: const InputDecoration(
-                labelText: 'When did you find it? *',
-                hintText: 'e.g. Today 2PM',
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _foundDetailsCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Matching details *',
-                hintText: 'Describe how this matches the lost item...',
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _foundContactCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Contact note'),
-            ),
-            if (error != null) ...[
-              const SizedBox(height: 8),
-              Text(error!,
-                  style: const TextStyle(color: cRedDark, fontSize: 12)),
-            ],
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: _AuthButton(
-                loading: false,
-                label: 'Submit Match',
-                onTap: () {
-                  final where = _foundWhereCtrl.text.trim();
-                  final when = _foundWhenCtrl.text.trim();
-                  final details = _foundDetailsCtrl.text.trim();
-                  if (where.isEmpty) {
-                    setModalState(() =>
-                        error = 'Please enter where you found it.');
-                    return;
-                  }
-                  if (when.isEmpty) {
-                    setModalState(() =>
-                        error = 'Please enter when you found it.');
-                    return;
-                  }
-                  if (details.isEmpty) {
-                    setModalState(() =>
-                        error = 'Please enter matching details.');
-                    return;
-                  }
-                  if (details.length < 8) {
-                    setModalState(() => error =
-                        'Matching details must be at least 8 characters.');
-                    return;
-                  }
-                  Navigator.of(ctx).pop(FoundMatchInput(
-                    foundLocation: where,
-                    foundWhen: when,
-                    matchDetails: details,
-                    contactNote: _foundContactCtrl.text.trim(),
                   ));
                 },
               ),
@@ -910,49 +805,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
                           ),
                         ),
                       ),
-                    if (isLost)
-                      SizedBox(
-                        height: 28,
-                        child: OutlinedButton.icon(
-                          onPressed: _postingMatch || isMatchSubmitted
-                              ? null
-                              : () async {
-                                  final input =
-                                      await _openFoundMatchSheet();
-                                  if (input == null) return;
-                                  setState(() => _postingMatch = true);
-                                  try {
-                                    await widget.onPostFoundMatch(input);
-                                  } finally {
-                                    if (mounted) {
-                                      setState(
-                                          () => _postingMatch = false);
-                                    }
-                                  }
-                                },
-                          icon: const Icon(
-                              Icons.add_circle_outline_rounded,
-                              size: 13),
-                          label: Text(
-                            isMatchSubmitted
-                                ? 'Submitted'
-                                : _postingMatch
-                                    ? 'Posting...'
-                                    : 'Match',
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10),
-                            side: BorderSide(
-                                color: const Color(0xFF27AE60)
-                                    .withValues(alpha: 0.35)),
-                            foregroundColor: const Color(0xFF27AE60),
-                            textStyle: const TextStyle(
-                                fontSize: 11, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ),
+                    // Lost items: no user action — admin matches them with found items
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
