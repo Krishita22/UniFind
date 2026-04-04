@@ -1405,6 +1405,28 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
     }
   }
 
+  Future<void> _unmatchItems(String matchId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Unmatch Items?', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: const Text('This will put both items back to active so they can be matched again.', style: TextStyle(color: cMuted)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Unmatch', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await adminUnmatch(matchId: matchId);
+      widget.onRefresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1558,46 +1580,46 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                                     child: Column(
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Image.network(pair.lostItem.image, width: 60, height: 60, fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: Colors.white10, child: const Icon(Icons.image, color: Colors.white30))),
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: Image.network(pair.lostItem.image, width: 70, height: 70, fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(width: 70, height: 70, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted))),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(pair.lostItem.title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-                                        Text('Lost · ${pair.lostItem.category}', style: const TextStyle(fontSize: 9, color: Colors.white54), textAlign: TextAlign.center),
+                                        const SizedBox(height: 6),
+                                        Text(pair.lostItem.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                                        Text('Lost · ${pair.lostItem.category}', style: const TextStyle(fontSize: 10, color: cMuted), textAlign: TextAlign.center),
                                       ],
                                     ),
                                   ),
                                   // Arrow
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    child: Icon(Icons.compare_arrows_rounded, color: isResolved ? const Color(0xFF27AE60) : const Color(0xFFE67E22), size: 24),
+                                    child: Icon(Icons.compare_arrows_rounded, color: isResolved ? const Color(0xFF27AE60) : const Color(0xFFE67E22), size: 28),
                                   ),
                                   // Found item
                                   Expanded(
                                     child: Column(
                                       children: [
                                         ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Image.network(pair.foundItem.image, width: 60, height: 60, fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: Colors.white10, child: const Icon(Icons.image, color: Colors.white30))),
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: Image.network(pair.foundItem.image, width: 70, height: 70, fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(width: 70, height: 70, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted))),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(pair.foundItem.title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-                                        Text('Found · ${pair.foundItem.category}', style: const TextStyle(fontSize: 9, color: Colors.white54), textAlign: TextAlign.center),
+                                        const SizedBox(height: 6),
+                                        Text(pair.foundItem.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                                        Text('Found · ${pair.foundItem.category}', style: const TextStyle(fontSize: 10, color: cMuted), textAlign: TextAlign.center),
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
+                                  // Status badge
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: isResolved ? const Color(0xFF27AE60).withValues(alpha: 0.2) : const Color(0xFFE67E22).withValues(alpha: 0.2),
+                                      color: isResolved ? const Color(0xFF27AE60).withValues(alpha: 0.15) : const Color(0xFFE67E22).withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -1605,7 +1627,23 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                                       style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: isResolved ? const Color(0xFF27AE60) : const Color(0xFFE67E22), letterSpacing: 0.5),
                                     ),
                                   ),
-                                  if (!isResolved)
+                                  const Spacer(),
+                                  if (!isResolved) ...[
+                                    // Unmatch button
+                                    OutlinedButton.icon(
+                                      onPressed: () => _unmatchItems(pair.matchId),
+                                      icon: const Icon(Icons.link_off_rounded, size: 14),
+                                      label: const Text('Unmatch'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: cRedDark,
+                                        side: const BorderSide(color: cRedDark),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Resolve button
                                     ElevatedButton.icon(
                                       onPressed: () => _resolveMatch(pair.matchId),
                                       icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
@@ -1613,11 +1651,12 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: const Color(0xFF27AE60),
                                         foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                         textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                       ),
                                     ),
+                                  ],
                                 ],
                               ),
                             ],
