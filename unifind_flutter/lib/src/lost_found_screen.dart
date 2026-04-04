@@ -749,8 +749,8 @@ class _LostFoundCardState extends State<_LostFoundCard>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    // Action button
-                    if (!isLost)
+                    // Action button — only non-owners can claim found items
+                    if (!isLost && !isOwner)
                       SizedBox(
                         height: 28,
                         child: OutlinedButton.icon(
