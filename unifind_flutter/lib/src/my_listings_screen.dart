@@ -417,6 +417,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               subtitle: '${i.category} · ${i.location}',
                               trailing: '\$${i.price.toStringAsFixed(0)}',
                               icon: Icons.storefront_rounded,
+                              status: i.status,
+                              imageUrl: i.image,
                               onTap: () => _editMarketplace(i),
                             )).toList()
                         : widget.lostFoundItems.map((i) => _MyListingTile(
@@ -426,6 +428,8 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               icon: i.type == LostFoundType.lost ? Icons.report_problem_outlined : Icons.check_circle_outline_rounded,
                               trailingColor: i.type == LostFoundType.lost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60),
                               trailingBgColor: i.type == LostFoundType.lost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0),
+                              status: i.status,
+                              imageUrl: i.image,
                               onTap: () => _editLostFound(i),
                             )).toList(),
                   ),
@@ -442,6 +446,8 @@ class _MyListingTile extends StatelessWidget {
   final Color trailingColor;
   final Color trailingBgColor;
   final VoidCallback? onTap;
+  final String status;
+  final String? imageUrl;
   const _MyListingTile({
     required this.title,
     required this.subtitle,
@@ -450,7 +456,39 @@ class _MyListingTile extends StatelessWidget {
     this.trailingColor = cRed,
     this.trailingBgColor = cRedLight,
     this.onTap,
+    this.status = 'active',
+    this.imageUrl,
   });
+
+  Color get _statusColor {
+    switch (status.toLowerCase()) {
+      case 'pending': return const Color(0xFFE67E22);
+      case 'active': case 'approved': return const Color(0xFF27AE60);
+      case 'denied': case 'rejected': return const Color(0xFFE74C3C);
+      case 'claimed': return const Color(0xFF2980B9);
+      default: return cMuted;
+    }
+  }
+
+  Color get _statusBg {
+    switch (status.toLowerCase()) {
+      case 'pending': return const Color(0xFFFEF3E2);
+      case 'active': case 'approved': return const Color(0xFFECF9F0);
+      case 'denied': case 'rejected': return const Color(0xFFFDECEC);
+      case 'claimed': return const Color(0xFFEBF5FB);
+      default: return cRedLight;
+    }
+  }
+
+  String get _statusLabel {
+    switch (status.toLowerCase()) {
+      case 'active': return 'Approved';
+      case 'pending': return 'Pending';
+      case 'denied': return 'Denied';
+      case 'claimed': return 'Claimed';
+      default: return status;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -468,13 +506,24 @@ class _MyListingTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: cRed, size: 20),
+            // Thumbnail
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? Image.network(imageUrl!, width: 52, height: 52, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 52, height: 52,
+                        decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10)),
+                        child: Icon(icon, color: cRed, size: 20),
+                      ),
+                    )
+                  : Container(
+                      width: 52, height: 52,
+                      decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10)),
+                      child: Icon(icon, color: cRed, size: 20),
+                    ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,6 +531,13 @@ class _MyListingTile extends StatelessWidget {
                   Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
                   const SizedBox(height: 2),
                   Text(subtitle, style: const TextStyle(fontSize: 12, color: cMuted)),
+                  const SizedBox(height: 4),
+                  // Status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: _statusBg, borderRadius: BorderRadius.circular(6)),
+                    child: Text(_statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor)),
+                  ),
                 ],
               ),
             ),
