@@ -618,78 +618,40 @@ class _UniFindAppState extends State<UniFindApp> {
     MarketplaceItem item,
     MarketplaceUpdateInput update,
   ) async {
-    try {
-      await updateListing(
-        id: item.id,
-        title: update.title,
-        description: update.description,
-        price: update.price,
-        category: update.category,
-        condition: update.condition,
-        location: update.location,
-        email: _email,
-        imageUrl: update.imageUrl,
-      );
-      setState(() {
-        _market.removeWhere((m) => m.id == item.id);
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Listing updated and sent for admin approval.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      await _loadListings();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update: $e'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    await updateListing(
+      id: item.id,
+      title: update.title,
+      description: update.description,
+      price: update.price,
+      category: update.category,
+      condition: update.condition,
+      location: update.location,
+      email: _email,
+      imageUrl: update.imageUrl,
+    );
+    setState(() {
+      _market.removeWhere((m) => m.id == item.id);
+    });
+    await _loadListings();
   }
 
   Future<void> _editLostFoundItem(
     LostFoundItem item,
     LostFoundUpdateInput update,
   ) async {
-    try {
-      await updateLostFoundItem(
-        id: item.id,
-        title: update.title,
-        description: update.description,
-        category: update.category,
-        location: update.location,
-        email: _email,
-        imageUrl: update.imageUrl,
-      );
-      setState(() {
-        _lostFound.removeWhere((m) => m.id == item.id);
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Post updated and sent for admin approval.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-      await _loadLostFound();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update: $e'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    await updateLostFoundItem(
+      id: item.id,
+      title: update.title,
+      description: update.description,
+      category: update.category,
+      location: update.location,
+      email: _email,
+      imageUrl: update.imageUrl,
+    );
+    setState(() {
+      _lostFound.removeWhere((m) => m.id == item.id);
+    });
+    await _loadLostFound();
   }
 
   void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
