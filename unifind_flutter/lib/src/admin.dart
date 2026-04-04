@@ -2,7 +2,7 @@ part of '../main.dart';
 
 // ─── ADMIN DATA MODELS ────────────────────────────────────────────────────────
 
-enum AdminTab { dashboard, listings, lostFound, matching, users, reports }
+enum AdminTab { dashboard, listings, lostFound, users, reports }
 
 enum UserRole { student, fac, admin, unknown }
 
@@ -584,8 +584,8 @@ class _AdminAppState extends State<AdminApp> {
                 pendingListings: _pending, activeListings: _active,
                 onRefresh: _loadAll, initialShowActive: _listingInitialShowActive,
               ),
-              _AdminLostFoundPanel(items: _lf, onRefresh: _loadAll),
-              _AdminMatchingPanel(
+              _AdminLostFoundPanel(
+                items: _lf,
                 lostItems: _lf.where((i) => i.type == 'lost' && i.status == 'active').toList(),
                 foundItems: _lf.where((i) => i.type == 'found' && i.status == 'active').toList(),
                 matchedPairs: _matches,
@@ -604,7 +604,6 @@ class _AdminAppState extends State<AdminApp> {
           _dest(Icons.dashboard_rounded, 'Dashboard'),
           _dest(Icons.storefront_outlined, 'Listings', badge: _stats.pendingApprovals > 0 ? '${_stats.pendingApprovals}' : null),
           _dest(Icons.search_rounded, 'Lost/Found'),
-          _dest(Icons.compare_arrows_rounded, 'Match'),
           _dest(Icons.people_outline_rounded, 'Users'),
           _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
         ],
@@ -725,13 +724,11 @@ class _AdminDashboard extends StatelessWidget {
                   Expanded(
                     child: stats.recentActivity.isEmpty
                         ? _AdminEmptyState(message: 'No recent activity', icon: Icons.history_rounded)
-                        : Scrollbar(
-                            thumbVisibility: true,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.only(right: 25),
+                        : ListView.builder(
+                              primary: false,
+                              padding: const EdgeInsets.only(right: 12),
                               itemCount: stats.recentActivity.length,
                               itemBuilder: (context, index) => _ActivityTile(entry: stats.recentActivity[index]),
-                            ),
                           ),
                   ),
                 ],
@@ -1208,186 +1205,35 @@ class _PendingListingTile extends StatelessWidget {
 
 class _AdminLostFoundPanel extends StatefulWidget {
   final List<AdminLostFoundItem> items;
+  final List<AdminLostFoundItem> lostItems;
+  final List<AdminLostFoundItem> foundItems;
+  final List<MatchedPair> matchedPairs;
   final VoidCallback onRefresh;
-  const _AdminLostFoundPanel({required this.items, required this.onRefresh});
+  const _AdminLostFoundPanel({required this.items, required this.lostItems, required this.foundItems, required this.matchedPairs, required this.onRefresh});
 
   @override
   State<_AdminLostFoundPanel> createState() => _AdminLostFoundPanelState();
 }
 
+// Colors
+const _cLost = Color(0xFFE74C3C);
+const _cFound = Color(0xFF2980B9);
+const _cGreen = Color(0xFF27AE60);
+const _cOrange = Color(0xFFE67E22);
+
 class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
-  String _filter = 'All';
-
-  List<AdminLostFoundItem> get _filtered {
-    if (_filter == 'All')      return widget.items;
-    if (_filter == 'Resolved') return widget.items.where((i) => i.status == 'resolved').toList();
-    return widget.items.where((i) => i.type == _filter.toLowerCase() && i.status != 'resolved').toList();
-  }
-
-  Future<void> _openDetail(AdminLostFoundItem item) async {
-    bool loading = false; String? error;
-    await showGeneralDialog(
-      context: context, barrierDismissible: true, barrierLabel: 'LF',
-      barrierColor: Colors.black.withValues(alpha: 0.4), transitionDuration: kMid,
-      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-      transitionBuilder: (ctx, anim, __, ___) => Opacity(
-        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
-        child: StatefulBuilder(builder: (ctx, setS) => Center(
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
-              child: Material(color: Colors.transparent, child: SingleChildScrollView(padding: const EdgeInsets.all(20),
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(child: Text(item.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cText))),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                  ]),
-                  Text('${item.type.toUpperCase()} · ${item.category} · ${item.location}', style: const TextStyle(fontSize: 12, color: cMuted)),
-                  Text('By ${item.posterUsername} (${item.posterEmail})', style: const TextStyle(fontSize: 12, color: cMuted)),
-                  const SizedBox(height: 12),
-                  Text(item.description, style: const TextStyle(fontSize: 13, color: cText, height: 1.6)),
-                  const SizedBox(height: 16),
-                  _AdminLabel('Claims (${item.claims.length})'),
-                  const SizedBox(height: 8),
-                  if (item.claims.isEmpty) const Text('No claims.', style: TextStyle(fontSize: 12, color: cMuted))
-                  else ...item.claims.map((c) => _ClaimMatchTile(email: c.claimantEmail, details: c.proofDetails, status: c.status, date: c.submittedAt)),
-                  const SizedBox(height: 12),
-                  _AdminLabel('Matches (${item.matches.length})'),
-                  const SizedBox(height: 8),
-                  if (item.matches.isEmpty) const Text('No matches.', style: TextStyle(fontSize: 12, color: cMuted))
-                  else ...item.matches.map((m) => _ClaimMatchTile(email: m.submitterEmail, details: '${m.matchDetails}\nFound at: ${m.foundLocation}', status: m.status, date: m.submittedAt)),
-                  if (error != null) ...[const SizedBox(height: 8), Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12))],
-                  if (item.status != 'resolved') ...[
-                    const SizedBox(height: 16),
-                    SizedBox(width: double.infinity, child: ElevatedButton.icon(
-                      icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.check_circle_outline_rounded, size: 16),
-                      label: const Text('Mark as Resolved'),
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
-                      onPressed: loading ? null : () async {
-                        setS(() { loading = true; error = null; });
-                        try {
-                          await adminMarkLostFoundResolved(itemId: item.id);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          widget.onRefresh();
-                        } catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                      },
-                    )),
-                  ],
-                ]),
-              )),
-            ),
-          ),
-        )),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final items = _filtered;
-    return Column(children: [
-      const Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Align(alignment: Alignment.centerLeft, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Lost & Found Oversight', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-          Text('Review claims, matches, and resolve cases', style: TextStyle(fontSize: 12, color: cMuted)),
-        ])),
-      ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-          for (final f in ['All', 'Lost', 'Found', 'Resolved'])
-            Padding(padding: const EdgeInsets.only(right: 8), child: _Chip(label: f, selected: _filter == f, onTap: () => setState(() => _filter = f))),
-        ])),
-      ),
-      Expanded(
-        child: items.isEmpty
-            ? _AdminEmptyState(message: 'No items here', icon: Icons.search_off_rounded)
-            : ListView.builder(padding: const EdgeInsets.all(12), itemCount: items.length, itemBuilder: (_, i) {
-                final item = items[i];
-                final isLost = item.type == 'lost';
-                final typeColor = item.status == 'resolved' ? const Color(0xFF27AE60) : isLost ? const Color(0xFFE74C3C) : const Color(0xFF2980B9);
-                return InkWell(
-                  onTap: () => _openDetail(item), borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
-                    child: Row(children: [
-                      ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(item.image, width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 64, height: 64, color: cPlaceholder, child: const Icon(Icons.image_not_supported, color: cMuted, size: 20)))),
-                      const SizedBox(width: 12),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Expanded(child: Text(item.title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                          Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(7)), child: Text(item.status == 'resolved' ? 'RESOLVED' : item.type.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor))),
-                        ]),
-                        const SizedBox(height: 3),
-                        Text(item.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: cMuted)),
-                        const SizedBox(height: 4),
-                        Text('${item.claims.length} claims · ${item.matches.length} matches · ${item.posterUsername}', style: const TextStyle(fontSize: 11, color: cMuted)),
-                      ])),
-                      const Icon(Icons.chevron_right_rounded, color: cMuted),
-                    ]),
-                  ),
-                );
-              }),
-      ),
-    ]);
-  }
-}
-
-class _ClaimMatchTile extends StatelessWidget {
-  final String email, details, status;
-  final DateTime date;
-  const _ClaimMatchTile({required this.email, required this.details, required this.status, required this.date});
-
-  @override
-  Widget build(BuildContext context) {
-    final statusColor = status == 'pending' ? const Color(0xFFE67E22) : status == 'approved' ? const Color(0xFF27AE60) : cRedDark;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text(email, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText)),
-          const Spacer(),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2), decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)), child: Text(status.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: statusColor))),
-        ]),
-        const SizedBox(height: 4),
-        Text(details, style: const TextStyle(fontSize: 12, color: cMuted, height: 1.5)),
-        const SizedBox(height: 4),
-        Text(formatDate(date), style: const TextStyle(fontSize: 11, color: cMuted)),
-      ]),
-    );
-  }
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// MATCHING PANEL
-// ═════════════════════════════════════════════════════════════════════════════
-
-class _AdminMatchingPanel extends StatefulWidget {
-  final List<AdminLostFoundItem> lostItems;
-  final List<AdminLostFoundItem> foundItems;
-  final List<MatchedPair> matchedPairs;
-  final VoidCallback onRefresh;
-  const _AdminMatchingPanel({required this.lostItems, required this.foundItems, required this.matchedPairs, required this.onRefresh});
-  @override
-  State<_AdminMatchingPanel> createState() => _AdminMatchingPanelState();
-}
-
-class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
+  bool _showMatched = false; // false = Items view, true = Matched view
   String? _selectedLostId;
   String? _selectedFoundId;
   bool _creating = false;
-  bool _showMatched = false;
 
+  // ── Create match ──
   Future<void> _createMatch() async {
     if (_selectedLostId == null || _selectedFoundId == null) return;
     setState(() => _creating = true);
     try {
       await adminCreateMatch(lostItemId: _selectedLostId!, foundItemId: _selectedFoundId!);
-      setState(() { _selectedLostId = null; _selectedFoundId = null; });
+      setState(() { _selectedLostId = null; _selectedFoundId = null; _showMatched = true; });
       widget.onRefresh();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
@@ -1396,22 +1242,14 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
     }
   }
 
-  Future<void> _resolveMatch(String matchId) async {
-    try {
-      await adminResolveMatch(matchId: matchId);
-      widget.onRefresh();
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
-    }
-  }
-
-  Future<void> _unmatchItems(String matchId) async {
+  // ── Unmatch ──
+  Future<void> _unmatch(String matchId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Unmatch Items?', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('This will put both items back to active so they can be matched again.', style: TextStyle(color: cMuted)),
+        content: const Text('Both items go back to active and can be matched again.', style: TextStyle(color: cMuted)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Unmatch', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700))),
@@ -1427,297 +1265,333 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
     }
   }
 
+  // ── Resolve ──
+  Future<void> _resolve(String matchId) async {
+    try {
+      await adminResolveMatch(matchId: matchId);
+      widget.onRefresh();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              const Icon(Icons.compare_arrows_rounded, color: cRed, size: 20),
-              const SizedBox(width: 8),
-              const Text('Match Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cText)),
-              const Spacer(),
-              // Toggle
-              GestureDetector(
-                onTap: () => setState(() => _showMatched = false),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: !_showMatched ? cRed : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('Match Maker', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: !_showMatched ? Colors.white : cMuted)),
-                ),
-              ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => setState(() => _showMatched = true),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _showMatched ? cRed : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text('Matched (${widget.matchedPairs.length})', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _showMatched ? Colors.white : cMuted)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+    return Column(children: [
+      // ── Header ──
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Row(children: [
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Lost & Found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+            Text('Select one from each side, then match', style: TextStyle(fontSize: 12, color: cMuted)),
+          ])),
+        ]),
+      ),
 
-          if (!_showMatched) ...[
-            // ── MATCH MAKER ──────────────────────────────────────────
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // LEFT: Lost items
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: const Color(0xFFE74C3C).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                          child: const Text('LOST ITEMS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFFE74C3C), letterSpacing: 1)),
-                        ),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: widget.lostItems.isEmpty
-                              ? const Center(child: Text('No active lost items', style: TextStyle(color: cMuted, fontSize: 12)))
-                              : ListView.builder(
-                                  itemCount: widget.lostItems.length,
-                                  itemBuilder: (_, i) => _MatchItemCard(
-                                    item: widget.lostItems[i],
-                                    selected: _selectedLostId == widget.lostItems[i].id,
-                                    accentColor: const Color(0xFFE74C3C),
-                                    onTap: () => setState(() => _selectedLostId = _selectedLostId == widget.lostItems[i].id ? null : widget.lostItems[i].id),
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // RIGHT: Found items
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: const Color(0xFF27AE60).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-                          child: const Text('FOUND ITEMS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF27AE60), letterSpacing: 1)),
-                        ),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: widget.foundItems.isEmpty
-                              ? const Center(child: Text('No active found items', style: TextStyle(color: cMuted, fontSize: 12)))
-                              : ListView.builder(
-                                  itemCount: widget.foundItems.length,
-                                  itemBuilder: (_, i) => _MatchItemCard(
-                                    item: widget.foundItems[i],
-                                    selected: _selectedFoundId == widget.foundItems[i].id,
-                                    accentColor: const Color(0xFF27AE60),
-                                    onTap: () => setState(() => _selectedFoundId = _selectedFoundId == widget.foundItems[i].id ? null : widget.foundItems[i].id),
-                                  ),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+      // ── Two-tab toggle: Items | Matched ──
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Row(children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _showMatched = false),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: !_showMatched ? cRed : cSurface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: !_showMatched ? cRed : cBorder),
+                ),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.compare_arrows_rounded, size: 16, color: !_showMatched ? Colors.white : cMuted),
+                  const SizedBox(width: 6),
+                  Text('Match Items', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: !_showMatched ? Colors.white : cMuted)),
+                ]),
               ),
             ),
-            const SizedBox(height: 12),
-            // Create Match button
-            SizedBox(
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _showMatched = true),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: _showMatched ? cRed : cSurface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: _showMatched ? cRed : cBorder),
+                ),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.link_rounded, size: 16, color: _showMatched ? Colors.white : cMuted),
+                  const SizedBox(width: 6),
+                  Text('Matched (${widget.matchedPairs.length})', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _showMatched ? Colors.white : cMuted)),
+                ]),
+              ),
+            ),
+          ),
+        ]),
+      ),
+
+      // ═══════════════════════════════════════════════════════════
+      // ITEMS VIEW — Lost on left, Found on right, side by side
+      // Only admin-approved (active) items appear here
+      // ═══════════════════════════════════════════════════════════
+      if (!_showMatched) ...[
+        // Side-by-side columns
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── LEFT: Lost items ──
+              Expanded(child: Column(children: [
+                Container(
+                  width: double.infinity, margin: const EdgeInsets.fromLTRB(12, 0, 4, 6),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(color: _cLost.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.search_off_rounded, size: 14, color: _cLost),
+                    const SizedBox(width: 4),
+                    Text('LOST (${widget.lostItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cLost, letterSpacing: 0.5)),
+                  ]),
+                ),
+                Expanded(
+                  child: widget.lostItems.isEmpty
+                      ? const Center(child: Text('No approved\nlost items', textAlign: TextAlign.center, style: TextStyle(color: cMuted, fontSize: 11)))
+                      : ListView.builder(
+                          primary: false,
+                          padding: const EdgeInsets.fromLTRB(12, 0, 4, 12),
+                          itemCount: widget.lostItems.length,
+                          itemBuilder: (_, i) {
+                            final item = widget.lostItems[i];
+                            final sel = _selectedLostId == item.id;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedLostId = sel ? null : item.id),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: sel ? _cLost.withValues(alpha: 0.08) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: sel ? _cLost : cBorder, width: sel ? 2 : 1),
+                                ),
+                                child: Row(children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                                    child: Image.network(item.image, width: 60, height: 60, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 20))),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
+                                    ]),
+                                  )),
+                                  if (sel) const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: _cLost, size: 20)),
+                                ]),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ])),
+
+              // ── RIGHT: Found items ──
+              Expanded(child: Column(children: [
+                Container(
+                  width: double.infinity, margin: const EdgeInsets.fromLTRB(4, 0, 12, 6),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  decoration: BoxDecoration(color: _cFound.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.inventory_2_outlined, size: 14, color: _cFound),
+                    const SizedBox(width: 4),
+                    Text('FOUND (${widget.foundItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cFound, letterSpacing: 0.5)),
+                  ]),
+                ),
+                Expanded(
+                  child: widget.foundItems.isEmpty
+                      ? const Center(child: Text('No approved\nfound items', textAlign: TextAlign.center, style: TextStyle(color: cMuted, fontSize: 11)))
+                      : ListView.builder(
+                          primary: false,
+                          padding: const EdgeInsets.fromLTRB(4, 0, 12, 12),
+                          itemCount: widget.foundItems.length,
+                          itemBuilder: (_, i) {
+                            final item = widget.foundItems[i];
+                            final sel = _selectedFoundId == item.id;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedFoundId = sel ? null : item.id),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: sel ? _cFound.withValues(alpha: 0.08) : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: sel ? _cFound : cBorder, width: sel ? 2 : 1),
+                                ),
+                                child: Row(children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                                    child: Image.network(item.image, width: 60, height: 60, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 20))),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
+                                    ]),
+                                  )),
+                                  if (sel) const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: _cFound, size: 20)),
+                                ]),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ])),
+            ],
+          ),
+        ),
+
+        // Match button (shows when both selected)
+        if (_selectedLostId != null && _selectedFoundId != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: (_selectedLostId != null && _selectedFoundId != null && !_creating) ? _createMatch : null,
+                onPressed: _creating ? null : _createMatch,
                 icon: _creating
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.compare_arrows_rounded, size: 18),
-                label: Text(_creating ? 'Creating...' : 'Create Match'),
+                label: Text(_creating ? 'Matching...' : 'Match These Items'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF27AE60),
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: cBorder,
-                  disabledForegroundColor: cMuted,
+                  backgroundColor: _cGreen, foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
-          ] else ...[
-            // ── MATCHED PAIRS ────────────────────────────────────────
-            Expanded(
-              child: widget.matchedPairs.isEmpty
-                  ? const Center(child: Text('No matched items yet', style: TextStyle(color: cMuted, fontSize: 13)))
-                  : ListView.builder(
-                      itemCount: widget.matchedPairs.length,
-                      itemBuilder: (_, i) {
-                        final pair = widget.matchedPairs[i];
-                        final isResolved = pair.status.toLowerCase() == 'resolved';
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: cSurface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: cBorder),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  // Lost item
-                                  Expanded(
-                                    child: Column(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(10),
-                                          child: Image.network(pair.lostItem.image, width: 70, height: 70, fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Container(width: 70, height: 70, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted))),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(pair.lostItem.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-                                        Text('Lost · ${pair.lostItem.category}', style: const TextStyle(fontSize: 10, color: cMuted), textAlign: TextAlign.center),
-                                      ],
-                                    ),
-                                  ),
-                                  // Arrow
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    child: Icon(Icons.compare_arrows_rounded, color: isResolved ? const Color(0xFF27AE60) : const Color(0xFFE67E22), size: 28),
-                                  ),
-                                  // Found item
-                                  Expanded(
-                                    child: Column(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(10),
-                                          child: Image.network(pair.foundItem.image, width: 70, height: 70, fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => Container(width: 70, height: 70, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted))),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(pair.foundItem.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
-                                        Text('Found · ${pair.foundItem.category}', style: const TextStyle(fontSize: 10, color: cMuted), textAlign: TextAlign.center),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  // Status badge
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: isResolved ? const Color(0xFF27AE60).withValues(alpha: 0.15) : const Color(0xFFE67E22).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      isResolved ? 'RESOLVED' : 'MATCHED',
-                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: isResolved ? const Color(0xFF27AE60) : const Color(0xFFE67E22), letterSpacing: 0.5),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  if (!isResolved) ...[
-                                    // Unmatch button
-                                    OutlinedButton.icon(
-                                      onPressed: () => _unmatchItems(pair.matchId),
-                                      icon: const Icon(Icons.link_off_rounded, size: 14),
-                                      label: const Text('Unmatch'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: cRedDark,
-                                        side: const BorderSide(color: cRedDark),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // Resolve button
-                                    ElevatedButton.icon(
-                                      onPressed: () => _resolveMatch(pair.matchId),
-                                      icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
-                                      label: const Text('Resolve'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF27AE60),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
+          ),
+      ],
 
-class _MatchItemCard extends StatelessWidget {
-  final AdminLostFoundItem item;
-  final bool selected;
-  final Color accentColor;
-  final VoidCallback onTap;
-  const _MatchItemCard({required this.item, required this.selected, required this.accentColor, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: selected ? accentColor.withValues(alpha: 0.1) : cSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? accentColor : cBorder, width: selected ? 2 : 1),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
+      // ═══════════════════════════════════════════════════════════
+      // MATCHED VIEW — matched pairs with resolve / unmatch
+      // ═══════════════════════════════════════════════════════════
+      if (_showMatched)
+        Expanded(
+          child: widget.matchedPairs.isEmpty
+              ? const _AdminEmptyState(message: 'No matched pairs yet', icon: Icons.link_off_rounded)
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: widget.matchedPairs.length,
+                  itemBuilder: (_, i) {
+                    final pair = widget.matchedPairs[i];
+                    final isResolved = pair.status.toLowerCase() == 'resolved';
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isResolved ? _cGreen.withValues(alpha: 0.3) : _cOrange.withValues(alpha: 0.3)),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+                      ),
+                      child: Column(children: [
+                        // Pair images row
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+                          child: Row(children: [
+                            // Lost side
+                            Expanded(child: Column(children: [
+                              ClipRRect(borderRadius: BorderRadius.circular(12),
+                                child: Image.network(pair.lostItem.image, width: 80, height: 80, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(width: 80, height: 80, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted)))),
+                              const SizedBox(height: 6),
+                              Text(pair.lostItem.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                              Container(
+                                margin: const EdgeInsets.only(top: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: _cLost.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(5)),
+                                child: Text('LOST · ${pair.lostItem.category}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cLost)),
+                              ),
+                            ])),
+                            // Arrow
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Column(children: [
+                                Icon(Icons.compare_arrows_rounded, color: isResolved ? _cGreen : _cOrange, size: 28),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: (isResolved ? _cGreen : _cOrange).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(isResolved ? 'RESOLVED' : 'MATCHED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: isResolved ? _cGreen : _cOrange, letterSpacing: 0.5)),
+                                ),
+                              ]),
+                            ),
+                            // Found side
+                            Expanded(child: Column(children: [
+                              ClipRRect(borderRadius: BorderRadius.circular(12),
+                                child: Image.network(pair.foundItem.image, width: 80, height: 80, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(width: 80, height: 80, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted)))),
+                              const SizedBox(height: 6),
+                              Text(pair.foundItem.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                              Container(
+                                margin: const EdgeInsets.only(top: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: _cFound.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(5)),
+                                child: Text('FOUND · ${pair.foundItem.category}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cFound)),
+                              ),
+                            ])),
+                          ]),
+                        ),
+                        // Action buttons
+                        if (!isResolved)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                            child: Row(children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _unmatch(pair.matchId),
+                                  icon: const Icon(Icons.link_off_rounded, size: 14),
+                                  label: const Text('Unmatch'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _resolve(pair.matchId),
+                                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
+                                  label: const Text('Resolve'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _cGreen, foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
+                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                ),
+                              ),
+                            ]),
+                          )
+                        else
+                          const SizedBox(height: 14),
+                      ]),
+                    );
+                  },
+                ),
         ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(item.image, width: 56, height: 56, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(width: 56, height: 56, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 22))),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Text(item.category, style: const TextStyle(fontSize: 11, color: cMuted)),
-                  Text(item.location, style: const TextStyle(fontSize: 10, color: cMuted)),
-                ],
-              ),
-            ),
-            if (selected) Icon(Icons.check_circle_rounded, color: accentColor, size: 20),
-          ],
-        ),
-      ),
-    );
+    ]);
   }
 }
 
