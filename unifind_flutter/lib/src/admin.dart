@@ -1328,31 +1328,55 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                         }),
                       // ── Select for matching button ──
                       const SizedBox(height: 16),
-                      SizedBox(width: double.infinity, child: OutlinedButton.icon(
-                        onPressed: () {
-                          setState(() {
-                            if (isLost) {
-                              _selectedLostId = _selectedLostId == item.id ? null : item.id;
-                            } else {
-                              _selectedFoundId = _selectedFoundId == item.id ? null : item.id;
+                      Row(children: [
+                        // Select for matching
+                        Expanded(child: OutlinedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              if (isLost) {
+                                _selectedLostId = _selectedLostId == item.id ? null : item.id;
+                              } else {
+                                _selectedFoundId = _selectedFoundId == item.id ? null : item.id;
+                              }
+                            });
+                            Navigator.pop(ctx);
+                          },
+                          icon: Icon(
+                            (isLost ? _selectedLostId == item.id : _selectedFoundId == item.id) ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
+                            size: 16,
+                          ),
+                          label: Text(
+                            (isLost ? _selectedLostId == item.id : _selectedFoundId == item.id) ? 'Deselect' : 'Select to Match',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: typeColor, side: BorderSide(color: typeColor),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        )),
+                        const SizedBox(width: 10),
+                        // Resolve directly
+                        Expanded(child: ElevatedButton.icon(
+                          onPressed: () async {
+                            try {
+                              await adminMarkLostFoundResolved(itemId: item.id);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              widget.onRefresh();
+                            } catch (e) {
+                              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
                             }
-                          });
-                          Navigator.pop(ctx);
-                        },
-                        icon: Icon(
-                          (isLost ? _selectedLostId == item.id : _selectedFoundId == item.id) ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
-                          size: 16,
-                        ),
-                        label: Text(
-                          (isLost ? _selectedLostId == item.id : _selectedFoundId == item.id) ? 'Deselect for Matching' : 'Select for Matching',
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: typeColor, side: BorderSide(color: typeColor),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                      )),
+                          },
+                          icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                          label: const Text('Resolve'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _cGreen, foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        )),
+                      ]),
                     ]))),
                   ])),
                 ),
