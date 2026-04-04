@@ -233,9 +233,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 TextField(controller: descCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: [...lostFoundCategories, ...categories].contains(category) ? category : null,
+                  value: category.isEmpty ? null : category,
                   decoration: const InputDecoration(labelText: 'Category'),
-                  items: {...lostFoundCategories, ...categories}.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  items: {category, ...lostFoundCategories, ...categories}.where((c) => c.isNotEmpty).map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                   onChanged: (v) => setDialogState(() => category = v ?? category),
                 ),
                 const SizedBox(height: 8),
