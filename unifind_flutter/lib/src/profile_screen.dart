@@ -227,6 +227,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
             MaterialPageRoute(builder: (_) => const DocumentationScreen()),
           ),
         ),
+        _ProfileActionTile(
+          icon: Icons.gavel_rounded,
+          label: 'Terms & Conditions',
+          subtitle: 'Usage policy and community rules',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen()),
+          ),
+        ),
+        _ProfileActionTile(
+          icon: Icons.privacy_tip_outlined,
+          label: 'Privacy Policy',
+          subtitle: 'How we handle your data',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen(initialTab: 1)),
+          ),
+        ),
         const SizedBox(height: 20),
 
         // ── Session section ─────────────────────────────────────────────

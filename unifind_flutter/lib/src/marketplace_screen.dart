@@ -213,7 +213,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       padding: const EdgeInsets.all(12),
                       itemCount: filtered.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, childAspectRatio: 1.1,
+                        crossAxisCount: 2, childAspectRatio: 1.35,
                         crossAxisSpacing: 8, mainAxisSpacing: 8,
                       ),
                       itemBuilder: (ctx, i) => _MarketCard(
@@ -598,14 +598,16 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
             width: _widthAnim.value * 240,
             child: OverflowBox(maxWidth: 240, alignment: Alignment.topLeft, child: child),
           ),
-          child: Container(
-            width: 240,
-            // Only show the right border while the panel is actually open
-            decoration: BoxDecoration(
-              color: cSurface,
-              border: _panelOpen
-                  ? Border(right: BorderSide(color: cBorder))
-                  : null,
+          child: AnimatedBuilder(
+            animation: _widthAnim,
+            builder: (context, child) => Container(
+              width: 240,
+              decoration: BoxDecoration(
+                color: cSurface,
+                // Border always present — acts as a permanent divider line
+                border: const Border(right: BorderSide(color: cBorder)),
+              ),
+              child: child,
             ),
             child: AnimatedOpacity(
               opacity: _panelOpen ? 1.0 : 0.0,
@@ -695,7 +697,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                         itemCount: widget.filtered.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, childAspectRatio: 0.9,
+                          crossAxisCount: 3, childAspectRatio: 1.1,
                           crossAxisSpacing: 10, mainAxisSpacing: 10,
                         ),
                         itemBuilder: (ctx, i) => _MarketCard(
@@ -1081,7 +1083,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                 ),
                 // ── Details (no description) ─────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
