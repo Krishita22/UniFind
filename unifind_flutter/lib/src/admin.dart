@@ -1469,42 +1469,12 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                               ? const Center(child: Text('No active lost items', style: TextStyle(color: Colors.white54, fontSize: 12)))
                               : ListView.builder(
                                   itemCount: widget.lostItems.length,
-                                  itemBuilder: (_, i) {
-                                    final item = widget.lostItems[i];
-                                    final selected = _selectedLostId == item.id;
-                                    return GestureDetector(
-                                      onTap: () => setState(() => _selectedLostId = selected ? null : item.id),
-                                      child: Container(
-                                        margin: const EdgeInsets.only(bottom: 6),
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: selected ? const Color(0xFFE74C3C).withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.06),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: selected ? const Color(0xFFE74C3C) : Colors.white.withValues(alpha: 0.1), width: selected ? 2 : 1),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            ClipRRect(
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: Image.network(item.image, width: 48, height: 48, fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: Colors.white10, child: const Icon(Icons.image, color: Colors.white30, size: 20))),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                  Text('${item.category} · ${item.location}', style: const TextStyle(fontSize: 10, color: Colors.white54), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                ],
-                                              ),
-                                            ),
-                                            if (selected) const Icon(Icons.check_circle_rounded, color: Color(0xFFE74C3C), size: 18),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                  itemBuilder: (_, i) => _MatchItemCard(
+                                    item: widget.lostItems[i],
+                                    selected: _selectedLostId == widget.lostItems[i].id,
+                                    accentColor: const Color(0xFFE74C3C),
+                                    onTap: () => setState(() => _selectedLostId = _selectedLostId == widget.lostItems[i].id ? null : widget.lostItems[i].id),
+                                  ),
                                 ),
                         ),
                       ],
@@ -1527,42 +1497,12 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                               ? const Center(child: Text('No active found items', style: TextStyle(color: Colors.white54, fontSize: 12)))
                               : ListView.builder(
                                   itemCount: widget.foundItems.length,
-                                  itemBuilder: (_, i) {
-                                    final item = widget.foundItems[i];
-                                    final selected = _selectedFoundId == item.id;
-                                    return GestureDetector(
-                                      onTap: () => setState(() => _selectedFoundId = selected ? null : item.id),
-                                      child: Container(
-                                        margin: const EdgeInsets.only(bottom: 6),
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: selected ? const Color(0xFF27AE60).withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.06),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(color: selected ? const Color(0xFF27AE60) : Colors.white.withValues(alpha: 0.1), width: selected ? 2 : 1),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            ClipRRect(
-                                              borderRadius: BorderRadius.circular(8),
-                                              child: Image.network(item.image, width: 48, height: 48, fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: Colors.white10, child: const Icon(Icons.image, color: Colors.white30, size: 20))),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                  Text('${item.category} · ${item.location}', style: const TextStyle(fontSize: 10, color: Colors.white54), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                                ],
-                                              ),
-                                            ),
-                                            if (selected) const Icon(Icons.check_circle_rounded, color: Color(0xFF27AE60), size: 18),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
+                                  itemBuilder: (_, i) => _MatchItemCard(
+                                    item: widget.foundItems[i],
+                                    selected: _selectedFoundId == widget.foundItems[i].id,
+                                    accentColor: const Color(0xFF27AE60),
+                                    onTap: () => setState(() => _selectedFoundId = _selectedFoundId == widget.foundItems[i].id ? null : widget.foundItems[i].id),
+                                  ),
                                 ),
                         ),
                       ],
@@ -1688,6 +1628,97 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _MatchItemCard extends StatelessWidget {
+  final AdminLostFoundItem item;
+  final bool selected;
+  final Color accentColor;
+  final VoidCallback onTap;
+  const _MatchItemCard({required this.item, required this.selected, required this.accentColor, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: selected ? accentColor.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? accentColor : Colors.white.withValues(alpha: 0.08), width: selected ? 2.5 : 1),
+          boxShadow: selected ? [BoxShadow(color: accentColor.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4))] : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+              child: Stack(
+                children: [
+                  Image.network(
+                    item.image,
+                    width: double.infinity,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 100, color: Colors.white.withValues(alpha: 0.08),
+                      child: const Center(child: Icon(Icons.image_not_supported, color: Colors.white30, size: 28)),
+                    ),
+                  ),
+                  if (selected)
+                    Positioned(
+                      top: 6, right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+                        child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            // Info
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(Icons.category_outlined, size: 10, color: Colors.white.withValues(alpha: 0.5)),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(item.category, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_outlined, size: 10, color: Colors.white.withValues(alpha: 0.5)),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(item.location, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.person_outline_rounded, size: 10, color: Colors.white.withValues(alpha: 0.5)),
+                      const SizedBox(width: 4),
+                      Expanded(child: Text(item.posterUsername, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
