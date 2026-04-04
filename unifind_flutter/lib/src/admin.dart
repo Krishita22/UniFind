@@ -1646,77 +1646,33 @@ class _MatchItemCard extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: selected ? accentColor.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: selected ? accentColor : Colors.white.withValues(alpha: 0.08), width: selected ? 2.5 : 1),
-          boxShadow: selected ? [BoxShadow(color: accentColor.withValues(alpha: 0.2), blurRadius: 12, offset: const Offset(0, 4))] : null,
+          color: selected ? accentColor.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? accentColor : Colors.white.withValues(alpha: 0.1), width: selected ? 2 : 1),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // Image
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
-              child: Stack(
-                children: [
-                  Image.network(
-                    item.image,
-                    width: double.infinity,
-                    height: 100,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 100, color: Colors.white.withValues(alpha: 0.08),
-                      child: const Center(child: Icon(Icons.image_not_supported, color: Colors.white30, size: 28)),
-                    ),
-                  ),
-                  if (selected)
-                    Positioned(
-                      top: 6, right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
-                        child: const Icon(Icons.check_rounded, color: Colors.white, size: 14),
-                      ),
-                    ),
-                ],
-              ),
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(item.image, width: 56, height: 56, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(width: 56, height: 56, color: Colors.white10, child: const Icon(Icons.image, color: Colors.white30, size: 22))),
             ),
-            // Info
-            Padding(
-              padding: const EdgeInsets.all(10),
+            const SizedBox(width: 10),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Icon(Icons.category_outlined, size: 10, color: Colors.white.withValues(alpha: 0.5)),
-                      const SizedBox(width: 4),
-                      Expanded(child: Text(item.category, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    ],
-                  ),
+                  Text(item.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_outlined, size: 10, color: Colors.white.withValues(alpha: 0.5)),
-                      const SizedBox(width: 4),
-                      Expanded(child: Text(item.location, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(Icons.person_outline_rounded, size: 10, color: Colors.white.withValues(alpha: 0.5)),
-                      const SizedBox(width: 4),
-                      Expanded(child: Text(item.posterUsername, style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.5)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    ],
-                  ),
+                  Text(item.category, style: const TextStyle(fontSize: 11, color: cMuted)),
+                  Text(item.location, style: const TextStyle(fontSize: 10, color: cMuted)),
                 ],
               ),
             ),
+            if (selected) Icon(Icons.check_circle_rounded, color: accentColor, size: 20),
           ],
         ),
       ),
