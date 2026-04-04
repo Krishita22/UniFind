@@ -22,7 +22,7 @@ class NewListingInput {
 }
 
 class MarketplaceItem {
-  final String id, title, description, category, condition, image, seller, sellerEmail, location;
+  final String id, title, description, category, condition, image, seller, sellerEmail, location, status;
   final int? sellerId;
   final double price;
   final DateTime createdAt;
@@ -39,6 +39,7 @@ class MarketplaceItem {
     this.sellerId,
     required this.createdAt,
     required this.location,
+    this.status = 'active',
   });
 }
 

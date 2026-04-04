@@ -360,6 +360,7 @@ class _UniFindAppState extends State<UniFindApp> {
                   ) ??
                   DateTime.now(),
               location: _asString(item['location']),
+              status: _asString(item['status']).isEmpty ? 'active' : _asString(item['status']),
             ),
           );
         } catch (_) {
