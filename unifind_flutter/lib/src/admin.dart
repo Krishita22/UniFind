@@ -1437,9 +1437,9 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
           // Header
           Row(
             children: [
-              const Icon(Icons.compare_arrows_rounded, color: Colors.white, size: 20),
+              const Icon(Icons.compare_arrows_rounded, color: cRed, size: 20),
               const SizedBox(width: 8),
-              const Text('Match Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+              const Text('Match Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cText)),
               const Spacer(),
               // Toggle
               GestureDetector(
@@ -1447,10 +1447,10 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: !_showMatched ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
+                    color: !_showMatched ? cRed : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('Match Maker', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: !_showMatched ? Colors.white : Colors.white60)),
+                  child: Text('Match Maker', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: !_showMatched ? Colors.white : cMuted)),
                 ),
               ),
               const SizedBox(width: 4),
@@ -1459,10 +1459,10 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _showMatched ? Colors.white.withValues(alpha: 0.2) : Colors.transparent,
+                    color: _showMatched ? cRed : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('Matched (${widget.matchedPairs.length})', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _showMatched ? Colors.white : Colors.white60)),
+                  child: Text('Matched (${widget.matchedPairs.length})', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _showMatched ? Colors.white : cMuted)),
                 ),
               ),
             ],
@@ -1488,7 +1488,7 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                         const SizedBox(height: 8),
                         Expanded(
                           child: widget.lostItems.isEmpty
-                              ? const Center(child: Text('No active lost items', style: TextStyle(color: Colors.white54, fontSize: 12)))
+                              ? const Center(child: Text('No active lost items', style: TextStyle(color: cMuted, fontSize: 12)))
                               : ListView.builder(
                                   itemCount: widget.lostItems.length,
                                   itemBuilder: (_, i) => _MatchItemCard(
@@ -1516,7 +1516,7 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                         const SizedBox(height: 8),
                         Expanded(
                           child: widget.foundItems.isEmpty
-                              ? const Center(child: Text('No active found items', style: TextStyle(color: Colors.white54, fontSize: 12)))
+                              ? const Center(child: Text('No active found items', style: TextStyle(color: cMuted, fontSize: 12)))
                               : ListView.builder(
                                   itemCount: widget.foundItems.length,
                                   itemBuilder: (_, i) => _MatchItemCard(
@@ -1546,8 +1546,8 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF27AE60),
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.white.withValues(alpha: 0.1),
-                  disabledForegroundColor: Colors.white38,
+                  disabledBackgroundColor: cBorder,
+                  disabledForegroundColor: cMuted,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -1557,7 +1557,7 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
             // ── MATCHED PAIRS ────────────────────────────────────────
             Expanded(
               child: widget.matchedPairs.isEmpty
-                  ? const Center(child: Text('No matched items yet', style: TextStyle(color: Colors.white54, fontSize: 13)))
+                  ? const Center(child: Text('No matched items yet', style: TextStyle(color: cMuted, fontSize: 13)))
                   : ListView.builder(
                       itemCount: widget.matchedPairs.length,
                       itemBuilder: (_, i) {
@@ -1567,9 +1567,10 @@ class _AdminMatchingPanelState extends State<_AdminMatchingPanel> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06),
+                            color: cSurface,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                            border: Border.all(color: cBorder),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
                           ),
                           child: Column(
                             children: [
@@ -1688,16 +1689,17 @@ class _MatchItemCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: selected ? accentColor.withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.06),
+          color: selected ? accentColor.withValues(alpha: 0.1) : cSurface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? accentColor : Colors.white.withValues(alpha: 0.1), width: selected ? 2 : 1),
+          border: Border.all(color: selected ? accentColor : cBorder, width: selected ? 2 : 1),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
         ),
         child: Row(
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.network(item.image, width: 56, height: 56, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(width: 56, height: 56, color: Colors.white10, child: const Icon(Icons.image, color: Colors.white30, size: 22))),
+                errorBuilder: (_, __, ___) => Container(width: 56, height: 56, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 22))),
             ),
             const SizedBox(width: 10),
             Expanded(
