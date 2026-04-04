@@ -245,12 +245,6 @@ class _StandardUserShell extends StatelessWidget {
     required this.onTabChanged,
   });
 
-  String _emailToHandle(String input) {
-    final n = input.trim().toLowerCase();
-    if (n.isEmpty) return '';
-    return n.contains('@') ? n.split('@').first : n;
-  }
-
   bool _isMyMarketplaceItem(MarketplaceItem item) {
     if (userId != null && item.sellerId != null) return item.sellerId == userId;
     return item.sellerEmail == email.trim().toLowerCase();
@@ -261,82 +255,141 @@ class _StandardUserShell extends StatelessWidget {
     return item.posterEmail == email.trim().toLowerCase();
   }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// Topnav items and helper functions
+// ═════════════════════════════════════════════════════════════════════════════
+  static const List<_TopNavItem> _userNavItems = [
+    _TopNavItem(icon: Icons.storefront_outlined,    activeIcon: Icons.storefront_rounded,      label: 'Market',      tabIndex: 0),
+    _TopNavItem(icon: Icons.search_outlined,         activeIcon: Icons.search_rounded,          label: 'Lost & Found',tabIndex: 1),
+    _TopNavItem(icon: Icons.list_alt_outlined,       activeIcon: Icons.list_alt_rounded,        label: 'My Listings', tabIndex: 3),
+    _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 4),
+  ];
+
+  int _navIndexForTab(int tabIndex) {
+    for (int i = 0; i < _userNavItems.length; i++) {
+      if (_userNavItems[i].tabIndex == tabIndex) return i;
+    }
+    return -1;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final activeNavIndex = _navIndexForTab(tab);
+
+    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Profile
+    final screens = [
+      MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email),
+      LostFoundScreen(
+        items: lostFound,
+        onCreateLost: () => goToPostTab(ListingType.lost),
+        onCreateFound: () => goToPostTab(ListingType.found),
+        onClaimLost: claimLostItem,
+        onPostFoundMatch: postFoundMatch,
+        submittedClaimItemIds: submittedClaimItemIds,
+        submittedMatchItemIds: submittedMatchItemIds,
+        currentUserEmail: email,
+      ),
+      PostListingScreen(key: ValueKey(postFormNonce), onPost: addListing, initialType: postDefaultType),
+      MyListingsScreen(
+        marketplaceItems: market.where(_isMyMarketplaceItem).toList(),
+        lostFoundItems: lostFound.where(_isMyLostFoundItem).toList(),
+        onListItem: () => goToPostTab(),
+        onEditMarketplace: editMarketplace,
+        onEditLostFound: editLostFound,
+      ),
+      ProfileScreen(email: email, username: username, onLogout: onLogout),
+    ];
+
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset('assets/images/whitelogo.png', height: 32, fit: BoxFit.contain),
-            const SizedBox(height: 2),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  username.isNotEmpty ? username : _emailToHandle(email),
-                  style: const TextStyle(fontSize: 12, color: Colors.white),
-                ),
-                if (role == UserRole.fac) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(6)),
-                    child: const Text('FACULTY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+      backgroundColor: cBg,
+      // ── Top nav bar — no bottom nav bar ───────────────────────────────
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80),
+        child: Container(
+          color: cNavBg,
+          child: SafeArea(
+            bottom: false,
+            child: SizedBox(
+              height: 80,
+              child: Stack(
+                children: [
+                  // ── Centered column: logo on top, tabs + post below ──
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Logo row (centered)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/images/whitelogo.png',
+                              height: 22,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Text(
+                                'UniFind',
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3),
+                              ),
+                            ),
+                            if (role == UserRole.fac) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+                                child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        // Nav tabs + post button (centered)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (int i = 0; i < _userNavItems.length; i++)
+                              _TopNavTab(
+                                item: _userNavItems[i],
+                                isActive: activeNavIndex == i,
+                                onTap: () => onTabChanged(_userNavItems[i].tabIndex),
+                              ),
+                            const SizedBox(width: 6),
+                            _NavPostButton(onTap: () => goToPostTab()),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // ── Logout button pinned to top-right corner ──
+                  Positioned(
+                    top: 0,
+                    right: 4,
+                    bottom: 0,
+                    child: Center(
+                      child: IconButton(
+                        tooltip: 'Log out',
+                        icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
+                        onPressed: onLogout,
+                      ),
+                    ),
                   ),
                 ],
-              ],
+              ),
             ),
-          ],
+          ),
         ),
-        actions: [IconButton(tooltip: 'Log out', onPressed: onLogout, icon: const Icon(Icons.logout))],
       ),
       body: Column(
         children: [
-          _BreadcrumbBar(tab: tab, onHome: () => onTabChanged(0)),
+          _BreadcrumbBar(tab: tab.clamp(0, 4), onHome: () => onTabChanged(0)),
           Expanded(
             child: IndexedStack(
               index: tab,
-              children: [
-                MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email),
-                LostFoundScreen(
-                  items: lostFound,
-                  onCreateLost: () => goToPostTab(ListingType.lost),
-                  onCreateFound: () => goToPostTab(ListingType.found),
-                  onClaimLost: claimLostItem,
-                  onPostFoundMatch: postFoundMatch,
-                  submittedClaimItemIds: submittedClaimItemIds,
-                  submittedMatchItemIds: submittedMatchItemIds,
-                  currentUserEmail: email,
-                ),
-                PostListingScreen(key: ValueKey(postFormNonce), onPost: addListing, initialType: postDefaultType),
-                MyListingsScreen(
-                  marketplaceItems: market.where(_isMyMarketplaceItem).toList(),
-                  lostFoundItems: lostFound.where(_isMyLostFoundItem).toList(),
-                  onListItem: () => goToPostTab(),
-                  onEditMarketplace: editMarketplace,
-                  onEditLostFound: editLostFound,
-                ),
-                const DocumentationScreen(),
-                ProfileScreen(email: email, username: username, onLogout: onLogout),
-              ],
+              children: screens,
             ),
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: tab,
-        onDestinationSelected: onTabChanged,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.storefront_outlined), label: 'Shop'),
-          NavigationDestination(icon: Icon(Icons.search), label: 'Lost/Found'),
-          NavigationDestination(icon: Icon(Icons.add_circle_outline), label: 'Post'),
-          NavigationDestination(icon: Icon(Icons.inventory_2_outlined), label: 'My Listings'),
-          NavigationDestination(icon: Icon(Icons.menu_book_outlined), label: 'Docs'),
-          NavigationDestination(icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
-        ],
-      ),
+      // NO bottomNavigationBar
     );
   }
 }

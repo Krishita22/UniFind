@@ -7,16 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
 import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
@@ -31,6 +27,7 @@ part 'src/ui_feedback.dart';
 part 'src/data.dart';
 part 'src/admin.dart';
 part 'src/welcome_screen.dart';
+part 'src/terms_conditions_screen.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
@@ -124,6 +121,163 @@ class _BreadcrumbBar extends StatelessWidget {
   }
 }
 
+// ─── TOP NAV ITEMS (single definition — shared by _StandardUserShell) ────────
+class _TopNavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final int tabIndex;
+  const _TopNavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.tabIndex,
+  });
+}
+
+const List<_TopNavItem> _navItems = [
+  _TopNavItem(
+    icon: Icons.storefront_outlined,
+    activeIcon: Icons.storefront_rounded,
+    label: 'Market',
+    tabIndex: 0,
+  ),
+  _TopNavItem(
+    icon: Icons.search_outlined,
+    activeIcon: Icons.search_rounded,
+    label: 'Lost & Found',
+    tabIndex: 1,
+  ),
+  _TopNavItem(
+    icon: Icons.list_alt_outlined,
+    activeIcon: Icons.list_alt_rounded,
+    label: 'My Listings',
+    tabIndex: 3,
+  ),
+  _TopNavItem(
+    icon: Icons.person_outline_rounded,
+    activeIcon: Icons.person_rounded,
+    label: 'Profile',
+    tabIndex: 4,
+  ),
+];
+
+class _TopNavTab extends StatefulWidget {
+  final _TopNavItem item;
+  final bool isActive;
+  final VoidCallback onTap;
+  const _TopNavTab({required this.item, required this.isActive, required this.onTap});
+
+  @override
+  State<_TopNavTab> createState() => _TopNavTabState();
+}
+
+class _TopNavTabState extends State<_TopNavTab> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: kFast,
+          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          decoration: BoxDecoration(
+            color: widget.isActive
+                ? Colors.white.withValues(alpha: 0.18)
+                : _hovered
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: widget.isActive
+                ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1)
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.isActive ? widget.item.activeIcon : widget.item.icon,
+                size: 16,
+                color: widget.isActive
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.65),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.item.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: widget.isActive
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.65),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavPostButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _NavPostButton({required this.onTap});
+
+  @override
+  State<_NavPostButton> createState() => _NavPostButtonState();
+}
+
+class _NavPostButtonState extends State<_NavPostButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: kFast,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? Colors.white.withValues(alpha: 0.25)
+                : Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, size: 16, color: Colors.white),
+              SizedBox(width: 4),
+              Text(
+                'Post',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── ROOT ────────────────────────────────────────────────────────────────────
 void main() {
   HttpOverrides.global = _AllowBadCertificates();
   runApp(const UniFindApp());
@@ -137,7 +291,6 @@ class _AllowBadCertificates extends HttpOverrides {
   }
 }
 
-// ─── ROOT ────────────────────────────────────────────────────────────────────
 class UniFindApp extends StatefulWidget {
   const UniFindApp({super.key});
   @override
@@ -505,7 +658,6 @@ class _UniFindAppState extends State<UniFindApp> {
     try {
       if (in_.type == ListingType.marketplace) {
         _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
-        print('DEBUG _addListing: email=$_email, title=${in_.title}');
         final res = await createListing(
           title: in_.title,
           description: in_.description,
@@ -516,7 +668,6 @@ class _UniFindAppState extends State<UniFindApp> {
           email: _email,
           image: in_.imageUrl,
         );
-        print('DEBUG createListing response: $res');
         final id = _extractIdFromResponse(res);
         if (id.isNotEmpty) _myMarketIds.add(id);
       } else {
@@ -536,7 +687,6 @@ class _UniFindAppState extends State<UniFindApp> {
       await _loadListings();
       await _loadLostFound();
     } catch (e) {
-      print('DEBUG addListing error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -693,18 +843,15 @@ class _UniFindAppState extends State<UniFindApp> {
   }
 
   void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
-  print('DEBUG _login called: role=$role');
-  print('DEBUG userRole will be: ${UserRoleExt.fromString(role ?? '')}');
-  setState(() {
-    _loggedIn = true;
-    _email = email;
-    _username = (username ?? '').trim();
-    _userId = userId;
-    _role = (role ?? '').trim();
-    _userRole = UserRoleExt.fromString(_role);
-    _tab = 0;
-  });
-  print('DEBUG _userRole after setState: $_userRole');
+    setState(() {
+      _loggedIn = true;
+      _email = email;
+      _username = (username ?? '').trim();
+      _userId = userId;
+      _role = (role ?? '').trim();
+      _userRole = UserRoleExt.fromString(_role);
+      _tab = 0;
+    });
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
       prefs.setString('logged_in_email', email);
@@ -810,273 +957,6 @@ class _UniFindAppState extends State<UniFindApp> {
         foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-      ),
-    );
-  }
-}
-
-// ─── TOP NAV WRAPPER ─────────────────────────────────────────────────────────
-// Replaces the old bottom NavigationBar.
-// Tabs: 0=Marketplace, 1=Lost&Found, 2=Post, 3=MyListings, 4=Profile
-// "Post" tab opens the PostListingScreen but is NOT shown as a persistent tab icon —
-// it is triggered via the floating action / buttons inside other screens.
-// The top bar shows: Marketplace | Lost&Found | My Listings | Profile  (4 tabs)
-// Post is tab index 2 internally but excluded from the top nav icons.
-
-class _TopNavItem {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final int tabIndex;
-  const _TopNavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.tabIndex,
-  });
-}
-
-const List<_TopNavItem> _navItems = [
-  _TopNavItem(
-    icon: Icons.storefront_outlined,
-    activeIcon: Icons.storefront_rounded,
-    label: 'Market',
-    tabIndex: 0,
-  ),
-  _TopNavItem(
-    icon: Icons.search_outlined,
-    activeIcon: Icons.search_rounded,
-    label: 'Lost & Found',
-    tabIndex: 1,
-  ),
-  _TopNavItem(
-    icon: Icons.list_alt_outlined,
-    activeIcon: Icons.list_alt_rounded,
-    label: 'My Listings',
-    tabIndex: 3,
-  ),
-  _TopNavItem(
-    icon: Icons.person_outline_rounded,
-    activeIcon: Icons.person_rounded,
-    label: 'Profile',
-    tabIndex: 4,
-  ),
-];
-
-// RoleAuthWrapper is assumed to exist in admin.dart / elsewhere.
-// We define _MainShell here which is what RoleAuthWrapper should render
-// for regular users. If your codebase already has RoleAuthWrapper rendering
-// a Scaffold with NavigationBar, replace that Scaffold with _MainShell.
-
-class _MainShell extends StatelessWidget {
-  final int tab;
-  final void Function(int) onTabChanged;
-  final VoidCallback goToPostTab;
-  final Widget body;
-  final String email;
-  final String username;
-
-  const _MainShell({
-    required this.tab,
-    required this.onTabChanged,
-    required this.goToPostTab,
-    required this.body,
-    required this.email,
-    required this.username,
-  });
-
-  // Maps a tab index to the visible nav item index (returns -1 if tab not in nav)
-  int _navIndexForTab(int tabIndex) {
-    for (int i = 0; i < _navItems.length; i++) {
-      if (_navItems[i].tabIndex == tabIndex) return i;
-    }
-    return -1;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final activeNavIndex = _navIndexForTab(tab);
-
-    return Scaffold(
-      backgroundColor: cBg,
-      // ── Top App Bar with nav tabs ─────────────────────────────────────────
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
-        child: Container(
-          color: cNavBg,
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: 56,
-              child: Row(
-                children: [
-                  // Logo / brand
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(
-                      'UniFind',
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                  ),
-                  // Divider
-                  Container(width: 1, height: 24, color: Colors.white.withValues(alpha: 0.2)),
-                  const SizedBox(width: 4),
-                  // Nav items
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (int i = 0; i < _navItems.length; i++)
-                            _TopNavTab(
-                              item: _navItems[i],
-                              isActive: activeNavIndex == i,
-                              onTap: () => onTabChanged(_navItems[i].tabIndex),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Post button (right side of nav bar)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: _NavPostButton(onTap: goToPostTab),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          // Breadcrumb
-          _BreadcrumbBar(
-            tab: tab.clamp(0, _tabBreadcrumbs.length - 1),
-            onHome: () => onTabChanged(0),
-          ),
-          Expanded(child: body),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopNavTab extends StatefulWidget {
-  final _TopNavItem item;
-  final bool isActive;
-  final VoidCallback onTap;
-  const _TopNavTab({required this.item, required this.isActive, required this.onTap});
-
-  @override
-  State<_TopNavTab> createState() => _TopNavTabState();
-}
-
-class _TopNavTabState extends State<_TopNavTab> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: kFast,
-          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-          decoration: BoxDecoration(
-            color: widget.isActive
-                ? Colors.white.withValues(alpha: 0.18)
-                : _hovered
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            border: widget.isActive
-                ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1)
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                widget.isActive ? widget.item.activeIcon : widget.item.icon,
-                size: 16,
-                color: widget.isActive
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.65),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                widget.item.label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: widget.isActive
-                      ? Colors.white
-                      : Colors.white.withValues(alpha: 0.65),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavPostButton extends StatefulWidget {
-  final VoidCallback onTap;
-  const _NavPostButton({required this.onTap});
-
-  @override
-  State<_NavPostButton> createState() => _NavPostButtonState();
-}
-
-class _NavPostButtonState extends State<_NavPostButton> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: kFast,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: _hovered
-                ? Colors.white.withValues(alpha: 0.25)
-                : Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.add_rounded, size: 16, color: Colors.white),
-              SizedBox(width: 4),
-              Text(
-                'Post',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
