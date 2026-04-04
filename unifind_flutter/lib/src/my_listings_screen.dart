@@ -350,7 +350,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text('My Listings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
-                    Text('Your active posts', style: TextStyle(fontSize: 12, color: cMuted)),
+                    Text('Your active posts', style: TextStyle(fontSize: 15, color: cMuted)),
                   ],
                 ),
               ),

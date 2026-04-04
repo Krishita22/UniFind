@@ -346,14 +346,18 @@ class _StandardUserShell extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            for (int i = 0; i < _userNavItems.length; i++)
+                            for (int i = 0; i < _userNavItems.length; i++) ...[
                               _TopNavTab(
                                 item: _userNavItems[i],
                                 isActive: activeNavIndex == i,
                                 onTap: () => onTabChanged(_userNavItems[i].tabIndex),
                               ),
-                            const SizedBox(width: 6),
-                            _NavPostButton(onTap: () => goToPostTab()),
+                              if (i == 1) ...[
+                                const SizedBox(width: 6),
+                                _NavPostButton(onTap: () => goToPostTab()),
+                                const SizedBox(width: 6),
+                              ],
+                            ],
                           ],
                         ),
                       ],

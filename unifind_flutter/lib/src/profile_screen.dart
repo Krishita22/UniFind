@@ -186,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 4),
                 Text(
                   _avatarBytes != null ? 'Change profile picture' : 'Add a profile picture',
-                  style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 13, color: cMuted, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
