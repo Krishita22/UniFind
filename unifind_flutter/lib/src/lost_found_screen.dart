@@ -319,35 +319,34 @@ void _showLostFoundPopup(
                                   style: const TextStyle(
                                       fontSize: 13, color: cMuted, height: 1.55)),
                               const SizedBox(height: 16),
-                              if (!isLost)
-                                _LFActionButton(
-                                  label: item.status.toLowerCase() == 'claimed'
-                                      ? 'Already Claimed'
-                                      : claimSubmittedByMe
-                                          ? 'Claim Submitted'
-                                          : 'Claim This Item',
-                                  icon: item.status.toLowerCase() == 'claimed'
-                                      ? Icons.check_circle_outline_rounded
-                                      : claimSubmittedByMe
-                                          ? Icons.mark_email_read_outlined
-                                          : Icons.volunteer_activism_outlined,
-                                  color: const Color(0xFFE74C3C),
-                                  disabled: item.status.toLowerCase() == 'claimed' ||
-                                      claimSubmittedByMe,
-                                  onTap: () async => Navigator.of(ctx).pop(),
+                              // Status badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: typeBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: typeColor.withValues(alpha: 0.3)),
                                 ),
-                              if (isLost)
-                                _LFActionButton(
-                                  label: matchSubmittedByMe
-                                      ? 'Match Submitted'
-                                      : 'I Found This Item',
-                                  icon: matchSubmittedByMe
-                                      ? Icons.check_circle_outline_rounded
-                                      : Icons.add_circle_outline_rounded,
-                                  color: const Color(0xFF27AE60),
-                                  disabled: matchSubmittedByMe,
-                                  onTap: () async => Navigator.of(ctx).pop(),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(isLost ? Icons.search_rounded : Icons.check_circle_outline_rounded, size: 14, color: typeColor),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      isLost ? 'Lost Item' : 'Found Item',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: typeColor),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Hint to use card buttons
+                              Text(
+                                isLost
+                                    ? (matchSubmittedByMe ? 'You already submitted a match for this item.' : 'Close this popup and tap "Match" on the card to submit a match.')
+                                    : (claimSubmittedByMe ? 'You already submitted a claim for this item.' : item.status.toLowerCase() == 'claimed' ? 'This item has already been claimed.' : 'Close this popup and tap "Claim" on the card to claim this item.'),
+                                style: const TextStyle(fontSize: 11, color: cMuted, fontStyle: FontStyle.italic),
+                              ),
                             ],
                           ),
                         ),
@@ -386,44 +385,6 @@ class _LFPopupChip extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 11, fontWeight: FontWeight.w600, color: cMuted)),
         ],
-      ),
-    );
-  }
-}
-
-class _LFActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final bool disabled;
-  final VoidCallback onTap;
-
-  const _LFActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-    this.disabled = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: disabled ? null : onTap,
-        icon: Icon(icon, size: 16),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          side: BorderSide(
-              color: disabled ? cBorder : color.withValues(alpha: 0.6)),
-          foregroundColor: disabled ? cMuted : color,
-          textStyle:
-              const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
       ),
     );
   }
