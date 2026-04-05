@@ -113,26 +113,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: selectedImageBytes != null
-                          ? Image.memory(
-                              selectedImageBytes!,
-                              fit: BoxFit.cover,
-                            )
+                          ? Image.memory(selectedImageBytes!, fit: BoxFit.cover)
                           : (item.image.trim().isNotEmpty
                                 ? Image.network(
                                     item.image,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Center(
-                                      child: Text(
-                                        'Current image unavailable',
-                                        style: TextStyle(color: cMuted),
-                                      ),
+                                      child: Text('Current image unavailable', style: TextStyle(color: cMuted)),
                                     ),
                                   )
                                 : const Center(
-                                    child: Text(
-                                      'Tap to add image',
-                                      style: TextStyle(color: cMuted),
-                                    ),
+                                    child: Text('Tap to add image', style: TextStyle(color: cMuted)),
                                   )),
                     ),
                   ),
@@ -140,10 +131,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 const SizedBox(height: 6),
                 const Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Tap image to change',
-                    style: TextStyle(fontSize: 11, color: cMuted),
-                  ),
+                  child: Text('Tap image to change', style: TextStyle(fontSize: 11, color: cMuted)),
                 ),
                 if (error != null) ...[
                   const SizedBox(height: 8),
@@ -167,19 +155,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   setDialogState(() => error = 'Please complete all fields with a valid price.');
                   return;
                 }
-                setDialogState(() {
-                  saving = true;
-                  error = null;
-                });
+                setDialogState(() { saving = true; error = null; });
                 try {
                   String? imageUrl;
                   if (selectedImage != null && selectedImageBytes != null) {
-                    imageUrl = await uploadImage(
-                      selectedImage!.path,
-                      selectedImageBytes!,
-                    );
+                    imageUrl = await uploadImage(selectedImage!.path, selectedImageBytes!);
                   }
-
                   await widget.onEditMarketplace(
                     item,
                     MarketplaceUpdateInput(
@@ -281,26 +262,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: selectedImageBytes != null
-                          ? Image.memory(
-                              selectedImageBytes!,
-                              fit: BoxFit.cover,
-                            )
+                          ? Image.memory(selectedImageBytes!, fit: BoxFit.cover)
                           : (item.image.trim().isNotEmpty
                                 ? Image.network(
                                     item.image,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Center(
-                                      child: Text(
-                                        'Current image unavailable',
-                                        style: TextStyle(color: cMuted),
-                                      ),
+                                      child: Text('Current image unavailable', style: TextStyle(color: cMuted)),
                                     ),
                                   )
                                 : const Center(
-                                    child: Text(
-                                      'Tap to add image',
-                                      style: TextStyle(color: cMuted),
-                                    ),
+                                    child: Text('Tap to add image', style: TextStyle(color: cMuted)),
                                   )),
                     ),
                   ),
@@ -308,10 +280,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 const SizedBox(height: 6),
                 const Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Tap image to change',
-                    style: TextStyle(fontSize: 11, color: cMuted),
-                  ),
+                  child: Text('Tap image to change', style: TextStyle(fontSize: 11, color: cMuted)),
                 ),
                 if (error != null) ...[
                   const SizedBox(height: 8),
@@ -334,17 +303,11 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   setDialogState(() => error = 'Please complete all required fields.');
                   return;
                 }
-                setDialogState(() {
-                  saving = true;
-                  error = null;
-                });
+                setDialogState(() { saving = true; error = null; });
                 try {
                   String? imageUrl;
                   if (selectedImage != null && selectedImageBytes != null) {
-                    imageUrl = await uploadImage(
-                      selectedImage!.path,
-                      selectedImageBytes!,
-                    );
+                    imageUrl = await uploadImage(selectedImage!.path, selectedImageBytes!);
                   }
                   await widget.onEditLostFound(
                     item,
@@ -387,7 +350,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: const [
                     Text('My Listings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
-                    Text('Your active posts', style: TextStyle(fontSize: 12, color: cMuted)),
+                    Text('Your active posts', style: TextStyle(fontSize: 15, color: cMuted)),
                   ],
                 ),
               ),
@@ -414,9 +377,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                     children: _showMarket
                         ? widget.marketplaceItems.map((i) => _MyListingTile(
                               title: i.title,
-                              subtitle: '${i.category} · ${i.location}',
+                              subtitle: '${i.category} · ${i.condition}',
                               trailing: '\$${i.price.toStringAsFixed(0)}',
                               icon: Icons.storefront_rounded,
+                              imageUrl: i.image,
                               onTap: () => _editMarketplace(i),
                             )).toList()
                         : widget.lostFoundItems.map((i) => _MyListingTile(
@@ -424,6 +388,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               subtitle: '${i.category} · ${i.location}',
                               trailing: i.type == LostFoundType.lost ? 'Lost' : 'Found',
                               icon: i.type == LostFoundType.lost ? Icons.report_problem_outlined : Icons.check_circle_outline_rounded,
+                              imageUrl: i.image,
                               trailingColor: i.type == LostFoundType.lost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60),
                               trailingBgColor: i.type == LostFoundType.lost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0),
                               onTap: () => _editLostFound(i),
@@ -439,14 +404,17 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
 class _MyListingTile extends StatelessWidget {
   final String title, subtitle, trailing;
   final IconData icon;
+  final String imageUrl;
   final Color trailingColor;
   final Color trailingBgColor;
   final VoidCallback? onTap;
+
   const _MyListingTile({
     required this.title,
     required this.subtitle,
     required this.trailing,
     required this.icon,
+    this.imageUrl = '',
     this.trailingColor = cRed,
     this.trailingBgColor = cRedLight,
     this.onTap,
@@ -454,12 +422,14 @@ class _MyListingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = imageUrl.trim().isNotEmpty;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: cSurface,
           borderRadius: BorderRadius.circular(14),
@@ -468,25 +438,44 @@ class _MyListingTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: cRed, size: 20),
+            // ── Thumbnail or icon fallback ──────────────────────────────
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: hasImage
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: cRedLight,
+                          child: Icon(icon, color: cRed, size: 22),
+                        ),
+                      )
+                    : Container(
+                        color: cRedLight,
+                        child: Icon(icon, color: cRed, size: 22),
+                      ),
+              ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
-                  const SizedBox(height: 2),
+                  Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
+                  const SizedBox(height: 3),
                   Text(subtitle, style: const TextStyle(fontSize: 12, color: cMuted)),
                 ],
               ),
             ),
-            const Icon(Icons.edit_outlined, size: 16, color: cMuted),
             const SizedBox(width: 8),
+            const Icon(Icons.edit_outlined, size: 15, color: cMuted),
+            const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(color: trailingBgColor, borderRadius: BorderRadius.circular(8)),

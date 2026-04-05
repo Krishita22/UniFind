@@ -49,7 +49,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
             children: [
               const Text('Lost & Found', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
               const SizedBox(height: 2),
-              const Text('Help reunite students with their belongings!', style: TextStyle(fontSize: 12, color: cMuted)),
+              const Text('Help reunite students with their belongings!', style: TextStyle(fontSize: 15, color: cMuted)),
               const SizedBox(height: 10),
               Row(
                 children: [

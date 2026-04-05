@@ -186,7 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 4),
                 Text(
                   _avatarBytes != null ? 'Change profile picture' : 'Add a profile picture',
-                  style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 13, color: cMuted, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -212,6 +212,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           subtitle: 'Update your account password',
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => ForgotPasswordScreen(initialEmail: widget.email)),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // ── Help & Docs section ─────────────────────────────────────────
+        _ProfileSectionHeader(label: 'Help & Docs'),
+        const SizedBox(height: 8),
+        _ProfileActionTile(
+          icon: Icons.menu_book_outlined,
+          label: 'Documentation',
+          subtitle: 'How to use UniFind',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const DocumentationScreen()),
+          ),
+        ),
+        _ProfileActionTile(
+          icon: Icons.gavel_rounded,
+          label: 'Terms & Conditions',
+          subtitle: 'Usage policy and community rules',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen()),
+          ),
+        ),
+        _ProfileActionTile(
+          icon: Icons.privacy_tip_outlined,
+          label: 'Privacy Policy',
+          subtitle: 'How we handle your data',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen(initialTab: 1)),
           ),
         ),
         const SizedBox(height: 20),

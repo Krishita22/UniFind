@@ -7,16 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
 import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/services.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
 part 'src/marketplace_screen.dart';
@@ -31,6 +27,7 @@ part 'src/ui_feedback.dart';
 part 'src/data.dart';
 part 'src/admin.dart';
 part 'src/welcome_screen.dart';
+part 'src/terms_conditions_screen.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
@@ -59,12 +56,12 @@ const Duration kSlow = Duration(milliseconds: 520);
 const Duration kPage = Duration(milliseconds: 420);
 
 // ─── BREADCRUMB LABELS ───────────────────────────────────────────────────────
+// Tabs: 0=Marketplace, 1=Lost&Found, 2=PostItem, 3=MyListings, 4=Profile
 const List<List<String>> _tabBreadcrumbs = [
   ['Home', 'Marketplace'],
   ['Home', 'Lost & Found'],
   ['Home', 'Post Item'],
   ['Home', 'My Listings'],
-  ['Home', 'Docs'],
   ['Home', 'Profile'],
 ];
 
@@ -124,6 +121,163 @@ class _BreadcrumbBar extends StatelessWidget {
   }
 }
 
+// ─── TOP NAV ITEMS (single definition — shared by _StandardUserShell) ────────
+class _TopNavItem {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final int tabIndex;
+  const _TopNavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.tabIndex,
+  });
+}
+
+const List<_TopNavItem> _navItems = [
+  _TopNavItem(
+    icon: Icons.storefront_outlined,
+    activeIcon: Icons.storefront_rounded,
+    label: 'Market',
+    tabIndex: 0,
+  ),
+  _TopNavItem(
+    icon: Icons.search_outlined,
+    activeIcon: Icons.search_rounded,
+    label: 'Lost & Found',
+    tabIndex: 1,
+  ),
+  _TopNavItem(
+    icon: Icons.list_alt_outlined,
+    activeIcon: Icons.list_alt_rounded,
+    label: 'My Listings',
+    tabIndex: 3,
+  ),
+  _TopNavItem(
+    icon: Icons.person_outline_rounded,
+    activeIcon: Icons.person_rounded,
+    label: 'Profile',
+    tabIndex: 4,
+  ),
+];
+
+class _TopNavTab extends StatefulWidget {
+  final _TopNavItem item;
+  final bool isActive;
+  final VoidCallback onTap;
+  const _TopNavTab({required this.item, required this.isActive, required this.onTap});
+
+  @override
+  State<_TopNavTab> createState() => _TopNavTabState();
+}
+
+class _TopNavTabState extends State<_TopNavTab> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: kFast,
+          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          decoration: BoxDecoration(
+            color: widget.isActive
+                ? Colors.white.withValues(alpha: 0.18)
+                : _hovered
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: widget.isActive
+                ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1)
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.isActive ? widget.item.activeIcon : widget.item.icon,
+                size: 16,
+                color: widget.isActive
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.65),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                widget.item.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: widget.isActive
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.65),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavPostButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _NavPostButton({required this.onTap});
+
+  @override
+  State<_NavPostButton> createState() => _NavPostButtonState();
+}
+
+class _NavPostButtonState extends State<_NavPostButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: kFast,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: _hovered
+                ? Colors.white.withValues(alpha: 0.25)
+                : Colors.white.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, size: 16, color: Colors.white),
+              SizedBox(width: 4),
+              Text(
+                'Post',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── ROOT ────────────────────────────────────────────────────────────────────
 void main() {
   HttpOverrides.global = _AllowBadCertificates();
   runApp(const UniFindApp());
@@ -137,7 +291,6 @@ class _AllowBadCertificates extends HttpOverrides {
   }
 }
 
-// ─── ROOT ────────────────────────────────────────────────────────────────────
 class UniFindApp extends StatefulWidget {
   const UniFindApp({super.key});
   @override
@@ -502,21 +655,19 @@ class _UniFindAppState extends State<UniFindApp> {
   }
 
   Future<void> _addListing(NewListingInput in_) async {
-  try {
-    if (in_.type == ListingType.marketplace) {
-      _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
-      print('DEBUG _addListing: email=$_email, title=${in_.title}');
-      final res = await createListing(
-        title: in_.title,
-        description: in_.description,
-        price: in_.price,
-        category: in_.category,
-        condition: in_.condition,
-        location: in_.location,
-        email: _email,
-        image: in_.imageUrl,
-      );
-      print('DEBUG createListing response: $res');
+    try {
+      if (in_.type == ListingType.marketplace) {
+        _myMarketFingerprints.add(_marketFingerprintFromInput(in_));
+        final res = await createListing(
+          title: in_.title,
+          description: in_.description,
+          price: in_.price,
+          category: in_.category,
+          condition: in_.condition,
+          location: in_.location,
+          email: _email,
+          image: in_.imageUrl,
+        );
         final id = _extractIdFromResponse(res);
         if (id.isNotEmpty) _myMarketIds.add(id);
       } else {
@@ -536,7 +687,6 @@ class _UniFindAppState extends State<UniFindApp> {
       await _loadListings();
       await _loadLostFound();
     } catch (e) {
-      print('DEBUG addListing error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -693,18 +843,15 @@ class _UniFindAppState extends State<UniFindApp> {
   }
 
   void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
-  print('DEBUG _login called: role=$role');
-  print('DEBUG userRole will be: ${UserRoleExt.fromString(role ?? '')}');
-  setState(() {
-    _loggedIn = true;
-    _email = email;
-    _username = (username ?? '').trim();
-    _userId = userId;
-    _role = (role ?? '').trim();
-    _userRole = UserRoleExt.fromString(_role);
-    _tab = 0;
-  });
-  print('DEBUG _userRole after setState: $_userRole');
+    setState(() {
+      _loggedIn = true;
+      _email = email;
+      _username = (username ?? '').trim();
+      _userId = userId;
+      _role = (role ?? '').trim();
+      _userRole = UserRoleExt.fromString(_role);
+      _tab = 0;
+    });
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
       prefs.setString('logged_in_email', email);
@@ -732,7 +879,7 @@ class _UniFindAppState extends State<UniFindApp> {
         _submittedClaimItemIds.clear();
         _submittedMatchItemIds.clear();
       });
-  
+
   void _clearSession() {
     SharedPreferences.getInstance().then((prefs) {
       prefs.remove('logged_in');
@@ -766,7 +913,10 @@ class _UniFindAppState extends State<UniFindApp> {
               email: _email,
               username: _username,
               userId: _userId,
-              onLogout: () { _logout(); _clearSession(); },
+              onLogout: () {
+                _logout();
+                _clearSession();
+              },
               market: _market,
               lostFound: _lostFound,
               tab: _tab,
@@ -787,7 +937,7 @@ class _UniFindAppState extends State<UniFindApp> {
                   _loadLostFound();
                 }
               },
-          ),
+            ),
     );
   }
 
@@ -807,31 +957,6 @@ class _UniFindAppState extends State<UniFindApp> {
         foregroundColor: Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
-      ),
-      // ─── ADDED: Navigation bar theme ───────────────────────────────
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: cSurface,
-        indicatorColor: cRedLight,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: cRed,
-            );
-          }
-          return const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: cMuted,
-          );
-        }),
-        iconTheme: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: cRed, size: 22);
-          }
-          return const IconThemeData(color: cMuted, size: 22);
-        }),
       ),
     );
   }
