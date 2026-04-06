@@ -52,6 +52,7 @@ class _ChipState extends State<_Chip> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) { setState(() => _hovered = true); _c.forward(); },
@@ -62,7 +63,7 @@ class _ChipState extends State<_Chip> with SingleTickerProviderStateMixin {
           scale: _scale,
           child: AnimatedContainer(
             duration: kFast,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 14, vertical: isMobile ? 5 : 7),
             decoration: BoxDecoration(
               color: widget.selected ? cRed : (_hovered ? cRedLight : cSurface),
               borderRadius: BorderRadius.circular(20),
@@ -74,10 +75,10 @@ class _ChipState extends State<_Chip> with SingleTickerProviderStateMixin {
             child: Text(
               widget.label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: isMobile ? 11 : 12,
                 fontWeight: FontWeight.w700,
                 color: widget.selected ? Colors.white : (_hovered ? cRed : cMuted),
-                height: 1.0,  // Removes the extra font descender space gap
+                height: 1.0,
               ),
             ),
           ),
