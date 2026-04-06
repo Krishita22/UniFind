@@ -629,144 +629,114 @@ class _AdminDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return LayoutBuilder(builder: (context, constraints) {
+      final isMobile = constraints.maxWidth < 600;
 
-        // ── Hero Banner ──
-        Container(
-          width: double.infinity, padding: const EdgeInsets.fromLTRB(16, 14, 24, 14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [cNavBg, cNavBgDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Admin Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
-              const SizedBox(height: 4),
-              Text('UniFind · ${_todayLabel()}', style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.65))),
-            ])),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(width: 7, height: 7, decoration: BoxDecoration(color: const Color(0xFF4ADE80), shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: const Color(0xFF4ADE80).withValues(alpha: 0.4), blurRadius: 6)])),
-                const SizedBox(width: 7),
-                const Text('System Online', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
-              ]),
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+          // ── Hero Banner ──
+          Container(
+            width: double.infinity, padding: EdgeInsets.fromLTRB(16, 14, isMobile ? 16 : 24, 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [cNavBg, cNavBgDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              borderRadius: BorderRadius.circular(16),
             ),
-          ]),
-        ),
-        const SizedBox(height: 12),
+            child: Row(children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Admin Dashboard', style: TextStyle(fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5)),
+                const SizedBox(height: 4),
+                Text('UniFind · ${_todayLabel()}', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.65))),
+              ])),
+              if (!isMobile)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Container(width: 7, height: 7, decoration: BoxDecoration(color: const Color(0xFF4ADE80), shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: const Color(0xFF4ADE80).withValues(alpha: 0.4), blurRadius: 6)])),
+                    const SizedBox(width: 7),
+                    const Text('System Online', style: TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 12),
 
-        // ── Stat Cards ──
-        const Text('   OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(child: _StatCard(label: 'Active Listings', value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded, color: cRed, onTap: () => onNavigate(AdminTab.listings, showActive: true))),
-            const SizedBox(width: 10),
-            Expanded(child: _StatCard(label: 'Pending Approvals', value: '${stats.pendingApprovals}', icon: Icons.pending_actions_rounded, color: const Color(0xFFD97706), onTap: () => onNavigate(AdminTab.listings, showActive: false))),
-            const SizedBox(width: 10),
-            Expanded(child: _StatCard(label: 'New Users (7d)', value: '${stats.newUsersThisWeek}', icon: Icons.person_add_rounded, color: const Color(0xFF1D4ED8), onTap: () => onNavigate(AdminTab.users, showActive: false))),
-            const SizedBox(width: 10),
-            Expanded(child: _StatCard(label: 'Open Reports', value: '${stats.openReports}', icon: Icons.flag_rounded, color: const Color(0xFF7C3AED), onTap: () => onNavigate(AdminTab.reports, showActive: false))),
-          ],
-        ),
-        const SizedBox(height: 12),
+          // ── Stat Cards ──
+          const Text('   OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          // Mobile: 2x2 grid, Desktop: 4 in a row
+          if (isMobile) ...[
+            Row(children: [
+              Expanded(child: _StatCard(label: 'Active', value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded, color: cRed, onTap: () => onNavigate(AdminTab.listings, showActive: true))),
+              const SizedBox(width: 8),
+              Expanded(child: _StatCard(label: 'Pending', value: '${stats.pendingApprovals}', icon: Icons.pending_actions_rounded, color: const Color(0xFFD97706), onTap: () => onNavigate(AdminTab.listings, showActive: false))),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: _StatCard(label: 'New Users', value: '${stats.newUsersThisWeek}', icon: Icons.person_add_rounded, color: const Color(0xFF1D4ED8), onTap: () => onNavigate(AdminTab.users, showActive: false))),
+              const SizedBox(width: 8),
+              Expanded(child: _StatCard(label: 'Reports', value: '${stats.openReports}', icon: Icons.flag_rounded, color: const Color(0xFF7C3AED), onTap: () => onNavigate(AdminTab.reports, showActive: false))),
+            ]),
+          ] else
+            Row(children: [
+              Expanded(child: _StatCard(label: 'Active Listings', value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded, color: cRed, onTap: () => onNavigate(AdminTab.listings, showActive: true))),
+              const SizedBox(width: 10),
+              Expanded(child: _StatCard(label: 'Pending Approvals', value: '${stats.pendingApprovals}', icon: Icons.pending_actions_rounded, color: const Color(0xFFD97706), onTap: () => onNavigate(AdminTab.listings, showActive: false))),
+              const SizedBox(width: 10),
+              Expanded(child: _StatCard(label: 'New Users (7d)', value: '${stats.newUsersThisWeek}', icon: Icons.person_add_rounded, color: const Color(0xFF1D4ED8), onTap: () => onNavigate(AdminTab.users, showActive: false))),
+              const SizedBox(width: 10),
+              Expanded(child: _StatCard(label: 'Open Reports', value: '${stats.openReports}', icon: Icons.flag_rounded, color: const Color(0xFF7C3AED), onTap: () => onNavigate(AdminTab.reports, showActive: false))),
+            ]),
+          const SizedBox(height: 12),
 
-        // ── Bottom Two-Column Grid ──
-        SizedBox(
-          height: 575,
-          child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // ── Quick Actions (always shown) ──
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Quick Actions', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
+              const SizedBox(height: 12),
+              _QuickAction(icon: Icons.pending_actions_rounded, iconBg: const Color.fromARGB(255, 254, 199, 199), iconColor: cRed, label: 'Pending Listings', sub: '${stats.pendingApprovals} submissions awaiting', onTap: () => onNavigate(AdminTab.listings, showActive: false)),
+              _QuickAction(icon: Icons.storefront_rounded,      iconBg: const Color.fromARGB(255, 254, 236, 226), iconColor: const Color(0xFFD97706), label: 'Active Listings', sub: '${stats.totalActiveListings} live posts', onTap: () => onNavigate(AdminTab.listings, showActive: true)),
+              _QuickAction(icon: Icons.flag_rounded,            iconBg: const Color.fromARGB(255, 254, 247, 226), iconColor: const Color.fromARGB(255, 161, 122, 39), label: 'Reports', sub: '${stats.openReports} reports need action', onTap: () => onNavigate(AdminTab.reports, showActive: false)),
+              _QuickAction(icon: Icons.people_outline_rounded,  iconBg: const Color.fromARGB(255, 219, 254, 221), iconColor: const Color(0xFF16A34A), label: 'Users', sub: 'View, warn, or ban accounts', onTap: () => onNavigate(AdminTab.users, showActive: false)),
+              _QuickAction(icon: Icons.search_rounded,          iconBg: const Color.fromARGB(255, 209, 227, 250), iconColor: const Color.fromARGB(255, 22, 83, 163), label: 'Lost & Found', sub: 'Review claims and matches', onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
+            ]),
+          ),
+          const SizedBox(height: 12),
+
           // ── Activity Feed ──
-          Expanded(
-            child: Container(
-                padding: const EdgeInsets.fromLTRB(12, 18, 18, 18),
-                decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: cBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Recent Activity',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: cBg,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: cBorder),
-                        ),
-                        child: Text(
-                          '${stats.recentActivity.length} events',
-                          style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-                  
-                  Expanded(
-                    child: stats.recentActivity.isEmpty
-                        ? _AdminEmptyState(message: 'No recent activity', icon: Icons.history_rounded)
-                        : ListView.builder(
-                              primary: false,
-                              padding: const EdgeInsets.only(right: 12),
-                              itemCount: stats.recentActivity.length,
-                              itemBuilder: (context, index) => _ActivityTile(entry: stats.recentActivity[index]),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          // ── Quick Actions ──
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 18, 18, 18),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Quick Actions', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
-                  const SizedBox(height: 17),
-                  _QuickAction(icon: Icons.pending_actions_rounded, iconBg: const Color.fromARGB(255, 254, 199, 199), iconColor: cRed, label: 'Pending Listings', sub: '${stats.pendingApprovals} submissions awaiting', onTap: () => onNavigate(AdminTab.listings, showActive: false)),
-                  _QuickAction(icon: Icons.storefront_rounded,      iconBg: const Color.fromARGB(255, 254, 236, 226), iconColor: const Color(0xFFD97706),                    label: 'Active Listings',    sub: '${stats.totalActiveListings} live posts',    onTap: () => onNavigate(AdminTab.listings, showActive: true)),
-                  _QuickAction(icon: Icons.flag_rounded,            iconBg: const Color.fromARGB(255, 254, 247, 226), iconColor: const Color.fromARGB(255, 161, 122, 39), label: 'Reports',      sub: '${stats.openReports} reports need action',   onTap: () => onNavigate(AdminTab.reports, showActive: false)),
-                  _QuickAction(icon: Icons.people_outline_rounded,  iconBg: const Color.fromARGB(255, 219, 254, 221), iconColor: const Color(0xFF16A34A), label: 'Users',              sub: 'View, warn, or ban accounts',                onTap: () => onNavigate(AdminTab.users, showActive: false)),
-                  _QuickAction(icon: Icons.search_rounded,          iconBg: const Color.fromARGB(255, 209, 227, 250), iconColor: const Color.fromARGB(255, 22, 83, 163), label: 'Lost & Found',    sub: 'Review claims and matches',                  onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
-                  _QuickAction(icon: Icons.admin_panel_settings_outlined,          iconBg: const Color.fromARGB(255, 241, 209, 250), iconColor: const Color.fromARGB(255, 129, 23, 171), label: 'My Profile',    sub: 'View profile information',                  onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
-                  _QuickAction(icon: Icons.add,          iconBg: const Color.fromARGB(255, 250, 209, 240), iconColor: const Color.fromARGB(255, 219, 31, 219), label: 'Admins',    sub: 'Create new admin profiles',                  onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
-                ],
-              ),
-            ),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Text('Recent Activity', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                  child: Text('${stats.recentActivity.length} events', style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600)),
+                ),
+              ]),
+              const SizedBox(height: 12),
+              if (stats.recentActivity.isEmpty)
+                const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: _AdminEmptyState(message: 'No recent activity', icon: Icons.history_rounded))
+              else
+                ...stats.recentActivity.map((e) => _ActivityTile(entry: e)),
+            ]),
           ),
         ]),
-        ),
-        // end bottom two-column Row
-      ]),
-      // end Column children
-    );
+      );
+    });
   }
-  // end build
 }
 // end _AdminDashboard
 
@@ -1436,16 +1406,84 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     }
   }
 
+  String _mobileTypeFilter = 'lost'; // only used on mobile
+
+  Widget _buildItemList({required List<AdminLostFoundItem> items, required bool isLost, required EdgeInsets padding}) {
+    final accent = isLost ? _cLost : _cFound;
+    final emptyMsg = isLost ? 'No approved lost items' : 'No approved found items';
+    if (items.isEmpty) return Center(child: Text(emptyMsg, style: const TextStyle(color: cMuted, fontSize: 11)));
+    return ListView.builder(
+      primary: false,
+      padding: padding,
+      itemCount: items.length,
+      itemBuilder: (_, i) {
+        final item = items[i];
+        final sel = isLost ? _selectedLostId == item.id : _selectedFoundId == item.id;
+        final hasClaims = item.claims.isNotEmpty;
+        return GestureDetector(
+          onTap: () => _showItemDetail(item),
+          onLongPress: () => setState(() {
+            if (isLost) { _selectedLostId = sel ? null : item.id; }
+            else { _selectedFoundId = sel ? null : item.id; }
+          }),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.only(bottom: 8),
+            decoration: BoxDecoration(
+              color: sel ? accent.withValues(alpha: 0.08) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: sel ? accent : cBorder, width: sel ? 2 : 1),
+            ),
+            child: Row(children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
+                child: Image.network(item.image, width: 60, height: 60, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 20))),
+              ),
+              const SizedBox(width: 8),
+              Expanded(child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Row(children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(color: accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                      child: Text(item.type.toUpperCase(), style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: accent)),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(child: Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted), overflow: TextOverflow.ellipsis)),
+                    if (hasClaims) ...[
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(color: _cOrange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
+                        child: Text('${item.claims.length} claim${item.claims.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cOrange)),
+                      ),
+                    ],
+                  ]),
+                ]),
+              )),
+              if (sel) Padding(padding: const EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: accent, size: 20)),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Column(children: [
       // ── Header ──
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Row(children: [
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Lost & Found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-            Text('Select one from each side, then match', style: TextStyle(fontSize: 12, color: cMuted)),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Lost & Found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+            Text(isMobile ? 'Tap to view, long-press to select' : 'Select one from each side, then match', style: const TextStyle(fontSize: 12, color: cMuted)),
           ])),
         ]),
       ),
@@ -1495,150 +1533,102 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
       ),
 
       // ═══════════════════════════════════════════════════════════
-      // ITEMS VIEW — Lost on left, Found on right, side by side
+      // ITEMS VIEW — responsive: side-by-side on desktop, tabs on mobile
       // Only admin-approved (active) items appear here
       // ═══════════════════════════════════════════════════════════
       if (!_showMatched) ...[
-        // Side-by-side columns
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── LEFT: Lost items ──
-              Expanded(child: Column(children: [
-                Container(
-                  width: double.infinity, margin: const EdgeInsets.fromLTRB(12, 0, 4, 6),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: BoxDecoration(color: _cLost.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.search_off_rounded, size: 14, color: _cLost),
-                    const SizedBox(width: 4),
-                    Text('LOST (${widget.lostItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cLost, letterSpacing: 0.5)),
-                  ]),
-                ),
-                Expanded(
-                  child: widget.lostItems.isEmpty
-                      ? const Center(child: Text('No approved\nlost items', textAlign: TextAlign.center, style: TextStyle(color: cMuted, fontSize: 11)))
-                      : ListView.builder(
-                          primary: false,
-                          padding: const EdgeInsets.fromLTRB(12, 0, 4, 12),
-                          itemCount: widget.lostItems.length,
-                          itemBuilder: (_, i) {
-                            final item = widget.lostItems[i];
-                            final sel = _selectedLostId == item.id;
-                            final hasClaims = item.claims.isNotEmpty;
-                            return GestureDetector(
-                              onTap: () => _showItemDetail(item),
-                              onLongPress: () => setState(() => _selectedLostId = sel ? null : item.id),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: sel ? _cLost.withValues(alpha: 0.08) : Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: sel ? _cLost : cBorder, width: sel ? 2 : 1),
-                                ),
-                                child: Row(children: [
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
-                                    child: Image.network(item.image, width: 60, height: 60, fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 20))),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      Row(children: [
-                                        Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
-                                        if (hasClaims) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                            decoration: BoxDecoration(color: _cOrange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
-                                            child: Text('${item.claims.length} claim${item.claims.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cOrange)),
-                                          ),
-                                        ],
-                                      ]),
-                                    ]),
-                                  )),
-                                  if (sel) const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: _cLost, size: 20)),
-                                ]),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ])),
-
-              // ── RIGHT: Found items ──
-              Expanded(child: Column(children: [
-                Container(
-                  width: double.infinity, margin: const EdgeInsets.fromLTRB(4, 0, 12, 6),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  decoration: BoxDecoration(color: _cFound.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const Icon(Icons.inventory_2_outlined, size: 14, color: _cFound),
-                    const SizedBox(width: 4),
-                    Text('FOUND (${widget.foundItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cFound, letterSpacing: 0.5)),
-                  ]),
-                ),
-                Expanded(
-                  child: widget.foundItems.isEmpty
-                      ? const Center(child: Text('No approved\nfound items', textAlign: TextAlign.center, style: TextStyle(color: cMuted, fontSize: 11)))
-                      : ListView.builder(
-                          primary: false,
-                          padding: const EdgeInsets.fromLTRB(4, 0, 12, 12),
-                          itemCount: widget.foundItems.length,
-                          itemBuilder: (_, i) {
-                            final item = widget.foundItems[i];
-                            final sel = _selectedFoundId == item.id;
-                            final hasClaims = item.claims.isNotEmpty;
-                            return GestureDetector(
-                              onTap: () => _showItemDetail(item),
-                              onLongPress: () => setState(() => _selectedFoundId = sel ? null : item.id),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                margin: const EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  color: sel ? _cFound.withValues(alpha: 0.08) : Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: sel ? _cFound : cBorder, width: sel ? 2 : 1),
-                                ),
-                                child: Row(children: [
-                                  ClipRRect(
-                                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
-                                    child: Image.network(item.image, width: 60, height: 60, fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 20))),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 8),
-                                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                      Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                      Row(children: [
-                                        Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted)),
-                                        if (hasClaims) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                            decoration: BoxDecoration(color: _cOrange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
-                                            child: Text('${item.claims.length} claim${item.claims.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cOrange)),
-                                          ),
-                                        ],
-                                      ]),
-                                    ]),
-                                  )),
-                                  if (sel) const Padding(padding: EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: _cFound, size: 20)),
-                                ]),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ])),
-            ],
+        // Mobile: Lost/Found toggle
+        if (isMobile)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(children: [
+              for (final t in ['lost', 'found'])
+                Expanded(child: Padding(
+                  padding: EdgeInsets.only(right: t == 'lost' ? 4 : 0, left: t == 'found' ? 4 : 0),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _mobileTypeFilter = t),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 7),
+                      decoration: BoxDecoration(
+                        color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound).withValues(alpha: 0.12) : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound) : cBorder),
+                      ),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(t == 'lost' ? Icons.search_off_rounded : Icons.inventory_2_outlined, size: 13, color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound) : cMuted),
+                        const SizedBox(width: 4),
+                        Text('${t == 'lost' ? 'Lost' : 'Found'} (${t == 'lost' ? widget.lostItems.length : widget.foundItems.length})', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound) : cMuted)),
+                      ]),
+                    ),
+                  ),
+                )),
+            ]),
           ),
+
+        // Selection indicator
+        if (_selectedLostId != null || _selectedFoundId != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            child: Container(
+              width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: _cGreen.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8), border: Border.all(color: _cGreen.withValues(alpha: 0.3))),
+              child: Row(children: [
+                Icon(_selectedLostId != null ? Icons.check_circle_rounded : Icons.radio_button_unchecked, size: 14, color: _selectedLostId != null ? _cLost : cMuted),
+                const SizedBox(width: 3),
+                Text('Lost', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _selectedLostId != null ? _cLost : cMuted)),
+                const SizedBox(width: 10),
+                Icon(_selectedFoundId != null ? Icons.check_circle_rounded : Icons.radio_button_unchecked, size: 14, color: _selectedFoundId != null ? _cFound : cMuted),
+                const SizedBox(width: 3),
+                Text('Found', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _selectedFoundId != null ? _cFound : cMuted)),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => setState(() { _selectedLostId = null; _selectedFoundId = null; }),
+                  child: const Text('Clear', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cRedDark)),
+                ),
+              ]),
+            ),
+          ),
+
+        const SizedBox(height: 4),
+
+        // ── Item lists ──
+        Expanded(
+          child: isMobile
+              // MOBILE: single list with toggle
+              ? _buildItemList(
+                  items: _mobileTypeFilter == 'lost' ? widget.lostItems : widget.foundItems,
+                  isLost: _mobileTypeFilter == 'lost',
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                )
+              // DESKTOP: side by side
+              : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(child: Column(children: [
+                    Container(
+                      width: double.infinity, margin: const EdgeInsets.fromLTRB(12, 0, 4, 6),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(color: _cLost.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.search_off_rounded, size: 14, color: _cLost),
+                        const SizedBox(width: 4),
+                        Text('LOST (${widget.lostItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cLost, letterSpacing: 0.5)),
+                      ]),
+                    ),
+                    Expanded(child: _buildItemList(items: widget.lostItems, isLost: true, padding: const EdgeInsets.fromLTRB(12, 0, 4, 12))),
+                  ])),
+                  Expanded(child: Column(children: [
+                    Container(
+                      width: double.infinity, margin: const EdgeInsets.fromLTRB(4, 0, 12, 6),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(color: _cFound.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.inventory_2_outlined, size: 14, color: _cFound),
+                        const SizedBox(width: 4),
+                        Text('FOUND (${widget.foundItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cFound, letterSpacing: 0.5)),
+                      ]),
+                    ),
+                    Expanded(child: _buildItemList(items: widget.foundItems, isLost: false, padding: const EdgeInsets.fromLTRB(4, 0, 12, 12))),
+                  ])),
+                ]),
         ),
 
         // Match button (shows when both selected)
