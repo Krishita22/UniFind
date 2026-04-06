@@ -1161,7 +1161,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                 Expanded(
                   flex: 2,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
