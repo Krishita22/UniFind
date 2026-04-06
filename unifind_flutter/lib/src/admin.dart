@@ -375,20 +375,27 @@ class _StandardUserShell extends StatelessWidget {
       body: IndexedStack(index: tab, children: screens),
       // MOBILE: bottom navigation bar
       bottomNavigationBar: isMobile
-          ? NavigationBar(
+          ? Theme(
+              data: Theme.of(context).copyWith(
+                navigationBarTheme: NavigationBarThemeData(
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) =>
+                    TextStyle(fontSize: 11, fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500, color: Colors.white)),
+                ),
+              ),
+              child: NavigationBar(
               selectedIndex: tab,
               backgroundColor: cNavBg,
               indicatorColor: Colors.white.withValues(alpha: 0.2),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               onDestinationSelected: onTabChanged,
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
-                NavigationDestination(icon: Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
-                NavigationDestination(icon: Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
-                NavigationDestination(icon: Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'My Listings'),
-                NavigationDestination(icon: Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
+              destinations: [
+                NavigationDestination(icon: const Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
+                NavigationDestination(icon: const Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
+                NavigationDestination(icon: const Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: const Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
+                NavigationDestination(icon: const Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'My Listings'),
+                NavigationDestination(icon: const Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: const Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
               ],
-            )
+            ))
           : null,
     );
   }
