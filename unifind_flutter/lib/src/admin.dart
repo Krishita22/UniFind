@@ -378,8 +378,8 @@ class _StandardUserShell extends StatelessWidget {
           ? Theme(
               data: Theme.of(context).copyWith(
                 navigationBarTheme: NavigationBarThemeData(
-                  labelTextStyle: WidgetStateProperty.resolveWith((states) =>
-                    TextStyle(fontSize: 11, fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500, color: Colors.white)),
+                  labelTextStyle: WidgetStateProperty.all(
+                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),
               child: NavigationBar(
