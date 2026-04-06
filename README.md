@@ -8,6 +8,14 @@ This repository contains:
 - a native Flutter app (`unifind_flutter/`)
 - a PHP backend (`unifind_backend/`)
 
+## Live Demo
+
+The app is deployed and accessible at:
+
+**http://cyan.csam.montclair.edu/~ivanovs1/Unifind/**
+
+> Requires MSU VPN or campus WiFi to access.
+
 ## Run Locally
 
 1. Clone and enter the repo:
