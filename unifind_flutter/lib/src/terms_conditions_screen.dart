@@ -28,8 +28,10 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: cBg,
+      backgroundColor: const Color(0xFFFCF8F8),
       appBar: AppBar(
+        backgroundColor: const Color(0xFF8B1A1A),
+        foregroundColor: Colors.white,
         title: const Text('Legal', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
@@ -67,111 +69,129 @@ class _TermsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 48),
       children: const [
-        _LegalHeader(
-          icon: Icons.gavel_rounded,
-          title: 'Terms & Conditions',
-          subtitle: 'Last updated: January 2026',
+        _IntroCard(
+          text:
+              'Welcome to UniFind, the student marketplace and lost & found platform for Montclair State University. '
+              'By creating an account and using UniFind, you agree to the following terms. Please read them carefully. '
+              'If you do not agree, you may not use the platform.',
+          lastUpdated: 'March 2026',
         ),
         SizedBox(height: 20),
         _LegalSection(
           number: '1',
-          title: 'Acceptance of Terms',
+          title: 'Eligibility',
           body:
-              'By accessing or using UniFind, you agree to be bound by these Terms and Conditions. '
-              'UniFind is a campus marketplace and lost-and-found platform exclusively for '
-              'Montclair State University (MSU) students, faculty, and staff. '
-              'If you do not agree to these terms, please do not use the platform.',
+              'UniFind is exclusively available to current Montclair State University students and faculty. '
+              'You must be at least 18 years of age and register with a valid @montclair.edu email address. '
+              'By registering, you confirm that all information you provide is accurate and up to date.',
         ),
         _LegalSection(
           number: '2',
-          title: 'Eligibility',
+          title: 'Account Responsibility',
           body:
-              'UniFind is available exclusively to members of the Montclair State University community. '
-              'You must register with a valid MSU email address. You are responsible for maintaining '
-              'the confidentiality of your account credentials and for all activity that occurs under your account.',
+              'You are solely responsible for all activity that occurs under your account. You must keep your '
+              'login credentials confidential and must not share your account with anyone else. UniFind is not '
+              'liable for any loss or damage resulting from unauthorized access to your account.\n\n'
+              'If you believe your account has been compromised, please contact us immediately.',
         ),
         _LegalSection(
           number: '3',
-          title: 'Marketplace Listings',
+          title: 'Acceptable Use',
           body:
-              'Users may post items for sale through the Marketplace feature. By posting a listing you confirm that:\n\n'
-              '• You own the item or have the right to sell it.\n'
-              '• The item is accurately described, including condition and price.\n'
-              '• The item does not violate any applicable laws or MSU policies.\n'
-              '• You will not list prohibited items such as weapons, controlled substances, alcohol, '
-              'counterfeit goods, or any items banned by MSU.\n\n'
-              'UniFind is not responsible for the quality, safety, legality, or delivery of listed items. '
-              'All transactions are between buyers and sellers — UniFind is not a party to any sale.',
+              'UniFind is a community platform built on mutual respect. All users are expected to behave '
+              'professionally and courteously at all times. The following are strictly prohibited:\n\n'
+              '• Posting content that is racist, sexist, homophobic, transphobic, or otherwise discriminatory\n'
+              '• Harassment, threats, or intimidation of any other user\n'
+              '• Impersonating another person or entity\n'
+              '• Using the platform for any illegal activity\n'
+              '• Attempting to manipulate, spam, or defraud other users\n'
+              '• Posting false, misleading, or deliberately inaccurate information',
+          warningText: '⚠ Violations of these rules may result in immediate and permanent suspension from the platform.',
         ),
         _LegalSection(
           number: '4',
-          title: 'Lost & Found',
+          title: 'Prohibited Items',
           body:
-              'The Lost & Found feature is provided to help the MSU community reunite people with their belongings. '
-              'Users must provide truthful and accurate information when posting a lost or found item. '
-              'Fraudulent claims — including claiming ownership of items you do not own — may result in '
-              'permanent account suspension and referral to MSU Student Affairs.',
+              'UniFind is intended for the exchange of everyday goods within the MSU community. '
+              'The following items are strictly prohibited:\n\n'
+              '• Weapons, firearms, or ammunition of any kind\n'
+              '• Illegal drugs, controlled substances, or drug paraphernalia\n'
+              '• Alcohol or tobacco products\n'
+              '• Counterfeit, stolen, or fraudulently obtained goods\n'
+              '• Prescription medications\n'
+              '• Explicit, adult, or sexually suggestive content\n'
+              '• Live animals\n'
+              '• Any item whose sale is prohibited by local, state, or federal law\n\n'
+              'UniFind reserves the right to determine, at its sole discretion, whether a listing violates this policy.',
         ),
         _LegalSection(
           number: '5',
-          title: 'Prohibited Conduct',
+          title: 'Listing Standards',
           body:
-              'You agree not to:\n\n'
-              '• Post false, misleading, or fraudulent listings.\n'
-              '• Harass, threaten, or harm other users.\n'
-              '• Use UniFind for any commercial purpose unrelated to personal campus transactions.\n'
-              '• Attempt to access, tamper with, or disrupt UniFind\'s servers or systems.\n'
-              '• Collect or harvest other users\' personal information without consent.\n'
-              '• Impersonate any person or entity.',
+              'All marketplace listings must meet the following standards to remain active:\n\n'
+              '• Insufficient description — listings must clearly describe the item\n'
+              '• Unreasonable pricing — no exploitative or misleading prices\n'
+              '• Personal information — no phone numbers, addresses, or sensitive data\n'
+              '• Duplicate listings — the same item may not be listed multiple times\n'
+              '• Prohibited content — any listing that violates Section 4\n'
+              '• Misleading imagery — images must accurately represent the item\n\n'
+              'Users whose listings are repeatedly removed may have their accounts suspended or permanently banned.',
         ),
         _LegalSection(
           number: '6',
-          title: 'Content Responsibility',
+          title: 'Lost & Found',
           body:
-              'You are solely responsible for all content you post on UniFind, including listings, '
-              'descriptions, images, and messages. UniFind reserves the right to remove any content '
-              'that violates these terms or is otherwise deemed inappropriate, without notice.',
+              'The Lost & Found feature is provided as a community service. UniFind does not guarantee '
+              'the recovery of any lost item and is not responsible for any transactions or interactions '
+              'that arise from a Lost & Found post. Users are encouraged to exercise caution and use '
+              'good judgment when arranging item returns.',
         ),
         _LegalSection(
           number: '7',
-          title: 'Disclaimer of Warranties',
+          title: 'Account Suspension & Banning',
           body:
-              'UniFind is provided "as is" without warranties of any kind. We do not guarantee that '
-              'the platform will be uninterrupted, error-free, or secure. Use of UniFind is at your own risk.',
+              'UniFind administrators reserve the right to suspend or permanently ban any user account at '
+              'any time, with or without prior notice, for any violation of these Terms & Conditions.\n\n'
+              '• Posting prohibited items or content\n'
+              '• Engaging in discriminatory, hateful, or harassing behavior\n'
+              '• Repeated listing violations\n'
+              '• Any conduct deemed harmful to the UniFind community\n\n'
+              'Banned users may not create new accounts to circumvent a suspension.',
         ),
         _LegalSection(
           number: '8',
-          title: 'Limitation of Liability',
+          title: 'Privacy',
           body:
-              'UniFind and its developers shall not be liable for any indirect, incidental, or consequential '
-              'damages arising from your use of the platform, including loss of property, disputes between '
-              'users, or failed transactions.',
+              'UniFind collects only the information necessary to operate the platform, including your name, '
+              'MSU email address, username, age, and role. We do not sell your personal information to third '
+              'parties. Your data is stored securely and used solely for the purpose of providing the UniFind service.',
         ),
         _LegalSection(
           number: '9',
-          title: 'Termination',
+          title: 'Disclaimer of Warranties',
           body:
-              'We reserve the right to suspend or terminate your account at any time, with or without notice, '
-              'for violation of these Terms or for any other reason at our discretion.',
+              'UniFind is provided "as is" without warranties of any kind. We do not guarantee that the '
+              'platform will be uninterrupted, error-free, or free of harmful components. UniFind is not '
+              'responsible for any damages arising from your use of the platform.',
         ),
         _LegalSection(
           number: '10',
-          title: 'Changes to Terms',
+          title: 'Changes to These Terms',
           body:
-              'UniFind may update these Terms at any time. Continued use of the platform after changes '
-              'are posted constitutes your acceptance of the revised Terms.',
+              'UniFind reserves the right to update these Terms & Conditions at any time. Continued use '
+              'of the platform after changes are posted constitutes your acceptance of the revised terms.',
         ),
         _LegalSection(
           number: '11',
           title: 'Contact',
           body:
-              'If you have questions about these Terms, please contact the UniFind team through the '
-              'Montclair State University student portal or reach out via your MSU email.',
+              'If you have any questions about these Terms & Conditions or wish to report a violation, '
+              'please reach out to the UniFind team through your MSU email.',
         ),
-        SizedBox(height: 8),
-        _LegalFootnote(text: '© 2026 UniFind · Montclair State University'),
+        SizedBox(height: 16),
+        _LegalFootnote(text: '© 2026 UniFind · Montclair State University · All rights reserved.'),
       ],
     );
   }
@@ -184,12 +204,13 @@ class _PrivacyTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 48),
       children: const [
-        _LegalHeader(
-          icon: Icons.privacy_tip_outlined,
-          title: 'Privacy Policy',
-          subtitle: 'Last updated: January 2026',
+        _IntroCard(
+          text:
+              'UniFind is committed to protecting your privacy. This policy explains what information '
+              'we collect, how we use it, and how we keep it safe.',
+          lastUpdated: 'March 2026',
         ),
         SizedBox(height: 20),
         _LegalSection(
@@ -219,9 +240,8 @@ class _PrivacyTab extends StatelessWidget {
           title: 'Information Sharing',
           body:
               'UniFind does not sell, rent, or trade your personal information to third parties. '
-              'Your email address is used internally for account purposes and is not publicly '
-              'displayed to other users — only your username is visible on listings. '
-              'We may share information if required by law or MSU policy.',
+              'Your email address is used internally and is not publicly displayed — only your username '
+              'is visible on listings. We may share information if required by law or MSU policy.',
         ),
         _LegalSection(
           number: '4',
@@ -229,7 +249,7 @@ class _PrivacyTab extends StatelessWidget {
           body:
               'Profile pictures you upload are stored locally on your device and are not uploaded '
               'to UniFind servers in the current version. Future versions may offer cloud-based '
-              'profile images, which will be covered by an updated privacy policy.',
+              'profile images, covered by an updated privacy policy.',
         ),
         _LegalSection(
           number: '5',
@@ -244,8 +264,7 @@ class _PrivacyTab extends StatelessWidget {
           title: 'Security',
           body:
               'We take reasonable measures to protect your information. However, no method of '
-              'transmission over the internet or electronic storage is 100% secure. '
-              'Please use a strong, unique password for your account.',
+              'transmission over the internet is 100% secure. Please use a strong, unique password.',
         ),
         _LegalSection(
           number: '7',
@@ -268,60 +287,44 @@ class _PrivacyTab extends StatelessWidget {
           number: '9',
           title: 'Changes to This Policy',
           body:
-              'We may update this Privacy Policy from time to time. We will notify users of '
-              'significant changes through the app. Continued use of UniFind after changes '
-              'are posted constitutes acceptance of the revised policy.',
+              'We may update this Privacy Policy from time to time. Continued use of UniFind after '
+              'changes are posted constitutes acceptance of the revised policy.',
         ),
-        SizedBox(height: 8),
-        _LegalFootnote(text: '© 2026 UniFind · Montclair State University'),
+        SizedBox(height: 16),
+        _LegalFootnote(text: '© 2026 UniFind · Montclair State University · All rights reserved.'),
       ],
     );
   }
 }
 
 // ─── SHARED LEGAL WIDGETS ─────────────────────────────────────────────────────
-class _LegalHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  const _LegalHeader({required this.icon, required this.title, required this.subtitle});
+
+class _IntroCard extends StatelessWidget {
+  final String text;
+  final String lastUpdated;
+  const _IntroCard({required this.text, required this.lastUpdated});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [cNavBg, cRedDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.28), blurRadius: 16, offset: const Offset(0, 6))],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFEDD8D8)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 16, offset: const Offset(0, 4))],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 14, color: Color(0xFF9C7070), fontFamily: 'Georgia', height: 1.75),
+          children: [
+            TextSpan(
+              text: 'Last updated: $lastUpdated\n\n',
+              style: const TextStyle(color: Color(0xFF1A1010), fontWeight: FontWeight.w700),
             ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.2)),
-                const SizedBox(height: 3),
-                Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.72))),
-              ],
-            ),
-          ),
-        ],
+            TextSpan(text: text),
+          ],
+        ),
       ),
     );
   }
@@ -331,38 +334,76 @@ class _LegalSection extends StatelessWidget {
   final String number;
   final String title;
   final String body;
-  const _LegalSection({required this.number, required this.title, required this.body});
+  final String? warningText;
+  const _LegalSection({
+    required this.number,
+    required this.title,
+    required this.body,
+    this.warningText,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: cSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: cBorder),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          expandedCrossAxisAlignment: CrossAxisAlignment.start,
-          leading: Container(
-            width: 30, height: 30,
-            decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8)),
-            child: Center(
-              child: Text(number, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: cRed)),
+      margin: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Section heading matching HTML h2 ──────────────────────────
+          Container(
+            padding: const EdgeInsets.only(bottom: 8),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: Color(0xFFEDD8D8), width: 2)),
+            ),
+            child: Text(
+              '$number. $title',
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFFA12727),
+                fontFamily: 'Georgia',
+                letterSpacing: -0.3,
+              ),
             ),
           ),
-          title: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
-          iconColor: cRed,
-          collapsedIconColor: cMuted,
-          children: [
-            Text(body, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.65)),
+          const SizedBox(height: 10),
+          // ── Body text ─────────────────────────────────────────────────
+          Text(
+            body,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF2A1A1A),
+              fontFamily: 'Georgia',
+              height: 1.75,
+            ),
+          ),
+          // ── Warning box ───────────────────────────────────────────────
+          if (warningText != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF5F5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border(
+                  left: const BorderSide(color: Color(0xFFA12727), width: 4),
+                  top: BorderSide(color: const Color(0xFFF5C0C0), width: 1),
+                  right: BorderSide(color: const Color(0xFFF5C0C0), width: 1),
+                  bottom: BorderSide(color: const Color(0xFFF5C0C0), width: 1),
+                ),
+              ),
+              child: Text(
+                warningText!,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF7A1A1A),
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Georgia',
+                ),
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -375,9 +416,12 @@ class _LegalFootnote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 8),
       child: Center(
-        child: Text(text, style: const TextStyle(fontSize: 11, color: cMuted)),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF9C7070), fontFamily: 'Georgia'),
+        ),
       ),
     );
   }
