@@ -211,7 +211,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           label: 'Change Password',
           subtitle: 'Update your account password',
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ForgotPasswordScreen(initialEmail: widget.email)),
+            MaterialPageRoute(builder: (_) => ChangePasswordScreen()),
           ),
         ),
         const SizedBox(height: 20),
