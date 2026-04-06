@@ -213,7 +213,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       padding: const EdgeInsets.all(12),
                       itemCount: filtered.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, childAspectRatio: 1.35,
+                        crossAxisCount: 2, mainAxisExtent: 200,
                         crossAxisSpacing: 8, mainAxisSpacing: 8,
                       ),
                       itemBuilder: (ctx, i) => _MarketCard(
@@ -781,7 +781,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                         itemCount: widget.filtered.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, childAspectRatio: 0.9,
+                          crossAxisCount: 3, mainAxisExtent: 280,
                           crossAxisSpacing: 10, mainAxisSpacing: 10,
                         ),
                         itemBuilder: (ctx, i) => _MarketCard(
@@ -1137,7 +1137,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: Stack(
                     children: [
                       Image.network(
@@ -1161,10 +1161,10 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                 Expanded(
                   flex: 2,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
