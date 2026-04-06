@@ -311,100 +311,85 @@ class _StandardUserShell extends StatelessWidget {
       ProfileScreen(email: email, username: username, onLogout: onLogout),
     ];
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
       backgroundColor: cBg,
-      // ── Top nav bar — no bottom nav bar ───────────────────────────────
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: Container(
-          color: cNavBg,
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: 80,
-              child: Stack(
-                children: [
-                  // ── Centered column: logo on top, tabs + post below ──
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Logo row (centered)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/whitelogo.png',
-                              height: 22,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Text(
-                                'UniFind',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3),
-                              ),
-                            ),
-                            if (role == UserRole.fac) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
-                                child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        // Nav tabs + post button (centered)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (int i = 0; i < _userNavItems.length; i++) ...[
-                              _TopNavTab(
-                                item: _userNavItems[i],
-                                isActive: activeNavIndex == i,
-                                onTap: () => onTabChanged(_userNavItems[i].tabIndex),
-                              ),
-                              if (i == 1) ...[
-                                const SizedBox(width: 6),
-                                _NavPostButton(onTap: () => goToPostTab()),
-                                const SizedBox(width: 6),
-                              ],
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // ── Logout button pinned to top-right corner ──
-                  Positioned(
-                    top: 0,
-                    right: 4,
-                    bottom: 0,
-                    child: Center(
-                      child: IconButton(
-                        tooltip: 'Log out',
-                        icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                        onPressed: onLogout,
-                      ),
-                    ),
+      appBar: isMobile
+          // MOBILE: simple app bar with logo + logout
+          ? AppBar(
+              backgroundColor: cNavBg, foregroundColor: Colors.white, elevation: 0, centerTitle: true,
+              title: Row(mainAxisSize: MainAxisSize.min, children: [
+                Image.asset('assets/images/whitelogo.png', height: 22, fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white))),
+                if (role == UserRole.fac) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+                    child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
                   ),
                 ],
+              ]),
+              actions: [IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18), onPressed: onLogout)],
+            )
+          // DESKTOP: top nav bar with tabs
+          : PreferredSize(
+              preferredSize: const Size.fromHeight(80),
+              child: Container(
+                color: cNavBg,
+                child: SafeArea(
+                  bottom: false,
+                  child: SizedBox(
+                    height: 80,
+                    child: Stack(children: [
+                      Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          Image.asset('assets/images/whitelogo.png', height: 22, fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3))),
+                          if (role == UserRole.fac) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+                              child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+                            ),
+                          ],
+                        ]),
+                        const SizedBox(height: 4),
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          for (int i = 0; i < _userNavItems.length; i++) ...[
+                            _TopNavTab(item: _userNavItems[i], isActive: activeNavIndex == i, onTap: () => onTabChanged(_userNavItems[i].tabIndex)),
+                            if (i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
+                          ],
+                        ]),
+                      ])),
+                      Positioned(top: 0, right: 4, bottom: 0, child: Center(
+                        child: IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white), onPressed: onLogout),
+                      )),
+                    ]),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          _BreadcrumbBar(tab: tab.clamp(0, 4), onHome: () => onTabChanged(0)),
-          Expanded(
-            child: IndexedStack(
-              index: tab,
-              children: screens,
-            ),
-          ),
-        ],
-      ),
-      // NO bottomNavigationBar
+      body: IndexedStack(index: tab, children: screens),
+      // MOBILE: bottom navigation bar
+      bottomNavigationBar: isMobile
+          ? NavigationBar(
+              selectedIndex: tab,
+              backgroundColor: cNavBg,
+              indicatorColor: Colors.white.withValues(alpha: 0.2),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              onDestinationSelected: onTabChanged,
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
+                NavigationDestination(icon: Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
+                NavigationDestination(icon: Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
+                NavigationDestination(icon: Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'My Listings'),
+                NavigationDestination(icon: Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
+              ],
+            )
+          : null,
     );
   }
 }
