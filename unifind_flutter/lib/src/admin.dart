@@ -1412,12 +1412,12 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     }
   }
 
-  String _mobileTypeFilter = 'lost'; // only used on mobile
-
   Widget _buildItemList({required List<AdminLostFoundItem> items, required bool isLost, required EdgeInsets padding}) {
     final accent = isLost ? _cLost : _cFound;
-    final emptyMsg = isLost ? 'No approved lost items' : 'No approved found items';
-    if (items.isEmpty) return Center(child: Text(emptyMsg, style: const TextStyle(color: cMuted, fontSize: 11)));
+    final emptyMsg = isLost ? 'No approved\nlost items' : 'No approved\nfound items';
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    final imgSize = isMobile ? 48.0 : 60.0;
+    if (items.isEmpty) return Center(child: Text(emptyMsg, textAlign: TextAlign.center, style: const TextStyle(color: cMuted, fontSize: 11)));
     return ListView.builder(
       primary: false,
       padding: padding,
@@ -1434,43 +1434,37 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
           }),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            margin: const EdgeInsets.only(bottom: 8),
+            margin: EdgeInsets.only(bottom: isMobile ? 6 : 8),
             decoration: BoxDecoration(
               color: sel ? accent.withValues(alpha: 0.08) : Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
               border: Border.all(color: sel ? accent : cBorder, width: sel ? 2 : 1),
             ),
             child: Row(children: [
               ClipRRect(
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(11)),
-                child: Image.network(item.image, width: 60, height: 60, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(width: 60, height: 60, color: cPlaceholder, child: const Icon(Icons.image, color: cMuted, size: 20))),
+                borderRadius: BorderRadius.horizontal(left: Radius.circular(isMobile ? 9 : 11)),
+                child: Image.network(item.image, width: imgSize, height: imgSize, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(width: imgSize, height: imgSize, color: cPlaceholder, child: Icon(Icons.image, color: cMuted, size: isMobile ? 16 : 20))),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: isMobile ? 6 : 8),
               Expanded(child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: EdgeInsets.symmetric(vertical: isMobile ? 6 : 8),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(color: accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                      child: Text(item.type.toUpperCase(), style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: accent)),
-                    ),
-                    const SizedBox(width: 4),
-                    Flexible(child: Text(item.category, style: const TextStyle(fontSize: 10, color: cMuted), overflow: TextOverflow.ellipsis)),
-                    if (hasClaims) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(color: _cOrange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(5)),
-                        child: Text('${item.claims.length} claim${item.claims.length > 1 ? 's' : ''}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cOrange)),
+                  Text(item.title, style: TextStyle(fontSize: isMobile ? 11 : 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(item.category, style: TextStyle(fontSize: isMobile ? 9 : 10, color: cMuted), overflow: TextOverflow.ellipsis),
+                  if (hasClaims)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(color: _cOrange.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
+                        child: Text('${item.claims.length} claim${item.claims.length > 1 ? 's' : ''}', style: TextStyle(fontSize: isMobile ? 8 : 9, fontWeight: FontWeight.w800, color: _cOrange)),
                       ),
-                    ],
-                  ]),
+                    ),
                 ]),
               )),
-              if (sel) Padding(padding: const EdgeInsets.only(right: 8), child: Icon(Icons.check_circle_rounded, color: accent, size: 20)),
+              if (sel) Padding(padding: EdgeInsets.only(right: isMobile ? 4 : 8), child: Icon(Icons.check_circle_rounded, color: accent, size: isMobile ? 16 : 20)),
             ]),
           ),
         );
@@ -1539,42 +1533,14 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
       ),
 
       // ═══════════════════════════════════════════════════════════
-      // ITEMS VIEW — responsive: side-by-side on desktop, tabs on mobile
+      // ITEMS VIEW — side by side (Lost | Found)
       // Only admin-approved (active) items appear here
       // ═══════════════════════════════════════════════════════════
       if (!_showMatched) ...[
-        // Mobile: Lost/Found toggle
-        if (isMobile)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(children: [
-              for (final t in ['lost', 'found'])
-                Expanded(child: Padding(
-                  padding: EdgeInsets.only(right: t == 'lost' ? 4 : 0, left: t == 'found' ? 4 : 0),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _mobileTypeFilter = t),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 7),
-                      decoration: BoxDecoration(
-                        color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound).withValues(alpha: 0.12) : Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound) : cBorder),
-                      ),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(t == 'lost' ? Icons.search_off_rounded : Icons.inventory_2_outlined, size: 13, color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound) : cMuted),
-                        const SizedBox(width: 4),
-                        Text('${t == 'lost' ? 'Lost' : 'Found'} (${t == 'lost' ? widget.lostItems.length : widget.foundItems.length})', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _mobileTypeFilter == t ? (t == 'lost' ? _cLost : _cFound) : cMuted)),
-                      ]),
-                    ),
-                  ),
-                )),
-            ]),
-          ),
-
         // Selection indicator
         if (_selectedLostId != null || _selectedFoundId != null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
             child: Container(
               width: double.infinity, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(color: _cGreen.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8), border: Border.all(color: _cGreen.withValues(alpha: 0.3))),
@@ -1597,44 +1563,38 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
 
         const SizedBox(height: 4),
 
-        // ── Item lists ──
+        // ── Side by side: Lost | Found ──
         Expanded(
-          child: isMobile
-              // MOBILE: single list with toggle
-              ? _buildItemList(
-                  items: _mobileTypeFilter == 'lost' ? widget.lostItems : widget.foundItems,
-                  isLost: _mobileTypeFilter == 'lost',
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                )
-              // DESKTOP: side by side
-              : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(child: Column(children: [
-                    Container(
-                      width: double.infinity, margin: const EdgeInsets.fromLTRB(12, 0, 4, 6),
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: BoxDecoration(color: _cLost.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        const Icon(Icons.search_off_rounded, size: 14, color: _cLost),
-                        const SizedBox(width: 4),
-                        Text('LOST (${widget.lostItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cLost, letterSpacing: 0.5)),
-                      ]),
-                    ),
-                    Expanded(child: _buildItemList(items: widget.lostItems, isLost: true, padding: const EdgeInsets.fromLTRB(12, 0, 4, 12))),
-                  ])),
-                  Expanded(child: Column(children: [
-                    Container(
-                      width: double.infinity, margin: const EdgeInsets.fromLTRB(4, 0, 12, 6),
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: BoxDecoration(color: _cFound.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        const Icon(Icons.inventory_2_outlined, size: 14, color: _cFound),
-                        const SizedBox(width: 4),
-                        Text('FOUND (${widget.foundItems.length})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: _cFound, letterSpacing: 0.5)),
-                      ]),
-                    ),
-                    Expanded(child: _buildItemList(items: widget.foundItems, isLost: false, padding: const EdgeInsets.fromLTRB(4, 0, 12, 12))),
-                  ])),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Lost column
+            Expanded(child: Column(children: [
+              Container(
+                width: double.infinity, margin: const EdgeInsets.fromLTRB(12, 0, 4, 6),
+                padding: EdgeInsets.symmetric(vertical: isMobile ? 5 : 6),
+                decoration: BoxDecoration(color: _cLost.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.search_off_rounded, size: isMobile ? 12 : 14, color: _cLost),
+                  const SizedBox(width: 4),
+                  Text('LOST (${widget.lostItems.length})', style: TextStyle(fontSize: isMobile ? 10 : 11, fontWeight: FontWeight.w900, color: _cLost, letterSpacing: 0.5)),
                 ]),
+              ),
+              Expanded(child: _buildItemList(items: widget.lostItems, isLost: true, padding: const EdgeInsets.fromLTRB(12, 0, 4, 12))),
+            ])),
+            // Found column
+            Expanded(child: Column(children: [
+              Container(
+                width: double.infinity, margin: const EdgeInsets.fromLTRB(4, 0, 12, 6),
+                padding: EdgeInsets.symmetric(vertical: isMobile ? 5 : 6),
+                decoration: BoxDecoration(color: _cFound.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.inventory_2_outlined, size: isMobile ? 12 : 14, color: _cFound),
+                  const SizedBox(width: 4),
+                  Text('FOUND (${widget.foundItems.length})', style: TextStyle(fontSize: isMobile ? 10 : 11, fontWeight: FontWeight.w900, color: _cFound, letterSpacing: 0.5)),
+                ]),
+              ),
+              Expanded(child: _buildItemList(items: widget.foundItems, isLost: false, padding: const EdgeInsets.fromLTRB(4, 0, 12, 12))),
+            ])),
+          ]),
         ),
 
         // Match button (shows when both selected)
