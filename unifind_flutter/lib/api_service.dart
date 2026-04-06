@@ -124,6 +124,14 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
   );
 }
 
+Future<bool> checkUsernameAvailable(String username) async {
+  final response = await http.get(
+    Uri.parse('$_baseUrl/check_username.php?username=${Uri.encodeComponent(username)}'),
+  );
+  final data = jsonDecode(response.body);
+  return data['available'] == true;
+}
+
 // PASSWORD RESET STEP 1: REQUEST RESET CODE
 Future<Map<String, dynamic>> requestPasswordReset(String email) async {
   final response = await http.post(
@@ -469,6 +477,7 @@ Future<Map<String, dynamic>> claimLostFoundItem({
     );
   }
 }
+
 
 // UPLOAD IMAGE
 // Sends an image file from the device to upload_image.php

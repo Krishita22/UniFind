@@ -1031,20 +1031,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                _StyledField(
-                                  key: const ValueKey('signup_username'),
-                                  label: 'Username',
-                                  hint: 'janedoe123',
-                                  icon: Icons.alternate_email_rounded,
+                                _UsernameField(
                                   onChanged: (v) => _username = v,
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) return 'Username is required';
-                                    if (v.trim().length < 6) return 'Username must be at least 6 characters';
-                                    if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v.trim())) {
-                                      return 'Letters, numbers, underscores, and periods only';
-                                    }
-                                    return null;
-                                  },
                                 ),
                                 const SizedBox(height: 16),
                                 Column(
@@ -1891,6 +1879,121 @@ class _RoleChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─── USERNAME FIELD WITH AVAILABILITY CHECK ───────────────────────────────────
+class _UsernameField extends StatefulWidget {
+  final ValueChanged<String> onChanged;
+  const _UsernameField({required this.onChanged});
+
+  @override
+  State<_UsernameField> createState() => _UsernameFieldState();
+}
+
+class _UsernameFieldState extends State<_UsernameField> {
+  String _value = '';
+  bool _checking = false;
+  bool? _available; 
+  Timer? _debounce;
+
+  bool get _isValidFormat =>
+      _value.trim().length >= 6 &&
+      RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(_value.trim());
+
+  void _onChanged(String v) {
+    _debounce?.cancel();
+    setState(() {
+      _value = v;
+      _available = null;
+    });
+    widget.onChanged(v);
+
+    if (!_isValidFormat) return;
+
+    setState(() => _checking = true);
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final available = await checkUsernameAvailable(v.trim());
+        if (mounted) setState(() { _available = available; _checking = false; });
+      } catch (_) {
+        if (mounted) setState(() { _available = null; _checking = false; });
+      }
+    });
+  }
+
+  @override
+  void dispose() { _debounce?.cancel(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final showTaken = _available == false && !_checking;
+    final showFree  = _available == true  && !_checking;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Username', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          onChanged: _onChanged,
+          textInputAction: TextInputAction.next,
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return 'Username is required';
+            if (v.trim().length < 6) return 'Username must be at least 6 characters';
+            if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v.trim())) return 'Letters, numbers, underscores, and periods only';
+            if (_available == false) return 'Username is already taken';
+            return null;
+          },
+          decoration: InputDecoration(
+            hintText: 'janedoe123',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18, color: cMuted),
+            suffixIcon: _checking
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cMuted)),
+                  )
+                : showFree
+                    ? const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF43A047))
+                    : showTaken
+                        ? const Icon(Icons.cancel_rounded, size: 18, color: cRedDark)
+                        : null,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: showTaken ? cRedDark : cBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: showTaken ? cRedDark : cRed, width: 2),
+            ),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+        if (showTaken) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 13, color: cRedDark),
+              SizedBox(width: 4),
+              Text('Username is already taken', style: TextStyle(fontSize: 11, color: cRedDark, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ] else if (showFree) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF43A047)),
+              SizedBox(width: 4),
+              Text('Username is available', style: TextStyle(fontSize: 11, color: Color(0xFF43A047), fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
