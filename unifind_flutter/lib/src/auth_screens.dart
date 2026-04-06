@@ -551,6 +551,250 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 }
 
+// ─── CHANGE PASSWORD SCREEN ──────────────────────────────────────────────────
+class ChangePasswordScreen extends StatefulWidget {
+  const ChangePasswordScreen({super.key});
+
+  @override
+  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+}
+
+class _ChangePasswordScreenState extends State<ChangePasswordScreen>
+    with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  String _email = '';
+  String _code = '';
+  String _newPassword = '';
+  String _confirmPassword = '';
+  bool _loading = false;
+  bool _codeSent = false;
+  String? _errorMessage;
+  late AnimationController _c;
+  late Animation<double> _fade, _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _fade = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
+    _slide = Tween(begin: 24.0, end: 0.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+    _c.forward();
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  bool get _resetReady {
+    if (!_codeSent) return _email.trim().isNotEmpty;
+    return _email.trim().isNotEmpty &&
+        _code.trim().isNotEmpty &&
+        _passwordStrong &&
+        _confirmPassword == _newPassword &&
+        _confirmPassword.isNotEmpty;
+  }
+
+  bool get _passwordStrong {
+    return _newPassword.length >= 6 &&
+        !_newPassword.contains(' ') &&
+        RegExp(r'[A-Z]').hasMatch(_newPassword) &&
+        RegExp(r'[0-9]').hasMatch(_newPassword) &&
+        RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_newPassword);
+  }
+
+  String _errorMsg(ApiException e) {
+    switch (e.code) {
+      case 'EMAIL_NOT_FOUND':   return 'No account found with this email.';
+      case 'INVALID_CODE':      return 'That code is invalid. Please check and try again.';
+      case 'CODE_EXPIRED':      return 'Your code expired. Request a new one.';
+      case 'WEAK_PASSWORD':     return 'Use a stronger password (at least 6 characters).';
+      case 'TOO_MANY_REQUESTS': return 'Too many attempts. Please wait and try again.';
+      default:                  return e.message;
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() { _loading = true; _errorMessage = null; });
+
+    try {
+      if (!_codeSent) {
+        final response = await requestPasswordReset(_email.trim().toLowerCase());
+        if (!mounted) return;
+        setState(() => _codeSent = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message']?.toString() ?? 'Code sent to your email.')),
+        );
+      } else {
+        await resetPassword(
+          email: _email.trim().toLowerCase(),
+          code: _code.trim(),
+          newPassword: _newPassword,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password changed successfully!')),
+        );
+        // ── Go back to profile, not login ────────────────────────────────────
+        Navigator.of(context).pop();
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = _errorMsg(e));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: cBg,
+      body: Stack(
+        children: [
+          Positioned(right: -80, top: -80, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
+          Positioned(left: -60, bottom: -60, child: Container(width: 220, height: 220, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.05), Colors.transparent])))),
+          Center(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, child) => Opacity(
+                opacity: _fade.value,
+                child: Transform.translate(offset: Offset(0, _slide.value), child: child),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    children: [
+                      Image.asset('assets/images/logo.jpg', height: 90, fit: BoxFit.contain),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Change Password',
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _codeSent
+                            ? 'Enter the code sent to your email and set a new password'
+                            : 'Enter your MSU email to receive a reset code',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, color: cMuted),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: cSurface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: cBorder),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 6))],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _StyledField(
+                                key: const ValueKey('change_email'),
+                                label: 'MSU Email Address',
+                                hint: 'you@montclair.edu',
+                                icon: Icons.mail_outline_rounded,
+                                initialValue: _email,
+                                onChanged: (v) => setState(() => _email = v),
+                                textInputAction: _codeSent ? TextInputAction.next : TextInputAction.done,
+                                onFieldSubmitted: (_) { if (!_codeSent) _submit(); },
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Email is required';
+                                  if (!v.toLowerCase().trim().endsWith('@montclair.edu')) return 'Must use an @montclair.edu email';
+                                  return null;
+                                },
+                              ),
+                              if (_codeSent) ...[
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  key: const ValueKey('change_code'),
+                                  label: 'Reset Code',
+                                  hint: 'Enter code from your email',
+                                  icon: Icons.verified_outlined,
+                                  onChanged: (v) => setState(() => _code = v),
+                                  textInputAction: TextInputAction.next,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.trim().isEmpty) return 'Code is required';
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _PasswordField(
+                                  key: const ValueKey('change_new_password'),
+                                  label: 'New Password',
+                                  onChanged: (v) => setState(() => _newPassword = v),
+                                  textInputAction: TextInputAction.next,
+                                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.isEmpty) return 'New password is required';
+                                    if (v.contains(' ')) return 'Password cannot contain spaces';
+                                    if (v.length < 6) return 'Minimum 6 characters';
+                                    if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
+                                    if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
+                                    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _ConfirmPasswordField(
+                                  key: const ValueKey('change_confirm_password'),
+                                  newPassword: _newPassword,
+                                  onChanged: (v) => setState(() => _confirmPassword = v),
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
+                                ),
+                              ],
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Text(_errorMessage!, style: const TextStyle(color: cRedDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                              ],
+                              const SizedBox(height: 24),
+                              _AuthButton(
+                                loading: _loading,
+                                onTap: _resetReady ? _submit : () {},
+                                label: _codeSent ? 'Change Password' : 'Send Reset Code',
+                                disabled: !_resetReady,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, size: 14, color: cMuted),
+                              SizedBox(width: 6),
+                              Text('Back to profile', style: TextStyle(color: cMuted, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── REGISTRATION SCREEN ─────────────────────────────────────────────────────
 class RegistrationScreen extends StatefulWidget {
   final AuthSuccessCallback onRegister;
