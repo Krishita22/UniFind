@@ -136,10 +136,12 @@ void _showLostFoundPopup(
   required Future<void> Function(FoundMatchInput) onPostFoundMatch,
   required bool claimSubmittedByMe,
   required bool matchSubmittedByMe,
+  required String currentUserEmail,
 }) {
   final isLost = item.type == LostFoundType.lost;
   final typeColor = isLost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60);
   final typeBg   = isLost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0);
+  final isOwner = currentUserEmail.trim().toLowerCase() == item.posterEmail.trim().toLowerCase();
 
   showGeneralDialog(
     context: context,
@@ -175,64 +177,81 @@ void _showLostFoundPopup(
                       // -- Tappable image header --
                       Stack(
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                PageRouteBuilder(
-                                  opaque: false,
-                                  barrierColor: Colors.black,
-                                  pageBuilder: (_, __, ___) =>
-                                      _FullScreenImagePage(imageUrl: item.image),
-                                  transitionsBuilder: (_, anim, __, child) =>
-                                      FadeTransition(opacity: anim, child: child),
-                                  transitionDuration: kMid,
-                                ),
-                              );
-                            },
-                            child: Stack(
-                              children: [
-                                Image.network(
-                                  item.image,
-                                  width: double.infinity,
-                                  height: 160,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                          if (isOwner)
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  PageRouteBuilder(
+                                    opaque: false,
+                                    barrierColor: Colors.black,
+                                    pageBuilder: (_, __, ___) =>
+                                        _FullScreenImagePage(imageUrl: item.image),
+                                    transitionsBuilder: (_, anim, __, child) =>
+                                        FadeTransition(opacity: anim, child: child),
+                                    transitionDuration: kMid,
+                                  ),
+                                );
+                              },
+                              child: Stack(
+                                children: [
+                                  Image.network(
+                                    item.image,
+                                    width: double.infinity,
                                     height: 160,
-                                    color: cPlaceholder,
-                                    child: const Center(
-                                      child: Icon(Icons.image_not_supported,
-                                          color: cMuted, size: 36),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      height: 160,
+                                      color: cPlaceholder,
+                                      child: const Center(
+                                        child: Icon(Icons.image_not_supported,
+                                            color: cMuted, size: 36),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                // Expand affordance badge
-                                Positioned(
-                                  bottom: 8, right: 8,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(alpha: 0.5),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.open_in_full_rounded,
-                                            size: 11, color: Colors.white),
-                                        SizedBox(width: 4),
-                                        Text('Tap to expand',
-                                            style: TextStyle(
-                                                fontSize: 10,
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600)),
-                                      ],
+                                  // Expand affordance badge
+                                  Positioned(
+                                    bottom: 8, right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.5),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.open_in_full_rounded,
+                                              size: 11, color: Colors.white),
+                                          SizedBox(width: 4),
+                                          Text('Tap to expand',
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
                                     ),
                                   ),
+                                ],
+                              ),
+                            )
+                          else
+                            Container(
+                              width: double.infinity,
+                              height: 160,
+                              color: cPlaceholder,
+                              child: const Center(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.visibility_off, color: cMuted, size: 36),
+                                    SizedBox(height: 6),
+                                    Text('Image hidden', style: TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600)),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
                           // Lost / Found type badge
                           Positioned(
                             top: 10, left: 10,
@@ -300,35 +319,34 @@ void _showLostFoundPopup(
                                   style: const TextStyle(
                                       fontSize: 13, color: cMuted, height: 1.55)),
                               const SizedBox(height: 16),
-                              if (!isLost)
-                                _LFActionButton(
-                                  label: item.status.toLowerCase() == 'claimed'
-                                      ? 'Already Claimed'
-                                      : claimSubmittedByMe
-                                          ? 'Claim Submitted'
-                                          : 'Claim This Item',
-                                  icon: item.status.toLowerCase() == 'claimed'
-                                      ? Icons.check_circle_outline_rounded
-                                      : claimSubmittedByMe
-                                          ? Icons.mark_email_read_outlined
-                                          : Icons.volunteer_activism_outlined,
-                                  color: const Color(0xFFE74C3C),
-                                  disabled: item.status.toLowerCase() == 'claimed' ||
-                                      claimSubmittedByMe,
-                                  onTap: () async => Navigator.of(ctx).pop(),
+                              // Status badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: typeBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: typeColor.withValues(alpha: 0.3)),
                                 ),
-                              if (isLost)
-                                _LFActionButton(
-                                  label: matchSubmittedByMe
-                                      ? 'Match Submitted'
-                                      : 'I Found This Item',
-                                  icon: matchSubmittedByMe
-                                      ? Icons.check_circle_outline_rounded
-                                      : Icons.add_circle_outline_rounded,
-                                  color: const Color(0xFF27AE60),
-                                  disabled: matchSubmittedByMe,
-                                  onTap: () async => Navigator.of(ctx).pop(),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(isLost ? Icons.search_rounded : Icons.check_circle_outline_rounded, size: 14, color: typeColor),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      isLost ? 'Lost Item' : 'Found Item',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: typeColor),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                              const SizedBox(height: 8),
+                              // Hint
+                              Text(
+                                isLost
+                                    ? 'If you found this item, post a "Found" listing and the admin will match them.'
+                                    : (claimSubmittedByMe ? 'You already submitted a claim for this item.' : item.status.toLowerCase() == 'claimed' ? 'This item has already been claimed.' : 'Close this popup and tap "Claim" on the card to claim this item.'),
+                                style: const TextStyle(fontSize: 11, color: cMuted, fontStyle: FontStyle.italic),
+                              ),
                             ],
                           ),
                         ),
@@ -372,44 +390,6 @@ class _LFPopupChip extends StatelessWidget {
   }
 }
 
-class _LFActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final bool disabled;
-  final VoidCallback onTap;
-
-  const _LFActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-    this.disabled = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: disabled ? null : onTap,
-        icon: Icon(icon, size: 16),
-        label: Text(label),
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          side: BorderSide(
-              color: disabled ? cBorder : color.withValues(alpha: 0.6)),
-          foregroundColor: disabled ? cMuted : color,
-          textStyle:
-              const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-    );
-  }
-}
-
 // -- Lost & Found card --
 class _LostFoundCard extends StatefulWidget {
   final LostFoundItem item;
@@ -436,15 +416,10 @@ class _LostFoundCardState extends State<_LostFoundCard>
   late AnimationController _c;
   late Animation<double> _scale;
   bool _claiming = false;
-  bool _postingMatch = false;
   final _proofCtrl = TextEditingController();
   final _identCtrl = TextEditingController();
   final _lastSeenCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
-  final _foundWhereCtrl = TextEditingController();
-  final _foundWhenCtrl = TextEditingController();
-  final _foundDetailsCtrl = TextEditingController();
-  final _foundContactCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -461,10 +436,6 @@ class _LostFoundCardState extends State<_LostFoundCard>
     _identCtrl.dispose();
     _lastSeenCtrl.dispose();
     _contactCtrl.dispose();
-    _foundWhereCtrl.dispose();
-    _foundWhenCtrl.dispose();
-    _foundDetailsCtrl.dispose();
-    _foundContactCtrl.dispose();
     super.dispose();
   }
 
@@ -602,102 +573,6 @@ class _LostFoundCardState extends State<_LostFoundCard>
     });
   }
 
-  Future<FoundMatchInput?> _openFoundMatchSheet() async {
-    _foundWhereCtrl.clear();
-    _foundWhenCtrl.clear();
-    _foundDetailsCtrl.clear();
-    _foundContactCtrl.clear();
-    String? error;
-    return _openCenteredDialog<FoundMatchInput>((ctx, setModalState) {
-      return SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Match',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
-            Text('Submit a match request for "${widget.item.title}".',
-                style: const TextStyle(fontSize: 12, color: cMuted)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _foundWhereCtrl,
-              decoration: const InputDecoration(
-                  labelText: 'Where did you find it? *'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _foundWhenCtrl,
-              decoration: const InputDecoration(
-                labelText: 'When did you find it? *',
-                hintText: 'e.g. Today 2PM',
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _foundDetailsCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Matching details *',
-                hintText: 'Describe how this matches the lost item...',
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _foundContactCtrl,
-              decoration:
-                  const InputDecoration(labelText: 'Contact note'),
-            ),
-            if (error != null) ...[
-              const SizedBox(height: 8),
-              Text(error!,
-                  style: const TextStyle(color: cRedDark, fontSize: 12)),
-            ],
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: _AuthButton(
-                loading: false,
-                label: 'Submit Match',
-                onTap: () {
-                  final where = _foundWhereCtrl.text.trim();
-                  final when = _foundWhenCtrl.text.trim();
-                  final details = _foundDetailsCtrl.text.trim();
-                  if (where.isEmpty) {
-                    setModalState(() =>
-                        error = 'Please enter where you found it.');
-                    return;
-                  }
-                  if (when.isEmpty) {
-                    setModalState(() =>
-                        error = 'Please enter when you found it.');
-                    return;
-                  }
-                  if (details.isEmpty) {
-                    setModalState(() =>
-                        error = 'Please enter matching details.');
-                    return;
-                  }
-                  if (details.length < 8) {
-                    setModalState(() => error =
-                        'Matching details must be at least 8 characters.');
-                    return;
-                  }
-                  Navigator.of(ctx).pop(FoundMatchInput(
-                    foundLocation: where,
-                    foundWhen: when,
-                    matchDetails: details,
-                    contactNote: _foundContactCtrl.text.trim(),
-                  ));
-                },
-              ),
-            ),
-          ],
-        ),
-      );
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isLost = widget.item.type == LostFoundType.lost;
@@ -709,6 +584,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
     final typeBg =
         isLost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0);
 
+    final isOwner = widget.currentUserEmail.trim().toLowerCase() == widget.item.posterEmail.trim().toLowerCase();
     return GestureDetector(
       onTapDown: (_) => _c.forward(),
       onTapUp: (_) {
@@ -720,6 +596,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
           onPostFoundMatch: widget.onPostFoundMatch,
           claimSubmittedByMe: isSubmitted,
           matchSubmittedByMe: isMatchSubmitted,
+          currentUserEmail: widget.currentUserEmail,
         );
       },
       onTapCancel: () => _c.reverse(),
@@ -740,57 +617,77 @@ class _LostFoundCardState extends State<_LostFoundCard>
           ),
           child: Row(
             children: [
-              // -- Thumbnail -- tap opens full-screen image directly --
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  PageRouteBuilder(
-                    opaque: false,
-                    barrierColor: Colors.black,
-                    pageBuilder: (_, __, ___) =>
-                        _FullScreenImagePage(imageUrl: widget.item.image),
-                    transitionsBuilder: (_, anim, __, child) =>
-                        FadeTransition(opacity: anim, child: child),
-                    transitionDuration: kMid,
+              // -- Thumbnail --
+              if (isOwner)
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    PageRouteBuilder(
+                      opaque: false,
+                      barrierColor: Colors.black,
+                      pageBuilder: (_, __, ___) =>
+                          _FullScreenImagePage(imageUrl: widget.item.image),
+                      transitionsBuilder: (_, anim, __, child) =>
+                          FadeTransition(opacity: anim, child: child),
+                      transitionDuration: kMid,
+                    ),
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        widget.item.image,
-                        width: 72,
-                        height: 72,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox(
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          widget.item.image,
                           width: 72,
                           height: 72,
-                          child: ColoredBox(
-                            color: cPlaceholder,
-                            child: Center(
-                              child: Icon(Icons.image_not_supported,
-                                  color: cMuted, size: 20),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const SizedBox(
+                            width: 72,
+                            height: 72,
+                            child: ColoredBox(
+                              color: cPlaceholder,
+                              child: Center(
+                                child: Icon(Icons.image_not_supported,
+                                    color: cMuted, size: 20),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    // Small expand icon hint on thumbnail
-                    Positioned(
-                      bottom: 3, right: 3,
-                      child: Container(
-                        width: 18, height: 18,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(5),
+                      // Small expand icon hint on thumbnail
+                      Positioned(
+                        bottom: 3, right: 3,
+                        child: Container(
+                          width: 18, height: 18,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: const Icon(Icons.open_in_full_rounded,
+                              size: 10, color: Colors.white),
                         ),
-                        child: const Icon(Icons.open_in_full_rounded,
-                            size: 10, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    color: cPlaceholder,
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.visibility_off, color: cMuted, size: 20),
+                          SizedBox(height: 2),
+                          Text('Image hidden', style: TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -852,8 +749,8 @@ class _LostFoundCardState extends State<_LostFoundCard>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    // Action button
-                    if (!isLost)
+                    // Action button — only non-owners can claim found items
+                    if (!isLost && !isOwner)
                       SizedBox(
                         height: 28,
                         child: OutlinedButton.icon(
@@ -908,49 +805,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
                           ),
                         ),
                       ),
-                    if (isLost)
-                      SizedBox(
-                        height: 28,
-                        child: OutlinedButton.icon(
-                          onPressed: _postingMatch || isMatchSubmitted
-                              ? null
-                              : () async {
-                                  final input =
-                                      await _openFoundMatchSheet();
-                                  if (input == null) return;
-                                  setState(() => _postingMatch = true);
-                                  try {
-                                    await widget.onPostFoundMatch(input);
-                                  } finally {
-                                    if (mounted) {
-                                      setState(
-                                          () => _postingMatch = false);
-                                    }
-                                  }
-                                },
-                          icon: const Icon(
-                              Icons.add_circle_outline_rounded,
-                              size: 13),
-                          label: Text(
-                            isMatchSubmitted
-                                ? 'Submitted'
-                                : _postingMatch
-                                    ? 'Posting...'
-                                    : 'Match',
-                            style: const TextStyle(fontSize: 11),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10),
-                            side: BorderSide(
-                                color: const Color(0xFF27AE60)
-                                    .withValues(alpha: 0.35)),
-                            foregroundColor: const Color(0xFF27AE60),
-                            textStyle: const TextStyle(
-                                fontSize: 11, fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ),
+                    // Lost items: no user action — admin matches them with found items
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,

@@ -284,6 +284,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
     if (raw.isEmpty || raw.contains('@') || raw.contains(' ')) return 'Student';
     return raw;
   }
+  // Marketplace images are always visible after admin approval
   showGeneralDialog(
     context: context,
     barrierDismissible: true,
@@ -352,16 +353,18 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.open_in_full_rounded, size: 11, color: Colors.white),
-                                        SizedBox(width: 4),
-                                        Text('Tap to expand', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
-                                      ],
+                                          Icon(Icons.open_in_full_rounded, size: 11, color: Colors.white),
+                                          SizedBox(width: 4),
+                                          Text('Tap to expand', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
+                          // Category badge
                           Positioned(
                             top: 10, left: 10,
                             child: Container(
@@ -1026,6 +1029,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
 
   @override
   Widget build(BuildContext context) {
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),

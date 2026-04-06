@@ -214,9 +214,9 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 TextField(controller: descCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: category,
+                  value: category.isEmpty ? null : category,
                   decoration: const InputDecoration(labelText: 'Category'),
-                  items: categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  items: {category, ...lostFoundCategories, ...categories}.where((c) => c.isNotEmpty).map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                   onChanged: (v) => setDialogState(() => category = v ?? category),
                 ),
                 const SizedBox(height: 8),
@@ -380,6 +380,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               subtitle: '${i.category} · ${i.condition}',
                               trailing: '\$${i.price.toStringAsFixed(0)}',
                               icon: Icons.storefront_rounded,
+                              status: i.status,
                               imageUrl: i.image,
                               onTap: () => _editMarketplace(i),
                             )).toList()
@@ -388,9 +389,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               subtitle: '${i.category} · ${i.location}',
                               trailing: i.type == LostFoundType.lost ? 'Lost' : 'Found',
                               icon: i.type == LostFoundType.lost ? Icons.report_problem_outlined : Icons.check_circle_outline_rounded,
-                              imageUrl: i.image,
                               trailingColor: i.type == LostFoundType.lost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60),
                               trailingBgColor: i.type == LostFoundType.lost ? const Color(0xFFFDECEC) : const Color(0xFFECF9F0),
+                              status: i.status,
+                              imageUrl: i.image,
                               onTap: () => _editLostFound(i),
                             )).toList(),
                   ),
@@ -408,7 +410,7 @@ class _MyListingTile extends StatelessWidget {
   final Color trailingColor;
   final Color trailingBgColor;
   final VoidCallback? onTap;
-
+  final String status;
   const _MyListingTile({
     required this.title,
     required this.subtitle,
@@ -418,7 +420,38 @@ class _MyListingTile extends StatelessWidget {
     this.trailingColor = cRed,
     this.trailingBgColor = cRedLight,
     this.onTap,
+    this.status = 'active',
   });
+
+  Color get _statusColor {
+    switch (status.toLowerCase()) {
+      case 'pending': return const Color(0xFFE67E22);
+      case 'active': case 'approved': return const Color(0xFF27AE60);
+      case 'denied': case 'rejected': return const Color(0xFFE74C3C);
+      case 'claimed': return const Color(0xFF2980B9);
+      default: return cMuted;
+    }
+  }
+
+  Color get _statusBg {
+    switch (status.toLowerCase()) {
+      case 'pending': return const Color(0xFFFEF3E2);
+      case 'active': case 'approved': return const Color(0xFFECF9F0);
+      case 'denied': case 'rejected': return const Color(0xFFFDECEC);
+      case 'claimed': return const Color(0xFFEBF5FB);
+      default: return cRedLight;
+    }
+  }
+
+  String get _statusLabel {
+    switch (status.toLowerCase()) {
+      case 'active': return 'Approved';
+      case 'pending': return 'Pending';
+      case 'denied': return 'Denied';
+      case 'claimed': return 'Claimed';
+      default: return status;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -438,24 +471,24 @@ class _MyListingTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // ── Thumbnail or icon fallback ──────────────────────────────
+            // Thumbnail
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: SizedBox(
-                width: 56,
-                height: 56,
+                width: 52,
+                height: 52,
                 child: hasImage
                     ? Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           color: cRedLight,
-                          child: Icon(icon, color: cRed, size: 22),
+                          child: Icon(icon, color: cRed, size: 20),
                         ),
                       )
                     : Container(
                         color: cRedLight,
-                        child: Icon(icon, color: cRed, size: 22),
+                        child: Icon(icon, color: cRed, size: 20),
                       ),
               ),
             ),
@@ -470,6 +503,13 @@ class _MyListingTile extends StatelessWidget {
                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
                   const SizedBox(height: 3),
                   Text(subtitle, style: const TextStyle(fontSize: 12, color: cMuted)),
+                  const SizedBox(height: 4),
+                  // Status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: _statusBg, borderRadius: BorderRadius.circular(6)),
+                    child: Text(_statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: _statusColor)),
+                  ),
                 ],
               ),
             ),
