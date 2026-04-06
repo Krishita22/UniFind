@@ -648,19 +648,27 @@ class _AdminAppState extends State<AdminApp> {
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
               _AdminReportsPanel(reports: _reports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
             ]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab.index,
-        backgroundColor: cNavBgDark,
-        indicatorColor: Colors.white.withValues(alpha: 0.2),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (i) => setState(() => _tab = AdminTab.values[i]),
-        destinations: [
-          _dest(Icons.dashboard_rounded, 'Dashboard'),
-          _dest(Icons.storefront_outlined, 'Listings', badge: _stats.pendingApprovals > 0 ? '${_stats.pendingApprovals}' : null),
-          _dest(Icons.search_rounded, 'Lost/Found'),
-          _dest(Icons.people_outline_rounded, 'Users'),
-          _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
-        ],
+      bottomNavigationBar: Theme(
+        data: Theme.of(context).copyWith(
+          navigationBarTheme: NavigationBarThemeData(
+            labelTextStyle: WidgetStateProperty.all(
+              const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+        child: NavigationBar(
+          selectedIndex: _tab.index,
+          backgroundColor: cNavBgDark,
+          indicatorColor: Colors.white.withValues(alpha: 0.2),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) => setState(() => _tab = AdminTab.values[i]),
+          destinations: [
+            _dest(Icons.dashboard_rounded, 'Dashboard'),
+            _dest(Icons.storefront_outlined, 'Listings', badge: _stats.pendingApprovals > 0 ? '${_stats.pendingApprovals}' : null),
+            _dest(Icons.search_rounded, 'Lost/Found'),
+            _dest(Icons.people_outline_rounded, 'Users'),
+            _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
+          ],
+        ),
       ),
     );
   }
