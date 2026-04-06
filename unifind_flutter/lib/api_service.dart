@@ -96,6 +96,7 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
   required String username,
   required String role,
   required int age,
+  int? graduationYear,
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/verify_code_register.php'),
@@ -109,6 +110,7 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
       'username':   username,
       'role':       role,
       'age':        age,
+      if (graduationYear != null) 'graduation_year': graduationYear,
     }),
   );
 

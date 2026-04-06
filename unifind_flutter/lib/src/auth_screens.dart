@@ -569,6 +569,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   String _password = '';
   String _age = '';
   String _role = 'student';
+  String _graduationYear = ''; 
+  String _confirmPassword = '';
   String _code = '';
   bool _loading = false;
   bool _codeSent = false;
@@ -604,9 +606,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   }
 
   bool get _canProceed {
-    if (!_codeSent) return _ageValid;
-    return _passwordStrong && _agreedToTerms;
+  if (!_codeSent) {
+    if (_role == 'student' && _graduationYear.isEmpty) return false;
+    return _ageValid;
   }
+  return _passwordStrong &&
+      _agreedToTerms &&
+      _confirmPassword == _password &&
+      _confirmPassword.isNotEmpty;
+}
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -639,7 +647,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           username: _username.trim(),
           role: _role,
           age: int.tryParse(_age.trim()) ?? 0,
-        );
+          graduationYear: (_role == 'student' && _graduationYear.isNotEmpty)
+              ? int.tryParse(_graduationYear)
+              : null,
+          );
         if (!mounted) return;
         widget.onRegister(
           _email.trim().toLowerCase(),
@@ -813,10 +824,58 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                           label: 'Faculty',
                                           icon: Icons.work_outline_rounded,
                                           selected: _role == 'faculty',
-                                          onTap: () => setState(() => _role = 'faculty'),
+                                          onTap: () => setState(() {
+                                            _role = 'faculty';
+                                            _graduationYear = '';
+                                          }),
                                         ),
                                       ],
                                     ),
+                                    if (_role == 'student') ...[
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'Graduation Year',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      DropdownButtonFormField<String>(
+                                        value: _graduationYear.isEmpty ? null : _graduationYear,
+                                        decoration: InputDecoration(
+                                          hintText: 'Select year',
+                                          hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+                                          prefixIcon: const Icon(Icons.school_outlined, size: 18, color: cMuted),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: cBorder),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: cBorder),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: cRed, width: 2),
+                                          ),
+                                          filled: true,
+                                          fillColor: cBg,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                        ),
+                                        dropdownColor: cSurface,
+                                        items: ['2026', '2027', '2028', '2029', '2030'].map((year) {
+                                          return DropdownMenuItem(
+                                            value: year,
+                                            child: Text(year, style: const TextStyle(fontSize: 14, color: cText)),
+                                          );
+                                        }).toList(),
+                                        onChanged: (v) => setState(() => _graduationYear = v ?? ''),
+                                        validator: (v) {
+                                          if (_role == 'student' && (v == null || v.isEmpty)) {
+                                            return 'Please select your graduation year';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 16),
@@ -856,7 +915,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 _ConfirmPasswordField(
                                   key: const ValueKey('signup_confirm_password'),
                                   newPassword: _password,
-                                  onChanged: (v) => setState(() {}),
+                                  onChanged: (v) => setState(() => _confirmPassword = v),
                                   textInputAction: TextInputAction.next,
                                 ),
                                 const SizedBox(height: 16),
@@ -951,13 +1010,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: (!_codeSent || (_passwordStrong && _agreedToTerms))
+                                onTap: (!_codeSent || (_passwordStrong && _agreedToTerms && _confirmPassword == _password && _confirmPassword.isNotEmpty))
                                     ? _submit
                                     : () {},
-                                label: _codeSent
-                                    ? 'Verify & Create Account'
-                                    : 'Send Verification Code',
-                                disabled: _codeSent && (!_passwordStrong || !_agreedToTerms),
+                                label: _codeSent ? 'Verify & Create Account' : 'Send Verification Code',
+                                disabled: _codeSent && (!_passwordStrong || !_agreedToTerms || _confirmPassword != _password || _confirmPassword.isEmpty),
                               ),
                             ],
                           ),
