@@ -513,6 +513,7 @@ class _UniFindAppState extends State<UniFindApp> {
                   ) ??
                   DateTime.now(),
               location: _asString(item['location']),
+              status: _asString(item['status']).isEmpty ? 'active' : _asString(item['status']),
             ),
           );
         } catch (_) {
@@ -768,78 +769,40 @@ class _UniFindAppState extends State<UniFindApp> {
     MarketplaceItem item,
     MarketplaceUpdateInput update,
   ) async {
-    try {
-      await updateListing(
-        id: item.id,
-        title: update.title,
-        description: update.description,
-        price: update.price,
-        category: update.category,
-        condition: update.condition,
-        location: update.location,
-        email: _email,
-        imageUrl: update.imageUrl,
-      );
-      await _loadListings();
-    } catch (_) {
-      setState(() {
-        final idx = _market.indexWhere((m) => m.id == item.id);
-        if (idx == -1) return;
-        final old = _market[idx];
-        _market[idx] = MarketplaceItem(
-          id: old.id,
-          title: update.title,
-          price: update.price,
-          description: update.description,
-          category: update.category,
-          condition: update.condition,
-          image: update.imageUrl ?? old.image,
-          seller: old.seller,
-          sellerEmail: old.sellerEmail,
-          sellerId: old.sellerId,
-          createdAt: old.createdAt,
-          location: update.location,
-        );
-      });
-    }
+    await updateListing(
+      id: item.id,
+      title: update.title,
+      description: update.description,
+      price: update.price,
+      category: update.category,
+      condition: update.condition,
+      location: update.location,
+      email: _email,
+      imageUrl: update.imageUrl,
+    );
+    setState(() {
+      _market.removeWhere((m) => m.id == item.id);
+    });
+    await _loadListings();
   }
 
   Future<void> _editLostFoundItem(
     LostFoundItem item,
     LostFoundUpdateInput update,
   ) async {
-    try {
-      await updateLostFoundItem(
-        id: item.id,
-        title: update.title,
-        description: update.description,
-        category: update.category,
-        location: update.location,
-        email: _email,
-        imageUrl: update.imageUrl,
-      );
-      await _loadLostFound();
-    } catch (_) {
-      setState(() {
-        final idx = _lostFound.indexWhere((m) => m.id == item.id);
-        if (idx == -1) return;
-        final old = _lostFound[idx];
-        _lostFound[idx] = LostFoundItem(
-          id: old.id,
-          title: update.title,
-          description: update.description,
-          category: update.category,
-          type: old.type,
-          image: update.imageUrl ?? old.image,
-          poster: old.poster,
-          posterEmail: old.posterEmail,
-          posterId: old.posterId,
-          createdAt: old.createdAt,
-          location: update.location,
-          status: old.status,
-        );
-      });
-    }
+    await updateLostFoundItem(
+      id: item.id,
+      title: update.title,
+      description: update.description,
+      category: update.category,
+      location: update.location,
+      email: _email,
+      imageUrl: update.imageUrl,
+    );
+    setState(() {
+      _lostFound.removeWhere((m) => m.id == item.id);
+    });
+    await _loadLostFound();
   }
 
   void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
