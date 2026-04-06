@@ -213,7 +213,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       padding: const EdgeInsets.all(12),
                       itemCount: filtered.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, childAspectRatio: 1.35,
+                        crossAxisCount: 2, childAspectRatio: 1.0,
                         crossAxisSpacing: 8, mainAxisSpacing: 8,
                       ),
                       itemBuilder: (ctx, i) => _MarketCard(
@@ -230,7 +230,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
     );
   }
 }
-
 // -- Full-screen image viewer --
 class _FullScreenImagePage extends StatelessWidget {
   final String imageUrl;
@@ -277,8 +276,9 @@ class _FullScreenImagePage extends StatelessWidget {
   }
 }
 
-// -- Item popup --
+// -- Item popup -- full detail content --
 void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUserEmail) {
+  // Helper to clean up seller display name (mirrors ItemDetailScreen logic)
   String asSellerUsername() {
     final raw = item.seller.trim();
     if (raw.isEmpty || raw.contains('@') || raw.contains(' ')) return 'Student';
@@ -300,6 +300,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
           scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
           child: Center(
             child: ConstrainedBox(
+              // Taller max height to fit all the detail content
               constraints: const BoxConstraints(maxWidth: 500, maxHeight: 680),
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
@@ -316,6 +317,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // -- Tappable image header --
                       Stack(
                         children: [
                           GestureDetector(
@@ -342,6 +344,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                     child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)),
                                   ),
                                 ),
+                                // Expand affordance badge
                                 Positioned(
                                   bottom: 8, right: 8,
                                   child: Container(
@@ -363,49 +366,86 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                 ],
                               ),
                             ),
-                          ),
                           // Category badge
                           Positioned(
                             top: 10, left: 10,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: cRed.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                              decoration: BoxDecoration(
+                                color: cRed.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               child: Text(
                                 item.category.toUpperCase(),
                                 style: const TextStyle(color: cRed, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6),
                               ),
                             ),
                           ),
+                          // Report + close buttons row
                           Positioned(
                             top: 8, right: 8,
                             child: Row(
                               children: [
+                                // Report menu
                                 PopupMenuButton<String>(
                                   icon: Container(
                                     width: 32, height: 32,
-                                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.45),
+                                      shape: BoxShape.circle,
+                                    ),
                                     child: const Icon(Icons.more_vert, color: Colors.white, size: 16),
                                   ),
                                   tooltip: 'Options',
                                   onSelected: (value) {
                                     Navigator.of(ctx).pop();
                                     if (value == 'report_listing') {
-                                      showReportDialog(context: context, targetId: item.id, targetType: 'listing', targetTitle: item.title, reporterEmail: currentUserEmail);
+                                      showReportDialog(
+                                        context: context,
+                                        targetId: item.id,
+                                        targetType: 'listing',
+                                        targetTitle: item.title,
+                                        reporterEmail: currentUserEmail,
+                                      );
                                     } else if (value == 'report_user') {
-                                      showReportDialog(context: context, targetId: item.sellerEmail.isNotEmpty ? item.sellerEmail : item.id, targetType: 'user', targetTitle: '@${asSellerUsername()}', reporterEmail: currentUserEmail);
+                                      showReportDialog(
+                                        context: context,
+                                        targetId: item.sellerEmail.isNotEmpty ? item.sellerEmail : item.id,
+                                        targetType: 'user',
+                                        targetTitle: '@${asSellerUsername()}',
+                                        reporterEmail: currentUserEmail,
+                                      );
                                     }
                                   },
                                   itemBuilder: (_) => [
-                                    const PopupMenuItem(value: 'report_listing', child: Row(children: [Icon(Icons.flag_outlined, size: 15, color: cRed), SizedBox(width: 10), Text('Report Listing', style: TextStyle(fontSize: 13))])),
-                                    const PopupMenuItem(value: 'report_user', child: Row(children: [Icon(Icons.person_off_outlined, size: 15, color: cRed), SizedBox(width: 10), Text('Report Seller', style: TextStyle(fontSize: 13))])),
+                                    const PopupMenuItem(
+                                      value: 'report_listing',
+                                      child: Row(children: [
+                                        Icon(Icons.flag_outlined, size: 15, color: cRed),
+                                        SizedBox(width: 10),
+                                        Text('Report Listing', style: TextStyle(fontSize: 13)),
+                                      ]),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'report_user',
+                                      child: Row(children: [
+                                        Icon(Icons.person_off_outlined, size: 15, color: cRed),
+                                        SizedBox(width: 10),
+                                        Text('Report Seller', style: TextStyle(fontSize: 13)),
+                                      ]),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(width: 4),
+                                // Close button
                                 GestureDetector(
                                   onTap: () => Navigator.of(ctx).pop(),
                                   child: Container(
                                     width: 32, height: 32,
-                                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.45), shape: BoxShape.circle),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withValues(alpha: 0.45),
+                                      shape: BoxShape.circle,
+                                    ),
                                     child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
                                   ),
                                 ),
@@ -414,41 +454,66 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                           ),
                         ],
                       ),
+                      // -- Scrollable content (mirrors ItemDetailScreen) --
                       Flexible(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Price + category badge row
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text('\$${item.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -1)),
+                                  Text(
+                                    '\$${item.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -1),
+                                  ),
                                   const Spacer(),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(color: cRed.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                    child: Text(item.category.toUpperCase(), style: const TextStyle(color: cRed, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6)),
+                                    decoration: BoxDecoration(
+                                      color: cRed.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      item.category.toUpperCase(),
+                                      style: const TextStyle(color: cRed, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.6),
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(item.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cText, letterSpacing: -0.3, height: 1.25)),
+                              // Title
+                              Text(
+                                item.title,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cText, letterSpacing: -0.3, height: 1.25),
+                              ),
                               const SizedBox(height: 6),
+                              // Seller + date row
                               Row(
                                 children: [
                                   const Icon(Icons.person_outline_rounded, size: 13, color: cMuted),
                                   const SizedBox(width: 4),
-                                  Text(asSellerUsername(), style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600)),
+                                  Text(
+                                    asSellerUsername(),
+                                    style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600),
+                                  ),
                                   const SizedBox(width: 10),
                                   const Icon(Icons.circle, size: 3, color: cMuted),
                                   const SizedBox(width: 10),
                                   const Icon(Icons.calendar_today_outlined, size: 12, color: cMuted),
                                   const SizedBox(width: 4),
-                                  Text(formatDate(item.createdAt), style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w500)),
+                                  Text(
+                                    formatDate(item.createdAt),
+                                    style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w500),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 16),
+
+
+                              // Condition + location chips
                               Row(
                                 children: [
                                   _InfoChip(icon: Icons.stars_rounded, label: item.condition),
@@ -457,16 +522,34 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                 ],
                               ),
                               const SizedBox(height: 18),
+
+
                               Divider(height: 1, color: cBorder),
                               const SizedBox(height: 18),
-                              const Text('Description', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText, letterSpacing: 0.1)),
+
+
+                              // Description
+                              const Text(
+                                'Description',
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText, letterSpacing: 0.1),
+                              ),
                               const SizedBox(height: 8),
-                              Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.75)),
+                              Text(
+                                item.description,
+                                style: const TextStyle(fontSize: 13, color: cMuted, height: 1.75),
+                              ),
                               const SizedBox(height: 24),
+
+
+                              // Contact Seller button (same behaviour as detail screen)
                               GestureDetector(
                                 onTap: () => ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: const Row(children: [Icon(Icons.message_rounded, color: Colors.white, size: 17), SizedBox(width: 10), Text('Contact flow coming soon!')]),
+                                    content: const Row(children: [
+                                      Icon(Icons.message_rounded, color: Colors.white, size: 17),
+                                      SizedBox(width: 10),
+                                      Text('Contact flow coming soon!'),
+                                    ]),
                                     backgroundColor: cRed,
                                     behavior: SnackBarBehavior.floating,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -475,13 +558,19 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                 ),
                                 child: Container(
                                   height: 48,
-                                  decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(12)),
+                                  decoration: BoxDecoration(
+                                    color: cRed,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Icon(Icons.message_rounded, color: Colors.white, size: 17),
                                       SizedBox(width: 8),
-                                      Text('Contact Seller', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                                      Text(
+                                        'Contact Seller',
+                                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -601,18 +690,9 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
             width: _widthAnim.value * 240,
             child: OverflowBox(maxWidth: 240, alignment: Alignment.topLeft, child: child),
           ),
-          child: AnimatedBuilder(
-            animation: _widthAnim,
-            builder: (context, child) => Container(
-              width: 240,
-              decoration: BoxDecoration(
-                color: cSurface,
-                border: _widthAnim.value > 0
-                    ? const Border(right: BorderSide(color: cBorder))
-                    : null,
-              ),
-              child: child,
-            ),
+          child: Container(
+            width: 240,
+            decoration: BoxDecoration(color: cSurface, border: Border(right: BorderSide(color: cBorder))),
             child: AnimatedOpacity(
               opacity: _panelOpen ? 1.0 : 0.0,
               duration: kFast,
@@ -701,7 +781,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                         itemCount: widget.filtered.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, childAspectRatio: 1.1,
+                          crossAxisCount: 3, childAspectRatio: 0.88,
                           crossAxisSpacing: 10, mainAxisSpacing: 10,
                         ),
                         itemBuilder: (ctx, i) => _MarketCard(
@@ -1001,7 +1081,7 @@ class _HoverButtonState extends State<_HoverButton> {
   }
 }
 
-// --- MARKET CARD (smaller — no description row) ---
+// --- MARKET CARD ---
 class _MarketCard extends StatefulWidget {
   final MarketplaceItem item;
   final VoidCallback onTap;
@@ -1016,6 +1096,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
   late AnimationController _c;
   late Animation<double> _scale;
   bool _hovered = false;
+
 
   @override
   void initState() {
@@ -1052,14 +1133,11 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
               )],
             ),
             clipBehavior: Clip.antiAlias,
-            // mainAxisSize.min so the card only takes as much height as needed
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Image (4:3) ──────────────────────────────────────────
-                AspectRatio(
-                  aspectRatio: 4 / 3,
+                Expanded(
+                  flex: 3,
                   child: Stack(
                     children: [
                       Image.network(
@@ -1067,85 +1145,67 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const ColoredBox(
-                          color: cPlaceholder,
-                          child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20)),
-                        ),
+                        errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20))),
                       ),
                       Positioned(
                         top: 6, left: 6,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(6)),
-                          child: Text(
-                            widget.item.category,
-                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.2),
-                          ),
+                          child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
                         ),
                       ),
                     ],
                   ),
                 ),
-                // ── Details (no description) ─────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.item.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '\$${widget.item.price.toStringAsFixed(0)}',
-                            style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(5), border: Border.all(color: cBorder)),
-                            child: Text(widget.item.condition, style: const TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 3),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on_outlined, size: 9, color: cMuted),
-                          const SizedBox(width: 2),
-                          Expanded(
-                            child: Text(
-                              widget.item.location,
-                              style: const TextStyle(fontSize: 9, color: cMuted),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('\$${widget.item.price.toStringAsFixed(0)}',
+                                style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(5), border: Border.all(color: cBorder)),
+                              child: Text(widget.item.condition, style: const TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
                             ),
-                          ),
-                          GestureDetector(
-                            onTap: () => showReportDialog(
-                              context: context,
-                              targetId: widget.item.id,
-                              targetType: 'listing',
-                              targetTitle: widget.item.title,
-                              reporterEmail: widget.currentUserEmail,
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 9, color: cMuted),
+                            const SizedBox(width: 2),
+                            Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 9, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            GestureDetector(
+                              onTap: () => showReportDialog(
+                                context: context,
+                                targetId: widget.item.id,
+                                targetType: 'listing',
+                                targetTitle: widget.item.title,
+                                reporterEmail: widget.currentUserEmail,
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.flag_outlined, size: 10, color: cMuted),
+                                  SizedBox(width: 2),
+                                  Text('Report', style: TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
                             ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.flag_outlined, size: 10, color: cMuted),
-                                SizedBox(width: 2),
-                                Text('Report', style: TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
