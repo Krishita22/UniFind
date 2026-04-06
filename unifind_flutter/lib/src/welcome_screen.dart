@@ -130,7 +130,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     const baseWidth = 400.0;
 
-    final scale = ((mq.size.width / baseWidth) * 1.5).clamp(1.0, 2.0);
+    final isMobile = mq.size.width < 600;
+    final scale = isMobile ? 1.0 : ((mq.size.width / baseWidth) * 1.5).clamp(1.0, 2.0);
 
     final double dividerWidth = (mq.size.width / 5) * scale;
 
