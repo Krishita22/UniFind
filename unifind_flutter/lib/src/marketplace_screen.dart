@@ -5,7 +5,8 @@ class MarketplaceScreen extends StatefulWidget {
   final List<MarketplaceItem> items;
   final VoidCallback onListItem;
   final String currentUserEmail;
-  const MarketplaceScreen({super.key, required this.items, required this.onListItem, required this.currentUserEmail});
+  final int? currentUserId;
+  const MarketplaceScreen({super.key, required this.items, required this.onListItem, required this.currentUserEmail, this.currentUserId});
 
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
@@ -174,6 +175,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             onSearch: (v) => setState(() => _q = v),
             q: _q,
             currentUserEmail: widget.currentUserEmail,
+            currentUserId: widget.currentUserId,
           );
         }
         return Column(
@@ -213,7 +215,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       padding: const EdgeInsets.all(12),
                       itemCount: filtered.length,
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2, childAspectRatio: 1.0,
+                        crossAxisCount: 2, mainAxisExtent: 200,
                         crossAxisSpacing: 8, mainAxisSpacing: 8,
                       ),
                       itemBuilder: (ctx, i) => _MarketCard(
@@ -221,6 +223,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                         compact: false,
                         onTap: () => _showItemPopup(ctx, filtered[i], widget.currentUserEmail),
                         currentUserEmail: widget.currentUserEmail,
+                        currentUserId: widget.currentUserId,
                       ),
                     ),
             ),
@@ -631,6 +634,7 @@ class _BrowserLayout extends StatefulWidget {
   final void Function(String) onSearch;
   final String q;
   final String currentUserEmail;
+  final int? currentUserId;
 
   const _BrowserLayout({
     required this.filtered,
@@ -649,6 +653,7 @@ class _BrowserLayout extends StatefulWidget {
     required this.onSearch,
     required this.q,
     required this.currentUserEmail,
+    this.currentUserId,
   });
 
   @override
@@ -781,7 +786,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                         itemCount: widget.filtered.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, childAspectRatio: 0.88,
+                          crossAxisCount: 3, mainAxisExtent: 280,
                           crossAxisSpacing: 10, mainAxisSpacing: 10,
                         ),
                         itemBuilder: (ctx, i) => _MarketCard(
@@ -789,6 +794,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                           compact: true,
                           onTap: () => _showItemPopup(ctx, widget.filtered[i], widget.currentUserEmail),
                           currentUserEmail: widget.currentUserEmail,
+                          currentUserId: widget.currentUserId,
                         ),
                       ),
               ),
@@ -1087,7 +1093,8 @@ class _MarketCard extends StatefulWidget {
   final VoidCallback onTap;
   final bool compact;
   final String currentUserEmail;
-  const _MarketCard({required this.item, required this.onTap, this.compact = false, this.currentUserEmail = ''});
+  final int? currentUserId;
+  const _MarketCard({required this.item, required this.onTap, this.compact = false, this.currentUserEmail = '', this.currentUserId});
   @override
   State<_MarketCard> createState() => _MarketCardState();
 }
@@ -1096,7 +1103,34 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
   late AnimationController _c;
   late Animation<double> _scale;
   bool _hovered = false;
+  bool _startingChat = false;
 
+  Future<void> _openChat() async {
+    final myId = widget.currentUserId;
+    final sellerId = widget.item.sellerId;
+    if (myId == null || sellerId == null || myId == sellerId) return;
+    setState(() => _startingChat = true);
+    try {
+      final result = await startConversation(
+        listingId: int.tryParse(widget.item.id) ?? 0,
+        user1Id: myId,
+        user2Id: sellerId,
+        subject: widget.item.title,
+      );
+      final convId = int.tryParse(result['id']?.toString() ?? '') ?? 0;
+      if (convId <= 0 || !mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ConversationScreen(
+          conv: Conversation(id: convId, subject: widget.item.title, otherName: widget.item.seller, otherId: sellerId, unread: 0),
+          myId: myId,
+        ),
+      ));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open chat: $e'), behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _startingChat = false);
+    }
+  }
 
   @override
   void initState() {
@@ -1137,7 +1171,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  flex: 3,
+                  flex: 4,
                   child: Stack(
                     children: [
                       Image.network(
@@ -1161,10 +1195,10 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                 Expanded(
                   flex: 2,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
@@ -1185,6 +1219,16 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                             const Icon(Icons.location_on_outlined, size: 9, color: cMuted),
                             const SizedBox(width: 2),
                             Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 9, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            if (widget.currentUserId != null && widget.item.sellerId != null && widget.currentUserId != widget.item.sellerId)
+                              GestureDetector(
+                                onTap: _startingChat ? null : _openChat,
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(_startingChat ? Icons.hourglass_top_rounded : Icons.chat_bubble_outline, size: 10, color: cRed),
+                                  const SizedBox(width: 2),
+                                  const Text('Chat', style: TextStyle(fontSize: 8, color: cRed, fontWeight: FontWeight.w700)),
+                                  const SizedBox(width: 8),
+                                ]),
+                              ),
                             GestureDetector(
                               onTap: () => showReportDialog(
                                 context: context,

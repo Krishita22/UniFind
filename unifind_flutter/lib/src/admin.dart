@@ -181,6 +181,7 @@ class RoleAuthWrapper extends StatelessWidget {
   final UserRole role;
   final String email, username;
   final int? userId;
+  final int unreadCount;
   final VoidCallback onLogout;
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
@@ -198,7 +199,7 @@ class RoleAuthWrapper extends StatelessWidget {
   const RoleAuthWrapper({
     super.key,
     required this.role, required this.email, required this.username,
-    required this.userId, required this.onLogout,
+    required this.userId, this.unreadCount = 0, required this.onLogout,
     required this.market, required this.lostFound,
     required this.tab, required this.postFormNonce, required this.postDefaultType,
     required this.submittedClaimItemIds, required this.submittedMatchItemIds,
@@ -273,7 +274,8 @@ class _StandardUserShell extends StatelessWidget {
     _TopNavItem(icon: Icons.storefront_outlined,    activeIcon: Icons.storefront_rounded,      label: 'Market',      tabIndex: 0),
     _TopNavItem(icon: Icons.search_outlined,         activeIcon: Icons.search_rounded,          label: 'Lost & Found',tabIndex: 1),
     _TopNavItem(icon: Icons.list_alt_outlined,       activeIcon: Icons.list_alt_rounded,        label: 'My Listings', tabIndex: 3),
-    _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 4),
+    _TopNavItem(icon: Icons.chat_bubble_outline,     activeIcon: Icons.chat_bubble_rounded,     label: 'Messages',    tabIndex: 4),
+    _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 5),
   ];
 
   int _navIndexForTab(int tabIndex) {
@@ -287,9 +289,9 @@ class _StandardUserShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeNavIndex = _navIndexForTab(tab);
 
-    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Profile
+    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile
     final screens = [
-      MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email),
+      MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email, currentUserId: userId),
       LostFoundScreen(
         items: lostFound,
         onCreateLost: () => goToPostTab(ListingType.lost),
@@ -299,6 +301,7 @@ class _StandardUserShell extends StatelessWidget {
         submittedClaimItemIds: submittedClaimItemIds,
         submittedMatchItemIds: submittedMatchItemIds,
         currentUserEmail: email,
+        currentUserId: userId,
       ),
       PostListingScreen(key: ValueKey(postFormNonce), onPost: addListing, initialType: postDefaultType),
       MyListingsScreen(
@@ -308,103 +311,97 @@ class _StandardUserShell extends StatelessWidget {
         onEditMarketplace: editMarketplace,
         onEditLostFound: editLostFound,
       ),
-      ProfileScreen(email: email, username: username, onLogout: onLogout),
+      MessagingScreen(userId: userId ?? 0, userEmail: email),
+      ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
     ];
+
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
       backgroundColor: cBg,
-      // ── Top nav bar — no bottom nav bar ───────────────────────────────
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80),
-        child: Container(
-          color: cNavBg,
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: 80,
-              child: Stack(
-                children: [
-                  // ── Centered column: logo on top, tabs + post below ──
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Logo row (centered)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/images/whitelogo.png',
-                              height: 22,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const Text(
-                                'UniFind',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3),
-                              ),
-                            ),
-                            if (role == UserRole.fac) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
-                                child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        // Nav tabs + post button (centered)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (int i = 0; i < _userNavItems.length; i++) ...[
-                              _TopNavTab(
-                                item: _userNavItems[i],
-                                isActive: activeNavIndex == i,
-                                onTap: () => onTabChanged(_userNavItems[i].tabIndex),
-                              ),
-                              if (i == 1) ...[
-                                const SizedBox(width: 6),
-                                _NavPostButton(onTap: () => goToPostTab()),
-                                const SizedBox(width: 6),
-                              ],
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  // ── Logout button pinned to top-right corner ──
-                  Positioned(
-                    top: 0,
-                    right: 4,
-                    bottom: 0,
-                    child: Center(
-                      child: IconButton(
-                        tooltip: 'Log out',
-                        icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
-                        onPressed: onLogout,
-                      ),
-                    ),
+      appBar: isMobile
+          // MOBILE: simple app bar with logo + logout
+          ? AppBar(
+              backgroundColor: cNavBg, foregroundColor: Colors.white, elevation: 0, centerTitle: true,
+              title: Row(mainAxisSize: MainAxisSize.min, children: [
+                Image.asset('assets/images/whitelogo.png', height: 22, fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white))),
+                if (role == UserRole.fac) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+                    child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
                   ),
                 ],
+              ]),
+              actions: [IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18), onPressed: onLogout)],
+            )
+          // DESKTOP: top nav bar with tabs
+          : PreferredSize(
+              preferredSize: const Size.fromHeight(80),
+              child: Container(
+                color: cNavBg,
+                child: SafeArea(
+                  bottom: false,
+                  child: SizedBox(
+                    height: 80,
+                    child: Stack(children: [
+                      Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          Image.asset('assets/images/whitelogo.png', height: 22, fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3))),
+                          if (role == UserRole.fac) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+                              child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+                            ),
+                          ],
+                        ]),
+                        const SizedBox(height: 4),
+                        Row(mainAxisSize: MainAxisSize.min, children: [
+                          for (int i = 0; i < _userNavItems.length; i++) ...[
+                            _TopNavTab(item: _userNavItems[i], isActive: activeNavIndex == i, onTap: () => onTabChanged(_userNavItems[i].tabIndex)),
+                            if (i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
+                          ],
+                        ]),
+                      ])),
+                      Positioned(top: 0, right: 4, bottom: 0, child: Center(
+                        child: IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white), onPressed: onLogout),
+                      )),
+                    ]),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ),
-      body: Column(
-        children: [
-          _BreadcrumbBar(tab: tab.clamp(0, 4), onHome: () => onTabChanged(0)),
-          Expanded(
-            child: IndexedStack(
-              index: tab,
-              children: screens,
-            ),
-          ),
-        ],
-      ),
-      // NO bottomNavigationBar
+      body: IndexedStack(index: tab, children: screens),
+      // MOBILE: bottom navigation bar
+      bottomNavigationBar: isMobile
+          ? Theme(
+              data: Theme.of(context).copyWith(
+                navigationBarTheme: NavigationBarThemeData(
+                  labelTextStyle: WidgetStateProperty.all(
+                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                ),
+              ),
+              child: NavigationBar(
+              selectedIndex: tab,
+              backgroundColor: cNavBg,
+              indicatorColor: Colors.white.withValues(alpha: 0.2),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              onDestinationSelected: onTabChanged,
+              destinations: [
+                NavigationDestination(icon: const Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
+                NavigationDestination(icon: const Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
+                NavigationDestination(icon: const Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: const Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
+                NavigationDestination(icon: const Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'Listings'),
+                NavigationDestination(icon: const Icon(Icons.chat_bubble_outline, color: Colors.white70), selectedIcon: const Icon(Icons.chat_bubble_rounded, color: Colors.white), label: 'Messages'),
+                NavigationDestination(icon: const Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: const Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
+              ],
+            ))
+          : null,
     );
   }
 }
@@ -656,19 +653,27 @@ class _AdminAppState extends State<AdminApp> {
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
               _AdminReportsPanel(reports: _reports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
             ]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab.index,
-        backgroundColor: cNavBgDark,
-        indicatorColor: Colors.white.withValues(alpha: 0.2),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        onDestinationSelected: (i) => setState(() => _tab = AdminTab.values[i]),
-        destinations: [
-          _dest(Icons.dashboard_rounded, 'Dashboard'),
-          _dest(Icons.storefront_outlined, 'Listings', badge: _stats.pendingApprovals > 0 ? '${_stats.pendingApprovals}' : null),
-          _dest(Icons.search_rounded, 'Lost/Found'),
-          _dest(Icons.people_outline_rounded, 'Users'),
-          _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
-        ],
+      bottomNavigationBar: Theme(
+        data: Theme.of(context).copyWith(
+          navigationBarTheme: NavigationBarThemeData(
+            labelTextStyle: WidgetStateProperty.all(
+              const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+          ),
+        ),
+        child: NavigationBar(
+          selectedIndex: _tab.index,
+          backgroundColor: cNavBgDark,
+          indicatorColor: Colors.white.withValues(alpha: 0.2),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          onDestinationSelected: (i) => setState(() => _tab = AdminTab.values[i]),
+          destinations: [
+            _dest(Icons.dashboard_rounded, 'Dashboard'),
+            _dest(Icons.storefront_outlined, 'Listings', badge: _stats.pendingApprovals > 0 ? '${_stats.pendingApprovals}' : null),
+            _dest(Icons.search_rounded, 'Lost/Found'),
+            _dest(Icons.people_outline_rounded, 'Users'),
+            _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
+          ],
+        ),
       ),
     );
   }
@@ -1356,6 +1361,28 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                               Text(c.proofDetails, style: const TextStyle(fontSize: 12, color: cText, height: 1.5)),
                               const SizedBox(height: 4),
                               Text(formatDate(c.submittedAt), style: const TextStyle(fontSize: 10, color: cMuted)),
+                              if (c.status == 'pending') ...[
+                                const SizedBox(height: 8),
+                                SizedBox(width: double.infinity, child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    try {
+                                      await adminAcceptClaim(claimId: c.id, itemId: item.id);
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      widget.onRefresh();
+                                    } catch (e) {
+                                      if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+                                    }
+                                  },
+                                  icon: const Icon(Icons.check_circle_rounded, size: 14),
+                                  label: const Text('Accept Claim'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _cGreen, foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                )),
+                              ],
                             ]),
                           );
                         }),
