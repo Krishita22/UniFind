@@ -1,18 +1,95 @@
 part of '../main.dart';
 
-class ItemDetailScreen extends StatelessWidget {
+class ItemDetailScreen extends StatefulWidget {
   final MarketplaceItem item;
   final String currentUserEmail;
+  final int? currentUserId;
   const ItemDetailScreen({
     super.key,
     required this.item,
     required this.currentUserEmail,
+    this.currentUserId,
   });
+  @override
+  State<ItemDetailScreen> createState() => _ItemDetailScreenState();
+}
+
+class _ItemDetailScreenState extends State<ItemDetailScreen> {
+  bool _startingChat = false;
+  double? _sellerRating;
+  int _sellerRatingCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSellerRating();
+  }
+
+  Future<void> _loadSellerRating() async {
+    final sid = widget.item.sellerId;
+    if (sid == null) return;
+    try {
+      final data = await getUserRating(userId: sid);
+      if (!mounted) return;
+      setState(() {
+        _sellerRating      = (data['avg'] as num?)?.toDouble() ?? 0.0;
+        _sellerRatingCount = (data['count'] as num?)?.toInt() ?? 0;
+      });
+    } catch (_) {}
+  }
 
   String _asSellerUsername() {
-    final raw = item.seller.trim();
+    final raw = widget.item.seller.trim();
     if (raw.isEmpty || raw.contains('@') || raw.contains(' ')) return 'Student';
     return raw;
+  }
+
+  Future<void> _contactSeller() async {
+    final myId     = widget.currentUserId;
+    final sellerId = widget.item.sellerId;
+    if (myId == null || sellerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not start conversation — user info unavailable.'),
+          behavior: SnackBarBehavior.floating));
+      return;
+    }
+    if (myId == sellerId) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('This is your own listing.'),
+          behavior: SnackBarBehavior.floating));
+      return;
+    }
+    setState(() => _startingChat = true);
+    try {
+      final result = await startConversation(
+        listingId: int.tryParse(widget.item.id) ?? 0,
+        user1Id:   myId,
+        user2Id:   sellerId,
+        subject:   'Interested in: ${widget.item.title}',
+      );
+      final convId = int.tryParse(result['id']?.toString() ?? '') ?? 0;
+      if (convId <= 0) throw Exception('Invalid conversation ID.');
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ConversationScreen(
+          conv: Conversation(
+            id:        convId,
+            subject:   'Interested in: ${widget.item.title}',
+            otherName: _asSellerUsername(),
+            otherId:   sellerId,
+            unread:    0,
+          ),
+          myId: myId,
+        ),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not open chat: $e'),
+          behavior: SnackBarBehavior.floating));
+    } finally {
+      if (mounted) setState(() => _startingChat = false);
+    }
   }
 
   @override
@@ -35,20 +112,20 @@ class ItemDetailScreen extends StatelessWidget {
                   if (value == 'report_listing') {
                     showReportDialog(
                       context: context,
-                      targetId: item.id,
+                      targetId: widget.item.id,
                       targetType: 'listing',
-                      targetTitle: item.title,
-                      reporterEmail: currentUserEmail,
+                      targetTitle: widget.item.title,
+                      reporterEmail: widget.currentUserEmail,
                     );
                   } else if (value == 'report_user') {
                     showReportDialog(
                       context: context,
-                      targetId: item.sellerEmail.isNotEmpty
-                          ? item.sellerEmail
-                          : item.id,
+                      targetId: widget.item.sellerEmail.isNotEmpty
+                          ? widget.item.sellerEmail
+                          : widget.item.id,
                       targetType: 'user',
                       targetTitle: '@${_asSellerUsername()}',
-                      reporterEmail: currentUserEmail,
+                      reporterEmail: widget.currentUserEmail,
                     );
                   }
                 },
@@ -76,7 +153,7 @@ class ItemDetailScreen extends StatelessWidget {
             ],
             flexibleSpace: FlexibleSpaceBar(
               background: Image.network(
-                item.image,
+                widget.item.image,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => const ColoredBox(
                   color: cPlaceholder,
@@ -101,7 +178,7 @@ class ItemDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        '\$${item.price.toStringAsFixed(0)}',
+                        '\$${widget.item.price.toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.w900,
@@ -118,7 +195,7 @@ class ItemDetailScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          item.category.toUpperCase(),
+                          widget.item.category.toUpperCase(),
                           style: const TextStyle(
                             color: cRed,
                             fontSize: 10,
@@ -133,7 +210,7 @@ class ItemDetailScreen extends StatelessWidget {
 
                   // Title
                   Text(
-                    item.title,
+                    widget.item.title,
                     style: const TextStyle(
                       fontSize: 19,
                       fontWeight: FontWeight.w800,
@@ -164,7 +241,7 @@ class ItemDetailScreen extends StatelessWidget {
                           size: 12, color: cMuted),
                       const SizedBox(width: 4),
                       Text(
-                        formatDate(item.createdAt),
+                        formatDate(widget.item.createdAt),
                         style: const TextStyle(
                             fontSize: 12,
                             color: cMuted,
@@ -179,12 +256,12 @@ class ItemDetailScreen extends StatelessWidget {
                     children: [
                       _InfoChip(
                         icon: Icons.stars_rounded,
-                        label: item.condition,
+                        label: widget.item.condition,
                       ),
                       const SizedBox(width: 8),
                       _InfoChip(
                         icon: Icons.location_on_outlined,
-                        label: item.location,
+                        label: widget.item.location,
                       ),
                     ],
                   ),
@@ -206,7 +283,7 @@ class ItemDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    item.description,
+                    widget.item.description,
                     style: const TextStyle(
                       fontSize: 13,
                       color: cMuted,
@@ -215,45 +292,66 @@ class ItemDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 28),
 
-                  // Contact button
-                  GestureDetector(
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Row(children: [
-                          Icon(Icons.message_rounded,
-                              color: Colors.white, size: 17),
-                          SizedBox(width: 10),
-                          Text('Contact flow coming soon!'),
+                  // Seller rating display + view reviews link
+                  if (_sellerRatingCount > 0) ...[
+                    GestureDetector(
+                      onTap: () => ReviewsSheet.show(
+                        context,
+                        userId:   widget.item.sellerId!,
+                        userName: _asSellerUsername(),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7).withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(children: [
+                          const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 18),
+                          const SizedBox(width: 8),
+                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            StarRatingDisplay(
+                              rating: _sellerRating!,
+                              count:  _sellerRatingCount,
+                              size:   13,
+                            ),
+                            const SizedBox(height: 2),
+                            const Text('Tap to view all reviews',
+                                style: TextStyle(fontSize: 11, color: cMuted)),
+                          ]),
+                          const Spacer(),
+                          const Icon(Icons.chevron_right_rounded, color: cMuted, size: 18),
                         ]),
-                        backgroundColor: cRed,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        margin: const EdgeInsets.all(12),
                       ),
                     ),
-                    child: Container(
+                    const SizedBox(height: 14),
+                  ],
+
+                  // Contact Seller button
+                  GestureDetector(
+                    onTap: _startingChat ? null : _contactSeller,
+                    child: AnimatedContainer(
+                      duration: kFast,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: cRed,
+                        color: _startingChat ? cMuted : cRed,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.message_rounded,
-                              color: Colors.white, size: 17),
-                          SizedBox(width: 8),
-                          Text(
-                            'Contact Seller',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ],
+                      child: Center(
+                        child: _startingChat
+                            ? const SizedBox(width: 20, height: 20,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.message_rounded, color: Colors.white, size: 17),
+                                  SizedBox(width: 8),
+                                  Text('Contact Seller',
+                                    style: TextStyle(color: Colors.white, fontSize: 14,
+                                        fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                                ],
+                              ),
                       ),
                     ),
                   ),

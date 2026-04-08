@@ -9,6 +9,7 @@ class LostFoundScreen extends StatefulWidget {
   final Set<String> submittedClaimItemIds;
   final Set<String> submittedMatchItemIds;
   final String currentUserEmail;
+  final int? currentUserId;
   const LostFoundScreen({
     super.key,
     required this.items,
@@ -19,6 +20,7 @@ class LostFoundScreen extends StatefulWidget {
     required this.submittedClaimItemIds,
     required this.submittedMatchItemIds,
     required this.currentUserEmail,
+    this.currentUserId,
   });
 
   @override
@@ -120,6 +122,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                     claimSubmittedByMe: widget.submittedClaimItemIds.contains(filtered[i].id),
                     matchSubmittedByMe: widget.submittedMatchItemIds.contains(filtered[i].id),
                     currentUserEmail: widget.currentUserEmail,
+                    currentUserId: widget.currentUserId,
                   ),
                 ),
         ),
@@ -398,6 +401,7 @@ class _LostFoundCard extends StatefulWidget {
   final bool claimSubmittedByMe;
   final bool matchSubmittedByMe;
   final String currentUserEmail;
+  final int? currentUserId;
   const _LostFoundCard({
     required this.item,
     required this.onClaim,
@@ -405,6 +409,7 @@ class _LostFoundCard extends StatefulWidget {
     required this.claimSubmittedByMe,
     required this.matchSubmittedByMe,
     required this.currentUserEmail,
+    this.currentUserId,
   });
 
   @override
@@ -805,7 +810,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
                           ),
                         ),
                       ),
-                    // Lost items: no user action — admin matches them with found items
+                    // L&F chat only available after admin matches or accepts a claim
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,

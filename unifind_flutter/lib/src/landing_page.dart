@@ -295,31 +295,34 @@ class _HeroSectionState extends State<_HeroSection> with TickerProviderStateMixi
           Positioned.fill(child: Container(decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFFFFF5F5), Color(0xFFFCECEC), Color(0xFFFFF8F8)], begin: Alignment.topLeft, end: Alignment.bottomRight)))),
           Positioned(right: -60, top: -40, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
           Positioned(left: -40, bottom: -20, child: Container(width: 200, height: 200, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.06), Colors.transparent])))),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-                  decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.school_rounded, size: 14, color: cRed), SizedBox(width: 6), Text('MSU Campus Exclusive', style: TextStyle(color: cRed, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3))]),
-                ),
-                const SizedBox(height: 28),
-                const Text('Your Campus.\nYour Marketplace.', textAlign: TextAlign.center, style: TextStyle(fontSize: 52, fontWeight: FontWeight.w900, color: cText, height: 1.15, letterSpacing: -1.5)),
-                const SizedBox(height: 20),
-                const Text('Buy, sell, and reunite with lost items within the\nMontclair State University community.', textAlign: TextAlign.center, style: TextStyle(fontSize: 17, color: cMuted, height: 1.7)),
-                const SizedBox(height: 40),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _HeroButton(label: 'Get Started', primary: true, onTap: widget.onRegister),
-                    const SizedBox(width: 14),
-                    _HeroButton(label: 'Log In', primary: false, onTap: widget.onLogin),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          LayoutBuilder(builder: (context, constraints) {
+            final isMobile = constraints.maxWidth < 600;
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 20 : 40, vertical: isMobile ? 50 : 80),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                    decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.school_rounded, size: 14, color: cRed), SizedBox(width: 6), Text('MSU Campus Exclusive', style: TextStyle(color: cRed, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3))]),
+                  ),
+                  const SizedBox(height: 28),
+                  Text('Your Campus.\nYour Marketplace.', textAlign: TextAlign.center, style: TextStyle(fontSize: isMobile ? 36 : 52, fontWeight: FontWeight.w900, color: cText, height: 1.15, letterSpacing: -1.5)),
+                  const SizedBox(height: 16),
+                  Text('Buy, sell, and reunite with lost items within the\nMontclair State University community.', textAlign: TextAlign.center, style: TextStyle(fontSize: isMobile ? 14 : 17, color: cMuted, height: 1.7)),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _HeroButton(label: 'Get Started', primary: true, onTap: widget.onRegister),
+                      const SizedBox(width: 14),
+                      _HeroButton(label: 'Log In', primary: false, onTap: widget.onLogin),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
