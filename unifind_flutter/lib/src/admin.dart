@@ -290,7 +290,7 @@ class _StandardUserShell extends StatelessWidget {
 
     // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile
     final screens = [
-      MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email),
+      MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email, currentUserId: userId),
       LostFoundScreen(
         items: lostFound,
         onCreateLost: () => goToPostTab(ListingType.lost),
@@ -1359,6 +1359,28 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                               Text(c.proofDetails, style: const TextStyle(fontSize: 12, color: cText, height: 1.5)),
                               const SizedBox(height: 4),
                               Text(formatDate(c.submittedAt), style: const TextStyle(fontSize: 10, color: cMuted)),
+                              if (c.status == 'pending') ...[
+                                const SizedBox(height: 8),
+                                SizedBox(width: double.infinity, child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    try {
+                                      await adminMarkLostFoundResolved(itemId: item.id);
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      widget.onRefresh();
+                                    } catch (e) {
+                                      if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+                                    }
+                                  },
+                                  icon: const Icon(Icons.check_circle_rounded, size: 14),
+                                  label: const Text('Accept Claim & Resolve'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _cGreen, foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                )),
+                              ],
                             ]),
                           );
                         }),
