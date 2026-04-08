@@ -421,38 +421,10 @@ class _LostFoundCardState extends State<_LostFoundCard>
   late AnimationController _c;
   late Animation<double> _scale;
   bool _claiming = false;
-  bool _startingChat = false;
   final _proofCtrl = TextEditingController();
   final _identCtrl = TextEditingController();
   final _lastSeenCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
-
-  Future<void> _openChat() async {
-    final myId = widget.currentUserId;
-    final posterId = widget.item.posterId;
-    if (myId == null || posterId == null || myId == posterId) return;
-    setState(() => _startingChat = true);
-    try {
-      final result = await startConversation(
-        listingId: int.tryParse(widget.item.id) ?? 0,
-        user1Id: myId,
-        user2Id: posterId,
-        subject: 'Lost & Found: ${widget.item.title}',
-      );
-      final convId = int.tryParse(result['id']?.toString() ?? '') ?? 0;
-      if (convId <= 0 || !mounted) return;
-      await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => ConversationScreen(
-          conv: Conversation(id: convId, subject: 'Lost & Found: ${widget.item.title}', otherName: widget.item.poster, otherId: posterId, unread: 0),
-          myId: myId,
-        ),
-      ));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open chat: $e'), behavior: SnackBarBehavior.floating));
-    } finally {
-      if (mounted) setState(() => _startingChat = false);
-    }
-  }
 
   @override
   void initState() {
@@ -838,26 +810,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
                           ),
                         ),
                       ),
-                    // Chat with poster (only for non-owners)
-                    if (!isOwner && widget.currentUserId != null && widget.item.posterId != null && widget.currentUserId != widget.item.posterId)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: SizedBox(
-                          height: 28,
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _startingChat ? null : _openChat,
-                            icon: Icon(_startingChat ? Icons.hourglass_top_rounded : Icons.chat_bubble_outline, size: 13),
-                            label: Text(_startingChat ? 'Opening...' : 'Chat with Poster', style: const TextStyle(fontSize: 11)),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                              side: BorderSide(color: const Color(0xFF2980B9).withValues(alpha: 0.35)),
-                              foregroundColor: const Color(0xFF2980B9),
-                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                            ),
-                          ),
-                        ),
-                      ),
+                    // L&F chat only available after admin matches or accepts a claim
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
