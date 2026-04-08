@@ -12,6 +12,9 @@ import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
 
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
@@ -28,7 +31,6 @@ part 'src/data.dart';
 part 'src/admin.dart';
 part 'src/welcome_screen.dart';
 part 'src/terms_conditions_screen.dart';
-part 'src/messages_screen.dart';
 part 'src/messaging_screen.dart';
 part 'src/notifications_service.dart';
 part 'src/ratings_screen.dart';
