@@ -1049,7 +1049,8 @@ class _ChangeUsernameScreenState extends State<ChangeUsernameScreen>
 // ─── REGISTRATION SCREEN ─────────────────────────────────────────────────────
 class RegistrationScreen extends StatefulWidget {
   final AuthSuccessCallback onRegister;
-  const RegistrationScreen({super.key, required this.onRegister});
+  final AuthSuccessCallback? onLoginExisting;
+  const RegistrationScreen({super.key, required this.onRegister, this.onLoginExisting});
 
   @override
   State<RegistrationScreen> createState() => _RegistrationScreenState();
@@ -1518,8 +1519,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => LoginScreen(
-                                    onLogin: (email, [userId, username, role, firstName]) =>
-                                        widget.onRegister(email, userId, username, role, firstName),
+                                    onLogin: widget.onLoginExisting ?? widget.onRegister,
                                   ),
                                 ),
                               );

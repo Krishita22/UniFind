@@ -49,6 +49,10 @@ class LandingPage extends StatelessWidget {
               ),
             );
           },
+          onLoginExisting: (email, [userId, username, role, firstName]) {
+            onLogin(email, userId, username, role, firstName);
+            Navigator.of(ctx).popUntil((r) => r.isFirst);
+          },
         ),
       ),
     ));
