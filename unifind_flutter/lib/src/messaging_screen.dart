@@ -404,6 +404,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   controller: _ctrl,
                   maxLines: 5, minLines: 1,
                   textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _send(),
                   decoration: const InputDecoration(
                     hintText: 'Type a message…',
                     hintStyle: TextStyle(color: cMuted),

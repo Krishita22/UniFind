@@ -3,10 +3,12 @@ part of '../main.dart';
 class PostListingScreen extends StatefulWidget {
   final void Function(NewListingInput) onPost;
   final ListingType initialType;
+  final bool hideSale;
   const PostListingScreen({
     super.key,
     required this.onPost,
     this.initialType = ListingType.marketplace,
+    this.hideSale = false,
   });
 
   @override
@@ -191,8 +193,10 @@ class _PostListingScreenState extends State<PostListingScreen> {
               const SizedBox(height: 8),
               Row(
                 children: [
-                  Expanded(child: _TypeBtn(label: 'For Sale', type: ListingType.marketplace, selected: _type == ListingType.marketplace, onTap: () => setState(() { _type = ListingType.marketplace; _cat = ''; }))),
-                  const SizedBox(width: 8),
+                  if (!widget.hideSale) ...[
+                    Expanded(child: _TypeBtn(label: 'For Sale', type: ListingType.marketplace, selected: _type == ListingType.marketplace, onTap: () => setState(() { _type = ListingType.marketplace; _cat = ''; }))),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(child: _TypeBtn(label: 'Lost', type: ListingType.lost, selected: _type == ListingType.lost, onTap: () => setState(() { _type = ListingType.lost; _cat = ''; }))),
                   const SizedBox(width: 8),
                   Expanded(child: _TypeBtn(label: 'Found', type: ListingType.found, selected: _type == ListingType.found, onTap: () => setState(() { _type = ListingType.found; _cat = ''; }))),

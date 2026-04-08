@@ -216,6 +216,7 @@ class RoleAuthWrapper extends StatelessWidget {
     }
     return _StandardUserShell(
       email: email, username: username, userId: userId, role: role,
+      unreadCount: unreadCount,
       onLogout: onLogout, market: market, lostFound: lostFound,
       tab: tab, postFormNonce: postFormNonce, postDefaultType: postDefaultType,
       submittedClaimItemIds: submittedClaimItemIds, submittedMatchItemIds: submittedMatchItemIds,
@@ -231,6 +232,7 @@ class _StandardUserShell extends StatelessWidget {
   final String email, username;
   final int? userId;
   final UserRole role;
+  final int unreadCount;
   final VoidCallback onLogout;
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
@@ -247,7 +249,7 @@ class _StandardUserShell extends StatelessWidget {
 
   const _StandardUserShell({
     required this.email, required this.username, required this.userId,
-    required this.role, required this.onLogout,
+    required this.role, this.unreadCount = 0, required this.onLogout,
     required this.market, required this.lostFound,
     required this.tab, required this.postFormNonce, required this.postDefaultType,
     required this.submittedClaimItemIds, required this.submittedMatchItemIds,
@@ -270,7 +272,7 @@ class _StandardUserShell extends StatelessWidget {
 // ═════════════════════════════════════════════════════════════════════════════
 // Topnav items and helper functions
 // ═════════════════════════════════════════════════════════════════════════════
-  static const List<_TopNavItem> _userNavItems = [
+  static const List<_TopNavItem> _studentNavItems = [
     _TopNavItem(icon: Icons.storefront_outlined,    activeIcon: Icons.storefront_rounded,      label: 'Market',      tabIndex: 0),
     _TopNavItem(icon: Icons.search_outlined,         activeIcon: Icons.search_rounded,          label: 'Lost & Found',tabIndex: 1),
     _TopNavItem(icon: Icons.list_alt_outlined,       activeIcon: Icons.list_alt_rounded,        label: 'My Listings', tabIndex: 3),
@@ -278,9 +280,18 @@ class _StandardUserShell extends StatelessWidget {
     _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 5),
   ];
 
+  static const List<_TopNavItem> _facultyNavItems = [
+    _TopNavItem(icon: Icons.search_outlined,         activeIcon: Icons.search_rounded,          label: 'Lost & Found',tabIndex: 1),
+    _TopNavItem(icon: Icons.chat_bubble_outline,     activeIcon: Icons.chat_bubble_rounded,     label: 'Messages',    tabIndex: 4),
+    _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 5),
+  ];
+
+  List<_TopNavItem> get _navItems => role == UserRole.fac ? _facultyNavItems : _studentNavItems;
+
   int _navIndexForTab(int tabIndex) {
-    for (int i = 0; i < _userNavItems.length; i++) {
-      if (_userNavItems[i].tabIndex == tabIndex) return i;
+    final items = _navItems;
+    for (int i = 0; i < items.length; i++) {
+      if (items[i].tabIndex == tabIndex) return i;
     }
     return -1;
   }
@@ -362,9 +373,9 @@ class _StandardUserShell extends StatelessWidget {
                         ]),
                         const SizedBox(height: 4),
                         Row(mainAxisSize: MainAxisSize.min, children: [
-                          for (int i = 0; i < _userNavItems.length; i++) ...[
-                            _TopNavTab(item: _userNavItems[i], isActive: activeNavIndex == i, onTap: () => onTabChanged(_userNavItems[i].tabIndex)),
-                            if (i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
+                          for (int i = 0; i < _navItems.length; i++) ...[
+                            _TopNavTab(item: _navItems[i], isActive: activeNavIndex == i, onTap: () => onTabChanged(_navItems[i].tabIndex), badgeCount: _navItems[i].tabIndex == 4 ? unreadCount : 0),
+                            if (role != UserRole.fac && i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
                           ],
                         ]),
                       ])),
@@ -386,19 +397,32 @@ class _StandardUserShell extends StatelessWidget {
                     const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),
-              child: NavigationBar(
+              child: role == UserRole.fac
+              ? NavigationBar(
+              selectedIndex: tab == 1 ? 0 : tab == 4 ? 1 : 2,
+              backgroundColor: cNavBg,
+              indicatorColor: Colors.white.withValues(alpha: 0.2),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              onDestinationSelected: (i) => onTabChanged(i == 0 ? 1 : i == 1 ? 4 : 5),
+              destinations: [
+                const NavigationDestination(icon: Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
+                NavigationDestination(icon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_outline, color: Colors.white70)), selectedIcon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_rounded, color: Colors.white)), label: 'Messages'),
+                const NavigationDestination(icon: Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
+              ],
+            )
+              : NavigationBar(
               selectedIndex: tab,
               backgroundColor: cNavBg,
               indicatorColor: Colors.white.withValues(alpha: 0.2),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               onDestinationSelected: onTabChanged,
               destinations: [
-                NavigationDestination(icon: const Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
-                NavigationDestination(icon: const Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
-                NavigationDestination(icon: const Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: const Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
-                NavigationDestination(icon: const Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'Listings'),
-                NavigationDestination(icon: const Icon(Icons.chat_bubble_outline, color: Colors.white70), selectedIcon: const Icon(Icons.chat_bubble_rounded, color: Colors.white), label: 'Messages'),
-                NavigationDestination(icon: const Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: const Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
+                const NavigationDestination(icon: Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
+                const NavigationDestination(icon: Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
+                const NavigationDestination(icon: Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
+                const NavigationDestination(icon: Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'Listings'),
+                NavigationDestination(icon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_outline, color: Colors.white70)), selectedIcon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_rounded, color: Colors.white)), label: 'Messages'),
+                const NavigationDestination(icon: Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
               ],
             ))
           : null,
@@ -466,8 +490,9 @@ class _AdminAppState extends State<AdminApp> {
     try {
       final r = await Future.wait([
         getAdminStats(), getAdminPendingListings(), getAdminActiveListings(),
-        getAdminUsers(), getAdminReports(), getAdminLostFoundItems(),
-        adminGetMatches(),
+        getAdminUsers(), getAdminReports(),
+        getAdminLostFoundItems().catchError((_) => <Map<String, dynamic>>[]),
+        adminGetMatches().catchError((_) => <Map<String, dynamic>>[]),
       ]);
       final rawStats   = r[0] as Map<String, dynamic>;
       final rawPending = r[1] as List<Map<String, dynamic>>;

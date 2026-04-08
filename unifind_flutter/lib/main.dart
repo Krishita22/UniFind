@@ -175,7 +175,8 @@ class _TopNavTab extends StatefulWidget {
   final _TopNavItem item;
   final bool isActive;
   final VoidCallback onTap;
-  const _TopNavTab({required this.item, required this.isActive, required this.onTap});
+  final int badgeCount;
+  const _TopNavTab({required this.item, required this.isActive, required this.onTap, this.badgeCount = 0});
 
   @override
   State<_TopNavTab> createState() => _TopNavTabState();
@@ -210,12 +211,16 @@ class _TopNavTabState extends State<_TopNavTab> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                widget.isActive ? widget.item.activeIcon : widget.item.icon,
-                size: 16,
-                color: widget.isActive
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.65),
+              Badge(
+                isLabelVisible: widget.badgeCount > 0,
+                label: Text('${widget.badgeCount}', style: const TextStyle(fontSize: 9)),
+                child: Icon(
+                  widget.isActive ? widget.item.activeIcon : widget.item.icon,
+                  size: 16,
+                  color: widget.isActive
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.65),
+                ),
               ),
               const SizedBox(width: 6),
               Text(
@@ -383,6 +388,64 @@ class UniFindApp extends StatefulWidget {
   const UniFindApp({super.key});
   @override
   State<UniFindApp> createState() => _UniFindAppState();
+}
+
+class _TopNotificationBanner extends StatefulWidget {
+  final String message;
+  final VoidCallback onDismiss;
+  const _TopNotificationBanner({required this.message, required this.onDismiss});
+  @override
+  State<_TopNotificationBanner> createState() => _TopNotificationBannerState();
+}
+
+class _TopNotificationBannerState extends State<_TopNotificationBanner> with SingleTickerProviderStateMixin {
+  late AnimationController _anim;
+  late Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _slide = Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic));
+    _anim.forward();
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) _anim.reverse().then((_) => widget.onDismiss());
+    });
+  }
+
+  @override
+  void dispose() { _anim.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      left: 16, right: 16,
+      child: SlideTransition(
+        position: _slide,
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(14),
+          color: cRed,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: widget.onDismiss,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(children: [
+                const Icon(Icons.notifications_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text(widget.message,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600, decoration: TextDecoration.none))),
+                const Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+              ]),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _UniFindAppState extends State<UniFindApp> {
@@ -723,23 +786,34 @@ class _UniFindAppState extends State<UniFindApp> {
     super.dispose();
   }
 
+  OverlayEntry? _notifOverlay;
+
+  void _showTopNotification(String message) {
+    _notifOverlay?.remove();
+    _notifOverlay = null;
+    final overlay = _navigatorKey.currentState?.overlay;
+    if (overlay == null) return;
+    late OverlayEntry entry;
+    entry = OverlayEntry(builder: (ctx) => _TopNotificationBanner(
+      message: message,
+      onDismiss: () { entry.remove(); _notifOverlay = null; },
+    ));
+    _notifOverlay = entry;
+    overlay.insert(entry);
+  }
+
   Future<void> _pollNotifications() async {
     if (_userId == null || !_loggedIn) return;
     try {
       final count = await getUnreadCount(userId: _userId!);
       if (count > _lastKnownUnread) {
-        _messengerKey.currentState?.showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.notifications_rounded, color: Colors.white, size: 18),
-            const SizedBox(width: 10),
-            Text('You have ${count - _lastKnownUnread} new message${(count - _lastKnownUnread) == 1 ? '' : 's'}.'),
-          ]),
-          backgroundColor: cRed,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(12),
-        ));
+        final newCount = count - _lastKnownUnread;
+        _showTopNotification('You have $newCount new message${newCount == 1 ? '' : 's'}.');
+        // Also show system notification
+        UniNotifications.showMessage(
+          title: 'UniFind',
+          body: 'You have $newCount new message${newCount == 1 ? '' : 's'}.',
+        );
       }
       _lastKnownUnread = count;
       if (_unreadCount != count) setState(() => _unreadCount = count);
@@ -762,6 +836,7 @@ class _UniFindAppState extends State<UniFindApp> {
       _userId = userId;
       _role = role;
       _userRole = UserRoleExt.fromString(role);
+      _tab = _userRole == UserRole.fac ? 1 : 0;
       _sessionLoaded = true;
     });
 
@@ -793,7 +868,8 @@ class _UniFindAppState extends State<UniFindApp> {
             body: PostListingScreen(
               key: ValueKey(_postFormNonce),
               onPost: _addListing,
-              initialType: type,
+              initialType: type == ListingType.marketplace ? ListingType.lost : type,
+              hideSale: true,
             ),
           ),
         ));
@@ -961,7 +1037,7 @@ class _UniFindAppState extends State<UniFindApp> {
       _userId = userId;
       _role = (role ?? '').trim();
       _userRole = UserRoleExt.fromString(_role);
-      _tab = 0;
+      _tab = _userRole == UserRole.fac ? 1 : 0;
       _unreadCount = 0;
       _lastKnownUnread = 0;
     });

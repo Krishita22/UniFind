@@ -221,7 +221,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       itemBuilder: (ctx, i) => _MarketCard(
                         item: filtered[i],
                         compact: false,
-                        onTap: () => _showItemPopup(ctx, filtered[i], widget.currentUserEmail),
+                        onTap: () => _showItemPopup(ctx, filtered[i], widget.currentUserEmail, currentUserId: widget.currentUserId),
                         currentUserEmail: widget.currentUserEmail,
                         currentUserId: widget.currentUserId,
                       ),
@@ -280,7 +280,7 @@ class _FullScreenImagePage extends StatelessWidget {
 }
 
 // -- Item popup -- full detail content --
-void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUserEmail) {
+void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUserEmail, {int? currentUserId}) {
   // Helper to clean up seller display name (mirrors ItemDetailScreen logic)
   String asSellerUsername() {
     final raw = item.seller.trim();
@@ -544,21 +544,40 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                               const SizedBox(height: 24),
 
 
-                              // Contact Seller button (same behaviour as detail screen)
+                              // Contact Seller button
                               GestureDetector(
-                                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Row(children: [
-                                      Icon(Icons.message_rounded, color: Colors.white, size: 17),
-                                      SizedBox(width: 10),
-                                      Text('Contact flow coming soon!'),
-                                    ]),
-                                    backgroundColor: cRed,
-                                    behavior: SnackBarBehavior.floating,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    margin: const EdgeInsets.all(12),
-                                  ),
-                                ),
+                                onTap: () async {
+                                  final myId = currentUserId;
+                                  final sellerId = item.sellerId;
+                                  if (myId == null || sellerId == null) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Could not start conversation — user info unavailable.'), behavior: SnackBarBehavior.floating));
+                                    return;
+                                  }
+                                  if (myId == sellerId) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('This is your own listing.'), behavior: SnackBarBehavior.floating));
+                                    return;
+                                  }
+                                  try {
+                                    final result = await startConversation(
+                                      listingId: int.tryParse(item.id) ?? 0,
+                                      user1Id: myId,
+                                      user2Id: sellerId,
+                                      subject: 'Interested in: ${item.title}',
+                                    );
+                                    final convId = int.tryParse(result['id']?.toString() ?? '') ?? 0;
+                                    if (convId <= 0) throw Exception('Invalid conversation ID.');
+                                    if (!ctx.mounted) return;
+                                    Navigator.of(ctx).pop(); // close popup
+                                    await Navigator.of(ctx).push(MaterialPageRoute(
+                                      builder: (_) => ConversationScreen(
+                                        conv: Conversation(id: convId, subject: 'Interested in: ${item.title}', otherName: asSellerUsername(), otherId: sellerId, unread: 0),
+                                        myId: myId,
+                                      ),
+                                    ));
+                                  } catch (e) {
+                                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Could not open chat: $e'), behavior: SnackBarBehavior.floating));
+                                  }
+                                },
                                 child: Container(
                                   height: 48,
                                   decoration: BoxDecoration(
@@ -792,7 +811,7 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                         itemBuilder: (ctx, i) => _MarketCard(
                           item: widget.filtered[i],
                           compact: true,
-                          onTap: () => _showItemPopup(ctx, widget.filtered[i], widget.currentUserEmail),
+                          onTap: () => _showItemPopup(ctx, widget.filtered[i], widget.currentUserEmail, currentUserId: widget.currentUserId),
                           currentUserEmail: widget.currentUserEmail,
                           currentUserId: widget.currentUserId,
                         ),
