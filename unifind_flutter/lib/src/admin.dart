@@ -273,7 +273,8 @@ class _StandardUserShell extends StatelessWidget {
     _TopNavItem(icon: Icons.storefront_outlined,    activeIcon: Icons.storefront_rounded,      label: 'Market',      tabIndex: 0),
     _TopNavItem(icon: Icons.search_outlined,         activeIcon: Icons.search_rounded,          label: 'Lost & Found',tabIndex: 1),
     _TopNavItem(icon: Icons.list_alt_outlined,       activeIcon: Icons.list_alt_rounded,        label: 'My Listings', tabIndex: 3),
-    _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 4),
+    _TopNavItem(icon: Icons.chat_bubble_outline,     activeIcon: Icons.chat_bubble_rounded,     label: 'Messages',    tabIndex: 4),
+    _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 5),
   ];
 
   int _navIndexForTab(int tabIndex) {
@@ -287,7 +288,7 @@ class _StandardUserShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeNavIndex = _navIndexForTab(tab);
 
-    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Profile
+    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile
     final screens = [
       MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email),
       LostFoundScreen(
@@ -308,6 +309,7 @@ class _StandardUserShell extends StatelessWidget {
         onEditMarketplace: editMarketplace,
         onEditLostFound: editLostFound,
       ),
+      MessagingScreen(userId: userId ?? 0, userEmail: email),
       ProfileScreen(email: email, username: username, onLogout: onLogout),
     ];
 
@@ -392,7 +394,8 @@ class _StandardUserShell extends StatelessWidget {
                 NavigationDestination(icon: const Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
                 NavigationDestination(icon: const Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
                 NavigationDestination(icon: const Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: const Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
-                NavigationDestination(icon: const Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'My Listings'),
+                NavigationDestination(icon: const Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: const Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'Listings'),
+                NavigationDestination(icon: const Icon(Icons.chat_bubble_outline, color: Colors.white70), selectedIcon: const Icon(Icons.chat_bubble_rounded, color: Colors.white), label: 'Messages'),
                 NavigationDestination(icon: const Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: const Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
               ],
             ))
