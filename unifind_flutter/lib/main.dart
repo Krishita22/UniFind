@@ -28,6 +28,10 @@ part 'src/data.dart';
 part 'src/admin.dart';
 part 'src/welcome_screen.dart';
 part 'src/terms_conditions_screen.dart';
+part 'src/messages_screen.dart';
+part 'src/messaging_screen.dart';
+part 'src/notifications_service.dart';
+part 'src/ratings_screen.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
