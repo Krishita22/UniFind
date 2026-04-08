@@ -901,3 +901,145 @@ Future<Map<String, dynamic>> adminUnmatch({
   throw ApiException(data['error']?.toString() ?? 'Failed to unmatch items.');
 }
 
+// ── MESSAGING ─────────────────────────────────────────────────────────────────
+
+Future<List<Map<String, dynamic>>> getInbox({required int userId}) async {
+  final response = await http.get(Uri.parse('$_baseUrl/get_inbox.php?user_id=$userId'));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load inbox.');
+}
+
+Future<List<Map<String, dynamic>>> getMessages({
+  required int conversationId,
+  required int userId,
+}) async {
+  final response = await http.get(
+    Uri.parse('$_baseUrl/get_messages.php?conversation_id=$conversationId&user_id=$userId'),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to load messages.');
+}
+
+Future<void> sendMessage({
+  required int conversationId,
+  required int senderId,
+  required String body,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/send_message.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'conversation_id': conversationId, 'sender_id': senderId, 'body': body}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) return;
+  throw ApiException(data['error']?.toString() ?? 'Failed to send message.');
+}
+
+Future<Map<String, dynamic>> startConversation({
+  required int listingId,
+  required int user1Id,
+  required int user2Id,
+  required String subject,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/start_conversation.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'listing_id': listingId,
+      'user1_id':   user1Id,
+      'user2_id':   user2Id,
+      'subject':    subject,
+    }),
+  );
+  final json = jsonDecode(response.body);
+  if (response.statusCode == 200 && json['success'] == true) {
+    final data = json['data'];
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return Map<String, dynamic>.from(json);
+  }
+  throw ApiException(json['error']?.toString() ?? 'Failed to start conversation.');
+}
+
+Future<int> getUnreadCount({required int userId}) async {
+  try {
+    final response = await http.get(Uri.parse('$_baseUrl/get_unread_count.php?user_id=$userId'));
+    final json = jsonDecode(response.body);
+    if (response.statusCode == 200 && json['success'] == true) {
+      final data = json['data'] as Map<String, dynamic>?;
+      return (data?['count'] as num?)?.toInt() ?? 0;
+    }
+  } catch (_) {}
+  return 0;
+}
+
+// ── RATINGS ───────────────────────────────────────────────────────────────────
+
+Future<Map<String, dynamic>> getUserRating({required int userId}) async {
+  try {
+    final response = await http.get(Uri.parse('$_baseUrl/get_user_rating.php?user_id=$userId'));
+    final json = jsonDecode(response.body);
+    if (response.statusCode == 200 && json['success'] == true) {
+      return Map<String, dynamic>.from(json['data'] as Map);
+    }
+  } catch (_) {}
+  return {'avg': 0.0, 'count': 0};
+}
+
+Future<List<Map<String, dynamic>>> getUserReviews({required int userId}) async {
+  try {
+    final response = await http.get(Uri.parse('$_baseUrl/get_user_reviews.php?user_id=$userId'));
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true) {
+      return List<Map<String, dynamic>>.from(data['data'] ?? []);
+    }
+  } catch (_) {}
+  return [];
+}
+
+Future<Map<String, dynamic>> submitRating({
+  required int conversationId,
+  required int raterUserId,
+  required int targetUserId,
+  required int stars,
+  String comment = '',
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/submit_rating.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'conversation_id': conversationId,
+      'rater_id':        raterUserId,
+      'target_id':       targetUserId,
+      'stars':           stars,
+      'comment':         comment,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to submit rating.');
+}
+
+Future<Map<String, dynamic>> markConversationComplete({
+  required int conversationId,
+  required int userId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/mark_complete.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'conversation_id': conversationId, 'user_id': userId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to mark complete.');
+}
+
