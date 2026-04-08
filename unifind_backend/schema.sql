@@ -39,3 +39,32 @@ CREATE TABLE IF NOT EXISTS listings (
     KEY idx_listings_approved_created (is_approved, created_at),
     KEY idx_listings_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS lost_found_claims (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    found_item_id INT UNSIGNED NOT NULL,
+    claimant_id INT UNSIGNED NOT NULL,
+    proof_details TEXT NOT NULL,
+    identifying_details TEXT NULL,
+    last_seen_context TEXT NULL,
+    contact_note TEXT NULL,
+    status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_claims_item (found_item_id),
+    KEY idx_claims_claimant (claimant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS lost_found_matches (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    lost_item_id INT UNSIGNED NOT NULL,
+    found_item_id INT UNSIGNED NULL,
+    submitter_id INT UNSIGNED NULL,
+    found_location VARCHAR(255) NULL,
+    found_when VARCHAR(255) NULL,
+    match_details TEXT NULL,
+    contact_note TEXT NULL,
+    status ENUM('active','resolved','unmatched') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_matches_lost (lost_item_id),
+    KEY idx_matches_found (found_item_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
