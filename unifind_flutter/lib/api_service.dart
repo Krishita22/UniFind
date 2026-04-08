@@ -132,6 +132,21 @@ Future<bool> checkUsernameAvailable(String username) async {
   return data['available'] == true;
 }
 
+// CHANGE USERNAME
+Future<void> changeUsername(String newUsername, String email) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/change_username.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'username': newUsername, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) return;
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to change username.',
+    code: data['error_code']?.toString(),
+  );
+}
+
 // PASSWORD RESET STEP 1: REQUEST RESET CODE
 Future<Map<String, dynamic>> requestPasswordReset(String email) async {
   final response = await http.post(

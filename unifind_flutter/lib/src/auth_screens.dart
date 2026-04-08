@@ -795,6 +795,257 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen>
   }
 }
 
+// ─── CHANGE USERNAME SCREEN ──────────────────────────────────────────────────
+class ChangeUsernameScreen extends StatefulWidget {
+  final String email;  
+  const ChangeUsernameScreen({super.key, required this.email});  
+
+  @override
+  State<ChangeUsernameScreen> createState() => _ChangeUsernameScreenState();
+}
+
+class _ChangeUsernameScreenState extends State<ChangeUsernameScreen>
+    with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  String _newUsername = '';
+  bool _loading = false;
+  bool? _available;
+  bool _checking = false;
+  String? _errorMessage;
+  Timer? _debounce;
+  late AnimationController _c;
+  late Animation<double> _fade, _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _fade = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
+    _slide = Tween(begin: 24.0, end: 0.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+    _c.forward();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _c.dispose();
+    super.dispose();
+  }
+
+  bool get _isValidFormat =>
+      _newUsername.trim().length >= 6 &&
+      RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(_newUsername.trim());
+
+  bool get _canSubmit =>
+      _isValidFormat && _available == true && !_checking;
+
+  void _onUsernameChanged(String v) {
+    _debounce?.cancel();
+    setState(() {
+      _newUsername = v;
+      _available = null;
+      _errorMessage = null;
+    });
+
+    if (!_isValidFormat) return;
+
+    setState(() => _checking = true);
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final available = await checkUsernameAvailable(v.trim());
+        if (mounted) setState(() { _available = available; _checking = false; });
+      } catch (_) {
+        if (mounted) setState(() { _available = null; _checking = false; });
+      }
+    });
+  }
+
+  String _errorMsg(ApiException e) {
+    switch (e.code) {
+      case 'USERNAME_TAKEN':    return 'That username is already taken.';
+      case 'INVALID_USERNAME':  return 'Username contains invalid characters.';
+      case 'UNAUTHORIZED':      return 'You must be logged in to change your username.';
+      default:                  return e.message;
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (!_canSubmit) return;
+    setState(() { _loading = true; _errorMessage = null; });
+
+    try {
+      await changeUsername(_newUsername.trim(), widget.email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username changed successfully!')),
+      );
+      Navigator.of(context).pop();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = _errorMsg(e));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showTaken = _available == false && !_checking;
+    final showFree  = _available == true  && !_checking;
+
+    return Scaffold(
+      backgroundColor: cBg,
+      body: Stack(
+        children: [
+          Positioned(right: -80, top: -80, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
+          Positioned(left: -60, bottom: -60, child: Container(width: 220, height: 220, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.05), Colors.transparent])))),
+          Center(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, child) => Opacity(
+                opacity: _fade.value,
+                child: Transform.translate(offset: Offset(0, _slide.value), child: child),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    children: [
+                      Image.asset('assets/images/logo.jpg', height: 90, fit: BoxFit.contain),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Change Username',
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Choose a new unique username for your account',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: cMuted),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: cSurface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: cBorder),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 6))],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // ── Username field with live availability check ──
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('New Username', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+                                  const SizedBox(height: 6),
+                                  TextFormField(
+                                    onChanged: _onUsernameChanged,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) => _submit(),
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) return 'Username is required';
+                                      if (v.trim().length < 6) return 'Must be at least 6 characters';
+                                      if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v.trim())) return 'Letters, numbers, underscores, and periods only';
+                                      if (_available == false) return 'Username is already taken';
+                                      return null;
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: 'janedoe123',
+                                      hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+                                      prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18, color: cMuted),
+                                      suffixIcon: _checking
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(12),
+                                              child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cMuted)),
+                                            )
+                                          : showFree
+                                              ? const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF43A047))
+                                              : showTaken
+                                                  ? const Icon(Icons.cancel_rounded, size: 18, color: cRedDark)
+                                                  : null,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: showTaken ? cRedDark : cBorder),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: showTaken ? cRedDark : cRed, width: 2),
+                                      ),
+                                      filled: true,
+                                      fillColor: cBg,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    ),
+                                  ),
+                                  if (showTaken) ...[
+                                    const SizedBox(height: 6),
+                                    const Row(children: [
+                                      Icon(Icons.error_outline_rounded, size: 13, color: cRedDark),
+                                      SizedBox(width: 4),
+                                      Text('Username is already taken', style: TextStyle(fontSize: 11, color: cRedDark, fontWeight: FontWeight.w600)),
+                                    ]),
+                                  ] else if (showFree) ...[
+                                    const SizedBox(height: 6),
+                                    const Row(children: [
+                                      Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF43A047)),
+                                      SizedBox(width: 4),
+                                      Text('Username is available', style: TextStyle(fontSize: 11, color: Color(0xFF43A047), fontWeight: FontWeight.w600)),
+                                    ]),
+                                  ],
+                                ],
+                              ),
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Text(_errorMessage!, style: const TextStyle(color: cRedDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                              ],
+                              const SizedBox(height: 24),
+                              _AuthButton(
+                                loading: _loading,
+                                onTap: _canSubmit ? _submit : () {},
+                                label: 'Change Username',
+                                disabled: !_canSubmit,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, size: 14, color: cMuted),
+                              SizedBox(width: 6),
+                              Text('Back to profile', style: TextStyle(color: cMuted, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 // ─── REGISTRATION SCREEN ─────────────────────────────────────────────────────
 class RegistrationScreen extends StatefulWidget {
   final AuthSuccessCallback onRegister;
