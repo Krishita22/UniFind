@@ -901,6 +901,22 @@ Future<Map<String, dynamic>> adminUnmatch({
   throw ApiException(data['error']?.toString() ?? 'Failed to unmatch items.');
 }
 
+Future<Map<String, dynamic>> adminAcceptClaim({
+  required String claimId,
+  required String itemId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/accept_claim.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'claim_id': claimId, 'item_id': itemId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to accept claim.');
+}
+
 // ── MESSAGING ─────────────────────────────────────────────────────────────────
 
 Future<List<Map<String, dynamic>>> getInbox({required int userId}) async {

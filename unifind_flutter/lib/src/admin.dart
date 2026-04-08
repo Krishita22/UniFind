@@ -300,6 +300,7 @@ class _StandardUserShell extends StatelessWidget {
         submittedClaimItemIds: submittedClaimItemIds,
         submittedMatchItemIds: submittedMatchItemIds,
         currentUserEmail: email,
+        currentUserId: userId,
       ),
       PostListingScreen(key: ValueKey(postFormNonce), onPost: addListing, initialType: postDefaultType),
       MyListingsScreen(
@@ -1364,7 +1365,7 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                 SizedBox(width: double.infinity, child: ElevatedButton.icon(
                                   onPressed: () async {
                                     try {
-                                      await adminMarkLostFoundResolved(itemId: item.id);
+                                      await adminAcceptClaim(claimId: c.id, itemId: item.id);
                                       if (ctx.mounted) Navigator.pop(ctx);
                                       widget.onRefresh();
                                     } catch (e) {
@@ -1372,7 +1373,7 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                     }
                                   },
                                   icon: const Icon(Icons.check_circle_rounded, size: 14),
-                                  label: const Text('Accept Claim & Resolve'),
+                                  label: const Text('Accept Claim'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _cGreen, foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 8),
