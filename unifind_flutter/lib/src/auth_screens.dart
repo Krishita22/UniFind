@@ -880,7 +880,7 @@ class _ChangeUsernameScreenState extends State<ChangeUsernameScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Username changed successfully!')),
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(_newUsername.trim());
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _errorMessage = _errorMsg(e));

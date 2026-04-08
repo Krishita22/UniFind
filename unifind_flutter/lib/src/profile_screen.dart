@@ -23,10 +23,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double? _ratingAvg;
   int _ratingCount = 0;
   Timer? _ratingTimer;
+  late String _localUsername = '';
 
   @override
   void initState() {
     super.initState();
+    _localUsername = widget.username;
     _loadRating();
     _ratingTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadRating());
   }
@@ -50,16 +52,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String get _initials {
-    if (widget.username.isNotEmpty) return widget.username[0].toUpperCase();
-    if (widget.email.isNotEmpty) return widget.email[0].toUpperCase();
-    return 'U';
-  }
+  if (_localUsername.isNotEmpty) return _localUsername[0].toUpperCase();
+  if (widget.email.isNotEmpty) return widget.email[0].toUpperCase();
+  return 'U';
+}
 
-  String get _displayHandle {
-    if (widget.username.isNotEmpty) return widget.username;
-    if (widget.email.contains('@')) return widget.email.split('@').first;
-    return widget.email;
-  }
+String get _displayHandle {
+  if (_localUsername.isNotEmpty) return _localUsername;
+  if (widget.email.contains('@')) return widget.email.split('@').first;
+  return widget.email;
+}
 
   Future<void> _pickAvatar() async {
     final picker = ImagePicker();
@@ -297,9 +299,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.drive_file_rename_outline_rounded,
           label: 'Change Username',
           subtitle: 'Update your display name',
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ChangeUsernameScreen(email: widget.email)),
-          ),
+          onTap: () async {
+            final newUsername = await Navigator.of(context).push<String>(
+              MaterialPageRoute(builder: (_) => ChangeUsernameScreen(email: widget.email)),
+            );
+            if (newUsername != null) {
+              setState(() => _localUsername = newUsername);
+            }
+          },
         ),
         const SizedBox(height: 20),
 

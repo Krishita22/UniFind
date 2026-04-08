@@ -3,7 +3,7 @@
   "packages": [
     {
       "name": "args",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/args-2.7.0",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/args-2.7.0",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
@@ -99,7 +99,7 @@
     },
     {
       "name": "dbus",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/dbus-0.7.12",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/dbus-0.7.12",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
@@ -153,7 +153,7 @@
     },
     {
       "name": "flutter",
-      "rootUri": "file:///opt/homebrew/share/flutter/packages/flutter",
+      "rootUri": "file:///Users/stephaniaivanov/flutter/packages/flutter",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -201,19 +201,19 @@
     },
     {
       "name": "flutter_local_notifications",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/flutter_local_notifications-17.2.4",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/flutter_local_notifications-17.2.4",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
     {
       "name": "flutter_local_notifications_linux",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/flutter_local_notifications_linux-4.0.1",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/flutter_local_notifications_linux-4.0.1",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
     {
       "name": "flutter_local_notifications_platform_interface",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/flutter_local_notifications_platform_interface-7.2.0",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/flutter_local_notifications_platform_interface-7.2.0",
       "packageUri": "lib/",
       "languageVersion": "2.17"
     },
@@ -225,13 +225,13 @@
     },
     {
       "name": "flutter_test",
-      "rootUri": "file:///opt/homebrew/share/flutter/packages/flutter_test",
+      "rootUri": "file:///Users/stephaniaivanov/flutter/packages/flutter_test",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
       "name": "flutter_web_plugins",
-      "rootUri": "file:///opt/homebrew/share/flutter/packages/flutter_web_plugins",
+      "rootUri": "file:///Users/stephaniaivanov/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -417,7 +417,7 @@
     },
     {
       "name": "petitparser",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/petitparser-7.0.2",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/petitparser-7.0.2",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -483,7 +483,7 @@
     },
     {
       "name": "sky_engine",
-      "rootUri": "file:///opt/homebrew/share/flutter/bin/cache/pkg/sky_engine",
+      "rootUri": "file:///Users/stephaniaivanov/flutter/bin/cache/pkg/sky_engine",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
@@ -525,13 +525,13 @@
     },
     {
       "name": "test_api",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/test_api-0.7.9",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/test_api-0.7.9",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
     {
       "name": "timezone",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/timezone-0.9.4",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/timezone-0.9.4",
       "packageUri": "lib/",
       "languageVersion": "2.19"
     },
@@ -621,7 +621,7 @@
     },
     {
       "name": "xml",
-      "rootUri": "file:///Users/krishitavaghani/.pub-cache/hosted/pub.dev/xml-6.6.1",
+      "rootUri": "file:///Users/stephaniaivanov/.pub-cache/hosted/pub.dev/xml-6.6.1",
       "packageUri": "lib/",
       "languageVersion": "3.8"
     },
@@ -640,7 +640,7 @@
   ],
   "generator": "pub",
   "generatorVersion": "3.11.0",
-  "flutterRoot": "file:///opt/homebrew/share/flutter",
+  "flutterRoot": "file:///Users/stephaniaivanov/flutter",
   "flutterVersion": "3.41.2",
-  "pubCache": "file:///Users/krishitavaghani/.pub-cache"
+  "pubCache": "file:///Users/stephaniaivanov/.pub-cache"
 }
