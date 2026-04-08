@@ -200,7 +200,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 8),
         _ProfileInfoTile(icon: Icons.person_outline_rounded, label: 'Username', value: _displayHandle),
         _ProfileInfoTile(icon: Icons.mail_outline_rounded, label: 'Email', value: widget.email),
-        _ProfileInfoTile(icon: Icons.school_outlined, label: 'Institution', value: 'Montclair State University'),
         const SizedBox(height: 20),
 
         // ── Security section ────────────────────────────────────────────
@@ -212,6 +211,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           subtitle: 'Update your account password',
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => ChangePasswordScreen()),
+          ),
+        ),
+        _ProfileActionTile(
+          icon: Icons.drive_file_rename_outline_rounded,
+          label: 'Change Username',
+          subtitle: 'Update your display name',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ChangeUsernameScreen(email: widget.email)),
           ),
         ),
         const SizedBox(height: 20),
