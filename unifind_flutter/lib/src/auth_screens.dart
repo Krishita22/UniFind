@@ -551,6 +551,501 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 }
 
+// ─── CHANGE PASSWORD SCREEN ──────────────────────────────────────────────────
+class ChangePasswordScreen extends StatefulWidget {
+  const ChangePasswordScreen({super.key});
+
+  @override
+  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+}
+
+class _ChangePasswordScreenState extends State<ChangePasswordScreen>
+    with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  String _email = '';
+  String _code = '';
+  String _newPassword = '';
+  String _confirmPassword = '';
+  bool _loading = false;
+  bool _codeSent = false;
+  String? _errorMessage;
+  late AnimationController _c;
+  late Animation<double> _fade, _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _fade = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
+    _slide = Tween(begin: 24.0, end: 0.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+    _c.forward();
+  }
+
+  @override
+  void dispose() { _c.dispose(); super.dispose(); }
+
+  bool get _resetReady {
+    if (!_codeSent) return _email.trim().isNotEmpty;
+    return _email.trim().isNotEmpty &&
+        _code.trim().isNotEmpty &&
+        _passwordStrong &&
+        _confirmPassword == _newPassword &&
+        _confirmPassword.isNotEmpty;
+  }
+
+  bool get _passwordStrong {
+    return _newPassword.length >= 6 &&
+        !_newPassword.contains(' ') &&
+        RegExp(r'[A-Z]').hasMatch(_newPassword) &&
+        RegExp(r'[0-9]').hasMatch(_newPassword) &&
+        RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(_newPassword);
+  }
+
+  String _errorMsg(ApiException e) {
+    switch (e.code) {
+      case 'EMAIL_NOT_FOUND':   return 'No account found with this email.';
+      case 'INVALID_CODE':      return 'That code is invalid. Please check and try again.';
+      case 'CODE_EXPIRED':      return 'Your code expired. Request a new one.';
+      case 'WEAK_PASSWORD':     return 'Use a stronger password (at least 6 characters).';
+      case 'TOO_MANY_REQUESTS': return 'Too many attempts. Please wait and try again.';
+      default:                  return e.message;
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() { _loading = true; _errorMessage = null; });
+
+    try {
+      if (!_codeSent) {
+        final response = await requestPasswordReset(_email.trim().toLowerCase());
+        if (!mounted) return;
+        setState(() => _codeSent = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response['message']?.toString() ?? 'Code sent to your email.')),
+        );
+      } else {
+        await resetPassword(
+          email: _email.trim().toLowerCase(),
+          code: _code.trim(),
+          newPassword: _newPassword,
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password changed successfully!')),
+        );
+        // ── Go back to profile, not login ────────────────────────────────────
+        Navigator.of(context).pop();
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = _errorMsg(e));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: cBg,
+      body: Stack(
+        children: [
+          Positioned(right: -80, top: -80, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
+          Positioned(left: -60, bottom: -60, child: Container(width: 220, height: 220, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.05), Colors.transparent])))),
+          Center(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, child) => Opacity(
+                opacity: _fade.value,
+                child: Transform.translate(offset: Offset(0, _slide.value), child: child),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    children: [
+                      Image.asset('assets/images/logo.jpg', height: 90, fit: BoxFit.contain),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Change Password',
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _codeSent
+                            ? 'Enter the code sent to your email and set a new password'
+                            : 'Enter your MSU email to receive a reset code',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 14, color: cMuted),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: cSurface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: cBorder),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 6))],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _StyledField(
+                                key: const ValueKey('change_email'),
+                                label: 'MSU Email Address',
+                                hint: 'you@montclair.edu',
+                                icon: Icons.mail_outline_rounded,
+                                initialValue: _email,
+                                onChanged: (v) => setState(() => _email = v),
+                                textInputAction: _codeSent ? TextInputAction.next : TextInputAction.done,
+                                onFieldSubmitted: (_) { if (!_codeSent) _submit(); },
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Email is required';
+                                  if (!v.toLowerCase().trim().endsWith('@montclair.edu')) return 'Must use an @montclair.edu email';
+                                  return null;
+                                },
+                              ),
+                              if (_codeSent) ...[
+                                const SizedBox(height: 16),
+                                _StyledField(
+                                  key: const ValueKey('change_code'),
+                                  label: 'Reset Code',
+                                  hint: 'Enter code from your email',
+                                  icon: Icons.verified_outlined,
+                                  onChanged: (v) => setState(() => _code = v),
+                                  textInputAction: TextInputAction.next,
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.trim().isEmpty) return 'Code is required';
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _PasswordField(
+                                  key: const ValueKey('change_new_password'),
+                                  label: 'New Password',
+                                  onChanged: (v) => setState(() => _newPassword = v),
+                                  textInputAction: TextInputAction.next,
+                                  onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
+                                  validator: (v) {
+                                    if (!_codeSent) return null;
+                                    if (v == null || v.isEmpty) return 'New password is required';
+                                    if (v.contains(' ')) return 'Password cannot contain spaces';
+                                    if (v.length < 6) return 'Minimum 6 characters';
+                                    if (!RegExp(r'[A-Z]').hasMatch(v)) return 'Add an uppercase letter';
+                                    if (!RegExp(r'[0-9]').hasMatch(v)) return 'Add a number';
+                                    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) return 'Add a special character';
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                                _ConfirmPasswordField(
+                                  key: const ValueKey('change_confirm_password'),
+                                  newPassword: _newPassword,
+                                  onChanged: (v) => setState(() => _confirmPassword = v),
+                                  textInputAction: TextInputAction.done,
+                                  onFieldSubmitted: (_) => _submit(),
+                                ),
+                              ],
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Text(_errorMessage!, style: const TextStyle(color: cRedDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                              ],
+                              const SizedBox(height: 24),
+                              _AuthButton(
+                                loading: _loading,
+                                onTap: _resetReady ? _submit : () {},
+                                label: _codeSent ? 'Change Password' : 'Send Reset Code',
+                                disabled: !_resetReady,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, size: 14, color: cMuted),
+                              SizedBox(width: 6),
+                              Text('Back to profile', style: TextStyle(color: cMuted, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── CHANGE USERNAME SCREEN ──────────────────────────────────────────────────
+class ChangeUsernameScreen extends StatefulWidget {
+  final String email;  
+  const ChangeUsernameScreen({super.key, required this.email});  
+
+  @override
+  State<ChangeUsernameScreen> createState() => _ChangeUsernameScreenState();
+}
+
+class _ChangeUsernameScreenState extends State<ChangeUsernameScreen>
+    with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  String _newUsername = '';
+  bool _loading = false;
+  bool? _available;
+  bool _checking = false;
+  String? _errorMessage;
+  Timer? _debounce;
+  late AnimationController _c;
+  late Animation<double> _fade, _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _fade = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOut));
+    _slide = Tween(begin: 24.0, end: 0.0).animate(CurvedAnimation(parent: _c, curve: Curves.easeOutCubic));
+    _c.forward();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _c.dispose();
+    super.dispose();
+  }
+
+  bool get _isValidFormat =>
+      _newUsername.trim().length >= 6 &&
+      RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(_newUsername.trim());
+
+  bool get _canSubmit =>
+      _isValidFormat && _available == true && !_checking;
+
+  void _onUsernameChanged(String v) {
+    _debounce?.cancel();
+    setState(() {
+      _newUsername = v;
+      _available = null;
+      _errorMessage = null;
+    });
+
+    if (!_isValidFormat) return;
+
+    setState(() => _checking = true);
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final available = await checkUsernameAvailable(v.trim());
+        if (mounted) setState(() { _available = available; _checking = false; });
+      } catch (_) {
+        if (mounted) setState(() { _available = null; _checking = false; });
+      }
+    });
+  }
+
+  String _errorMsg(ApiException e) {
+    switch (e.code) {
+      case 'USERNAME_TAKEN':    return 'That username is already taken.';
+      case 'INVALID_USERNAME':  return 'Username contains invalid characters.';
+      case 'UNAUTHORIZED':      return 'You must be logged in to change your username.';
+      default:                  return e.message;
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (!_canSubmit) return;
+    setState(() { _loading = true; _errorMessage = null; });
+
+    try {
+      await changeUsername(_newUsername.trim(), widget.email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username changed successfully!')),
+      );
+      Navigator.of(context).pop();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = _errorMsg(e));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showTaken = _available == false && !_checking;
+    final showFree  = _available == true  && !_checking;
+
+    return Scaffold(
+      backgroundColor: cBg,
+      body: Stack(
+        children: [
+          Positioned(right: -80, top: -80, child: Container(width: 300, height: 300, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.08), Colors.transparent])))),
+          Positioned(left: -60, bottom: -60, child: Container(width: 220, height: 220, decoration: BoxDecoration(shape: BoxShape.circle, gradient: RadialGradient(colors: [cRed.withValues(alpha: 0.05), Colors.transparent])))),
+          Center(
+            child: AnimatedBuilder(
+              animation: _c,
+              builder: (_, child) => Opacity(
+                opacity: _fade.value,
+                child: Transform.translate(offset: Offset(0, _slide.value), child: child),
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    children: [
+                      Image.asset('assets/images/logo.jpg', height: 90, fit: BoxFit.contain),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Change Username',
+                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Choose a new unique username for your account',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 14, color: cMuted),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: cSurface,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: cBorder),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 6))],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // ── Username field with live availability check ──
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('New Username', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+                                  const SizedBox(height: 6),
+                                  TextFormField(
+                                    onChanged: _onUsernameChanged,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) => _submit(),
+                                    validator: (v) {
+                                      if (v == null || v.trim().isEmpty) return 'Username is required';
+                                      if (v.trim().length < 6) return 'Must be at least 6 characters';
+                                      if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v.trim())) return 'Letters, numbers, underscores, and periods only';
+                                      if (_available == false) return 'Username is already taken';
+                                      return null;
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: 'janedoe123',
+                                      hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+                                      prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18, color: cMuted),
+                                      suffixIcon: _checking
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(12),
+                                              child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cMuted)),
+                                            )
+                                          : showFree
+                                              ? const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF43A047))
+                                              : showTaken
+                                                  ? const Icon(Icons.cancel_rounded, size: 18, color: cRedDark)
+                                                  : null,
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: showTaken ? cRedDark : cBorder),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: BorderSide(color: showTaken ? cRedDark : cRed, width: 2),
+                                      ),
+                                      filled: true,
+                                      fillColor: cBg,
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    ),
+                                  ),
+                                  if (showTaken) ...[
+                                    const SizedBox(height: 6),
+                                    const Row(children: [
+                                      Icon(Icons.error_outline_rounded, size: 13, color: cRedDark),
+                                      SizedBox(width: 4),
+                                      Text('Username is already taken', style: TextStyle(fontSize: 11, color: cRedDark, fontWeight: FontWeight.w600)),
+                                    ]),
+                                  ] else if (showFree) ...[
+                                    const SizedBox(height: 6),
+                                    const Row(children: [
+                                      Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF43A047)),
+                                      SizedBox(width: 4),
+                                      Text('Username is available', style: TextStyle(fontSize: 11, color: Color(0xFF43A047), fontWeight: FontWeight.w600)),
+                                    ]),
+                                  ],
+                                ],
+                              ),
+                              if (_errorMessage != null) ...[
+                                const SizedBox(height: 10),
+                                Text(_errorMessage!, style: const TextStyle(color: cRedDark, fontSize: 12, fontWeight: FontWeight.w600)),
+                              ],
+                              const SizedBox(height: 24),
+                              _AuthButton(
+                                loading: _loading,
+                                onTap: _canSubmit ? _submit : () {},
+                                label: 'Change Username',
+                                disabled: !_canSubmit,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.arrow_back, size: 14, color: cMuted),
+                              SizedBox(width: 6),
+                              Text('Back to profile', style: TextStyle(color: cMuted, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 // ─── REGISTRATION SCREEN ─────────────────────────────────────────────────────
 class RegistrationScreen extends StatefulWidget {
   final AuthSuccessCallback onRegister;
@@ -569,6 +1064,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   String _password = '';
   String _age = '';
   String _role = 'student';
+  String _graduationYear = ''; 
+  String _confirmPassword = '';
   String _code = '';
   bool _loading = false;
   bool _codeSent = false;
@@ -604,9 +1101,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
   }
 
   bool get _canProceed {
-    if (!_codeSent) return _ageValid;
-    return _passwordStrong && _agreedToTerms;
+  if (!_codeSent) {
+    if (_role == 'student' && _graduationYear.isEmpty) return false;
+    return _ageValid;
   }
+  return _passwordStrong &&
+      _agreedToTerms &&
+      _confirmPassword == _password &&
+      _confirmPassword.isNotEmpty;
+}
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -639,7 +1142,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           username: _username.trim(),
           role: _role,
           age: int.tryParse(_age.trim()) ?? 0,
-        );
+          graduationYear: (_role == 'student' && _graduationYear.isNotEmpty)
+              ? int.tryParse(_graduationYear)
+              : null,
+          );
         if (!mounted) return;
         widget.onRegister(
           _email.trim().toLowerCase(),
@@ -776,20 +1282,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                   },
                                 ),
                                 const SizedBox(height: 16),
-                                _StyledField(
-                                  key: const ValueKey('signup_username'),
-                                  label: 'Username',
-                                  hint: 'janedoe123',
-                                  icon: Icons.alternate_email_rounded,
+                                _UsernameField(
                                   onChanged: (v) => _username = v,
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) return 'Username is required';
-                                    if (v.trim().length < 6) return 'Username must be at least 6 characters';
-                                    if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v.trim())) {
-                                      return 'Letters, numbers, underscores, and periods only';
-                                    }
-                                    return null;
-                                  },
                                 ),
                                 const SizedBox(height: 16),
                                 Column(
@@ -813,10 +1307,58 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                           label: 'Faculty',
                                           icon: Icons.work_outline_rounded,
                                           selected: _role == 'faculty',
-                                          onTap: () => setState(() => _role = 'faculty'),
+                                          onTap: () => setState(() {
+                                            _role = 'faculty';
+                                            _graduationYear = '';
+                                          }),
                                         ),
                                       ],
                                     ),
+                                    if (_role == 'student') ...[
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'Graduation Year',
+                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      DropdownButtonFormField<String>(
+                                        value: _graduationYear.isEmpty ? null : _graduationYear,
+                                        decoration: InputDecoration(
+                                          hintText: 'Select year',
+                                          hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+                                          prefixIcon: const Icon(Icons.school_outlined, size: 18, color: cMuted),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: cBorder),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: cBorder),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: const BorderSide(color: cRed, width: 2),
+                                          ),
+                                          filled: true,
+                                          fillColor: cBg,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                        ),
+                                        dropdownColor: cSurface,
+                                        items: ['2026', '2027', '2028', '2029', '2030'].map((year) {
+                                          return DropdownMenuItem(
+                                            value: year,
+                                            child: Text(year, style: const TextStyle(fontSize: 14, color: cText)),
+                                          );
+                                        }).toList(),
+                                        onChanged: (v) => setState(() => _graduationYear = v ?? ''),
+                                        validator: (v) {
+                                          if (_role == 'student' && (v == null || v.isEmpty)) {
+                                            return 'Please select your graduation year';
+                                          }
+                                          return null;
+                                        },
+                                      ),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 16),
@@ -856,7 +1398,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                 _ConfirmPasswordField(
                                   key: const ValueKey('signup_confirm_password'),
                                   newPassword: _password,
-                                  onChanged: (v) => setState(() {}),
+                                  onChanged: (v) => setState(() => _confirmPassword = v),
                                   textInputAction: TextInputAction.next,
                                 ),
                                 const SizedBox(height: 16),
@@ -951,13 +1493,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                               const SizedBox(height: 24),
                               _AuthButton(
                                 loading: _loading,
-                                onTap: (!_codeSent || (_passwordStrong && _agreedToTerms))
+                                onTap: (!_codeSent || (_passwordStrong && _agreedToTerms && _confirmPassword == _password && _confirmPassword.isNotEmpty))
                                     ? _submit
                                     : () {},
-                                label: _codeSent
-                                    ? 'Verify & Create Account'
-                                    : 'Send Verification Code',
-                                disabled: _codeSent && (!_passwordStrong || !_agreedToTerms),
+                                label: _codeSent ? 'Verify & Create Account' : 'Send Verification Code',
+                                disabled: _codeSent && (!_passwordStrong || !_agreedToTerms || _confirmPassword != _password || _confirmPassword.isEmpty),
                               ),
                             ],
                           ),
@@ -1590,6 +2130,121 @@ class _RoleChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ─── USERNAME FIELD WITH AVAILABILITY CHECK ───────────────────────────────────
+class _UsernameField extends StatefulWidget {
+  final ValueChanged<String> onChanged;
+  const _UsernameField({required this.onChanged});
+
+  @override
+  State<_UsernameField> createState() => _UsernameFieldState();
+}
+
+class _UsernameFieldState extends State<_UsernameField> {
+  String _value = '';
+  bool _checking = false;
+  bool? _available; 
+  Timer? _debounce;
+
+  bool get _isValidFormat =>
+      _value.trim().length >= 6 &&
+      RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(_value.trim());
+
+  void _onChanged(String v) {
+    _debounce?.cancel();
+    setState(() {
+      _value = v;
+      _available = null;
+    });
+    widget.onChanged(v);
+
+    if (!_isValidFormat) return;
+
+    setState(() => _checking = true);
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final available = await checkUsernameAvailable(v.trim());
+        if (mounted) setState(() { _available = available; _checking = false; });
+      } catch (_) {
+        if (mounted) setState(() { _available = null; _checking = false; });
+      }
+    });
+  }
+
+  @override
+  void dispose() { _debounce?.cancel(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    final showTaken = _available == false && !_checking;
+    final showFree  = _available == true  && !_checking;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Username', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+        const SizedBox(height: 6),
+        TextFormField(
+          onChanged: _onChanged,
+          textInputAction: TextInputAction.next,
+          validator: (v) {
+            if (v == null || v.trim().isEmpty) return 'Username is required';
+            if (v.trim().length < 6) return 'Username must be at least 6 characters';
+            if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(v.trim())) return 'Letters, numbers, underscores, and periods only';
+            if (_available == false) return 'Username is already taken';
+            return null;
+          },
+          decoration: InputDecoration(
+            hintText: 'janedoe123',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+            prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18, color: cMuted),
+            suffixIcon: _checking
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cMuted)),
+                  )
+                : showFree
+                    ? const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF43A047))
+                    : showTaken
+                        ? const Icon(Icons.cancel_rounded, size: 18, color: cRedDark)
+                        : null,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: showTaken ? cRedDark : cBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: showTaken ? cRedDark : cRed, width: 2),
+            ),
+            filled: true,
+            fillColor: cBg,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+        if (showTaken) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.error_outline_rounded, size: 13, color: cRedDark),
+              SizedBox(width: 4),
+              Text('Username is already taken', style: TextStyle(fontSize: 11, color: cRedDark, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ] else if (showFree) ...[
+          const SizedBox(height: 6),
+          const Row(
+            children: [
+              Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF43A047)),
+              SizedBox(width: 4),
+              Text('Username is available', style: TextStyle(fontSize: 11, color: Color(0xFF43A047), fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
