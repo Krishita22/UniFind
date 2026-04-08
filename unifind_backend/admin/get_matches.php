@@ -1,30 +1,61 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/../api_helpers.php';
+require_once __DIR__ . '/../config.php';
+
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
+
+if (!function_exists('api_success')) {
+    function api_success($data) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $data]);
+        exit;
+    }
+    function api_error(string $message, int $status = 400) {
+        http_response_code($status);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => $message]);
+        exit;
+    }
+    function api_body(): array {
+        $raw = file_get_contents('php://input');
+        if ($raw === false || $raw === '') return [];
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') api_error('Method not allowed.', 405);
 
+// Check if table exists first
+$check = @$conn->query("SELECT 1 FROM lost_found_matches LIMIT 1");
+if (!$check) {
+    api_success([]);
+}
+
 $sql = "SELECT m.id AS match_id, m.status, m.created_at,
-               m.lost_item_id, m.found_item_id
+               m.lost_item_id, m.matched_found_item_id
         FROM lost_found_matches m
-        WHERE m.found_item_id IS NOT NULL
+        WHERE m.matched_found_item_id IS NOT NULL
         ORDER BY m.created_at DESC";
 $result = $conn->query($sql);
-if (!$result) api_error('Failed to query matches.', 500);
+if (!$result) api_error('Failed to query matches: ' . $conn->error, 500);
 
 $matches = [];
 while ($row = $result->fetch_assoc()) {
     $lostId  = (int)$row['lost_item_id'];
-    $foundId = (int)$row['found_item_id'];
+    $foundId = (int)$row['matched_found_item_id'];
 
-    // Fetch lost item
-    $lStmt = $conn->prepare(
-        "SELECT lf.id, lf.title, lf.description, lf.category, lf.type, lf.status,
-                lf.image_url AS image, lf.location, lf.created_at,
-                u.email AS poster_email, COALESCE(u.username, u.full_name) AS poster_username
-         FROM lost_found_items lf
-         LEFT JOIN users u ON lf.user_id = u.id
-         WHERE lf.id = ? LIMIT 1"
-    );
+    $itemSql = "SELECT lf.id, lf.title, lf.description, lf.category, lf.type, lf.status,
+                       lf.image_url AS image, lf.location, lf.created_at,
+                       u.email AS poster_email, u.username AS poster_username
+                FROM lost_found_items lf
+                LEFT JOIN users u ON lf.poster_id = u.id
+                WHERE lf.id = ? LIMIT 1";
+
+    $lStmt = $conn->prepare($itemSql);
     $lostItem = null;
     if ($lStmt) {
         $lStmt->bind_param('i', $lostId);
@@ -33,15 +64,7 @@ while ($row = $result->fetch_assoc()) {
         $lStmt->close();
     }
 
-    // Fetch found item
-    $fStmt = $conn->prepare(
-        "SELECT lf.id, lf.title, lf.description, lf.category, lf.type, lf.status,
-                lf.image_url AS image, lf.location, lf.created_at,
-                u.email AS poster_email, COALESCE(u.username, u.full_name) AS poster_username
-         FROM lost_found_items lf
-         LEFT JOIN users u ON lf.user_id = u.id
-         WHERE lf.id = ? LIMIT 1"
-    );
+    $fStmt = $conn->prepare($itemSql);
     $foundItem = null;
     if ($fStmt) {
         $fStmt->bind_param('i', $foundId);

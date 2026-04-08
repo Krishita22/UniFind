@@ -61,15 +61,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       print('DEBUG role value: ${user?['role']}');
 
       final loggedInEmail = (user?['email'] as String?) ?? _username.trim();
-      final loggedInUserId = int.tryParse(
-        (user?['id'] ??
+      final rawId = user?['id'] ??
                 user?['user_id'] ??
                 data['user_id'] ??
                 data['id'] ??
-                data['data']?['id'] ??
-                '')
-            .toString(),
-      );
+                data['data']?['id'];
+      final loggedInUserId = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
       final loggedInUsername = ((user?['username'] ??
                   user?['user_name'] ??
                   data['username'] ??
