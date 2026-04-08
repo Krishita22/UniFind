@@ -4,12 +4,14 @@ class ProfileScreen extends StatefulWidget {
   final String email;
   final String username;
   final VoidCallback onLogout;
+  final int? userId;
 
   const ProfileScreen({
     super.key,
     required this.email,
     required this.username,
     required this.onLogout,
+    this.userId,
   });
 
   @override
@@ -18,6 +20,34 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   Uint8List? _avatarBytes;
+  double? _ratingAvg;
+  int _ratingCount = 0;
+  Timer? _ratingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRating();
+    _ratingTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadRating());
+  }
+
+  @override
+  void dispose() {
+    _ratingTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadRating() async {
+    if (widget.userId == null) return;
+    try {
+      final data = await getUserRating(userId: widget.userId!);
+      if (!mounted) return;
+      setState(() {
+        _ratingAvg   = (data['avg'] as num?)?.toDouble() ?? 0.0;
+        _ratingCount = (data['count'] as num?)?.toInt() ?? 0;
+      });
+    } catch (_) {}
+  }
 
   String get _initials {
     if (widget.username.isNotEmpty) return widget.username[0].toUpperCase();
@@ -186,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(width: 4),
                 Text(
                   _avatarBytes != null ? 'Change profile picture' : 'Add a profile picture',
-                  style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600),
+                  style: const TextStyle(fontSize: 13, color: cMuted, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -201,6 +231,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _ProfileInfoTile(icon: Icons.person_outline_rounded, label: 'Username', value: _displayHandle),
         _ProfileInfoTile(icon: Icons.mail_outline_rounded, label: 'Email', value: widget.email),
         _ProfileInfoTile(icon: Icons.school_outlined, label: 'Institution', value: 'Montclair State University'),
+        const SizedBox(height: 20),
+
+        // ── Reputation section ──────────────────────────────────────────
+        _ProfileSectionHeader(label: 'Reputation'),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: widget.userId != null && _ratingCount > 0
+              ? () => ReviewsSheet.show(context, userId: widget.userId!, userName: _displayHandle)
+              : null,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cSurface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cBorder),
+            ),
+            child: _ratingCount == 0
+                ? Row(children: [
+                    const Icon(Icons.star_outline_rounded, color: cMuted, size: 22),
+                    const SizedBox(width: 12),
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('No ratings yet',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
+                      const SizedBox(height: 2),
+                      Text('Complete interactions to receive ratings',
+                          style: const TextStyle(fontSize: 12, color: cMuted)),
+                    ]),
+                  ])
+                : Row(children: [
+                    Container(
+                      width: 48, height: 48,
+                      decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(12)),
+                      child: const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 26),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(_ratingAvg!.toStringAsFixed(1),
+                          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900,
+                              color: cText, letterSpacing: -1)),
+                      StarRatingDisplay(rating: _ratingAvg!, count: _ratingCount, size: 13),
+                    ])),
+                    const Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text('View all', style: TextStyle(fontSize: 12, color: cRed, fontWeight: FontWeight.w700)),
+                      Icon(Icons.chevron_right_rounded, color: cRed, size: 18),
+                    ]),
+                  ]),
+          ),
+        ),
         const SizedBox(height: 20),
 
         // ── Security section ────────────────────────────────────────────

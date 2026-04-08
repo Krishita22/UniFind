@@ -311,7 +311,7 @@ class _StandardUserShell extends StatelessWidget {
         onEditLostFound: editLostFound,
       ),
       MessagingScreen(userId: userId ?? 0, userEmail: email),
-      ProfileScreen(email: email, username: username, onLogout: onLogout),
+      ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
     ];
 
     final isMobile = MediaQuery.of(context).size.width < 600;
