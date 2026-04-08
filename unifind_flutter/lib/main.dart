@@ -15,6 +15,7 @@ import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
 
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';

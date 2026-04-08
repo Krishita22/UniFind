@@ -96,6 +96,7 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
   required String username,
   required String role,
   required int age,
+  int? graduationYear,
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/verify_code_register.php'),
@@ -109,6 +110,7 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
       'username':   username,
       'role':       role,
       'age':        age,
+      if (graduationYear != null) 'graduation_year': graduationYear,
     }),
   );
 
@@ -118,6 +120,29 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
   }
   throw ApiException(
     data['error']?.toString() ?? 'Verification failed.',
+    code: data['error_code']?.toString(),
+  );
+}
+
+Future<bool> checkUsernameAvailable(String username) async {
+  final response = await http.get(
+    Uri.parse('$_baseUrl/check_username.php?username=${Uri.encodeComponent(username)}'),
+  );
+  final data = jsonDecode(response.body);
+  return data['available'] == true;
+}
+
+// CHANGE USERNAME
+Future<void> changeUsername(String newUsername, String email) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/change_username.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'username': newUsername, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) return;
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to change username.',
     code: data['error_code']?.toString(),
   );
 }
@@ -467,6 +492,7 @@ Future<Map<String, dynamic>> claimLostFoundItem({
     );
   }
 }
+
 
 // UPLOAD IMAGE
 // Sends an image file from the device to upload_image.php
