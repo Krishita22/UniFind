@@ -2,19 +2,19 @@ library unifind_app;
 
 import 'package:flutter/gestures.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:typed_data';
 import 'dart:io';
 import 'api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:async';
 
 part 'src/landing_page.dart';
 part 'src/auth_screens.dart';
@@ -62,12 +62,14 @@ const Duration kSlow = Duration(milliseconds: 520);
 const Duration kPage = Duration(milliseconds: 420);
 
 // ─── BREADCRUMB LABELS ───────────────────────────────────────────────────────
-// Tabs: 0=Marketplace, 1=Lost&Found, 2=PostItem, 3=MyListings, 4=Profile
+// Student tabs: 0=Marketplace, 1=Lost&Found, 2=PostItem, 3=MyListings, 4=Messages, 5=Profile
+// Faculty tabs: 0=Lost&Found, 1=Messages, 2=Profile
 const List<List<String>> _tabBreadcrumbs = [
   ['Home', 'Marketplace'],
   ['Home', 'Lost & Found'],
   ['Home', 'Post Item'],
   ['Home', 'My Listings'],
+  ['Home', 'Messages'],
   ['Home', 'Profile'],
 ];
 
@@ -233,6 +235,85 @@ class _TopNavTabState extends State<_TopNavTab> {
   }
 }
 
+/// A nav tab that shows a red unread-count badge on the icon.
+class _BadgedNavTab extends StatelessWidget {
+  final _TopNavItem item;
+  final bool isActive;
+  final String badge;
+  final VoidCallback onTap;
+  const _BadgedNavTab({
+    required this.item,
+    required this.isActive,
+    required this.badge,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: kFast,
+        margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        decoration: BoxDecoration(
+          color: isActive
+              ? Colors.white.withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: isActive
+              ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1)
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  isActive ? item.activeIcon : item.icon,
+                  size: 16,
+                  color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.65),
+                ),
+                Positioned(
+                  top: -6,
+                  right: -8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: cRed,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: cNavBg, width: 1.5),
+                    ),
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              item.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.65),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _NavPostButton extends StatefulWidget {
   final VoidCallback onTap;
   const _NavPostButton({required this.onTap});
@@ -314,6 +395,13 @@ class _UniFindAppState extends State<UniFindApp> {
   String _role = '';
   UserRole _userRole = UserRole.unknown;
   ListingType _postDefaultType = ListingType.marketplace;
+
+  // ── Messaging / notification state ────────────────────────────────────────
+  int _unreadCount = 0;
+  int _lastKnownUnread = 0;
+  Timer? _notifTimer;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final GlobalKey<ScaffoldMessengerState> _messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   final List<MarketplaceItem> _market = [];
   final List<LostFoundItem> _lostFound = [];
@@ -623,7 +711,38 @@ class _UniFindAppState extends State<UniFindApp> {
   @override
   void initState() {
     super.initState();
+    UniNotifications.init();
     _restoreSession();
+    _notifTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollNotifications());
+  }
+
+  @override
+  void dispose() {
+    _notifTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _pollNotifications() async {
+    if (_userId == null || !_loggedIn) return;
+    try {
+      final count = await getUnreadCount(userId: _userId!);
+      if (count > _lastKnownUnread) {
+        _messengerKey.currentState?.showSnackBar(SnackBar(
+          content: Row(children: [
+            const Icon(Icons.notifications_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 10),
+            Text('You have ${count - _lastKnownUnread} new message${(count - _lastKnownUnread) == 1 ? '' : 's'}.'),
+          ]),
+          backgroundColor: cRed,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(12),
+        ));
+      }
+      _lastKnownUnread = count;
+      if (_unreadCount != count) setState(() => _unreadCount = count);
+    } catch (_) {}
   }
 
   Future<void> _restoreSession() async {
@@ -657,8 +776,30 @@ class _UniFindAppState extends State<UniFindApp> {
     setState(() {
       _postDefaultType = type;
       _postFormNonce++;
-      _tab = 2;
     });
+    // Faculty has no Post tab — push as a full-screen route
+    if (_userRole == UserRole.fac) {
+      final navContext = _navigatorKey.currentContext;
+      if (navContext != null) {
+        Navigator.of(navContext).push(MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: Text(type == ListingType.lost
+                  ? 'Report Lost Item' : 'Post Found Item'),
+              backgroundColor: cNavBg,
+              foregroundColor: Colors.white,
+            ),
+            body: PostListingScreen(
+              key: ValueKey(_postFormNonce),
+              onPost: _addListing,
+              initialType: type,
+            ),
+          ),
+        ));
+      }
+      return;
+    }
+    setState(() => _tab = 2);
   }
 
   Future<void> _addListing(NewListingInput in_) async {
@@ -820,6 +961,8 @@ class _UniFindAppState extends State<UniFindApp> {
       _role = (role ?? '').trim();
       _userRole = UserRoleExt.fromString(_role);
       _tab = 0;
+      _unreadCount = 0;
+      _lastKnownUnread = 0;
     });
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
@@ -875,6 +1018,8 @@ class _UniFindAppState extends State<UniFindApp> {
       title: 'UniFind',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
+      navigatorKey: _navigatorKey,
+      scaffoldMessengerKey: _messengerKey,
       home: !_loggedIn
           ? LandingPage(onLogin: _login)
           : RoleAuthWrapper(
@@ -882,6 +1027,7 @@ class _UniFindAppState extends State<UniFindApp> {
               email: _email,
               username: _username,
               userId: _userId,
+              unreadCount: _unreadCount,
               onLogout: () {
                 _logout();
                 _clearSession();

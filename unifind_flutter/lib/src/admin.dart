@@ -181,6 +181,7 @@ class RoleAuthWrapper extends StatelessWidget {
   final UserRole role;
   final String email, username;
   final int? userId;
+  final int unreadCount;
   final VoidCallback onLogout;
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
@@ -198,7 +199,7 @@ class RoleAuthWrapper extends StatelessWidget {
   const RoleAuthWrapper({
     super.key,
     required this.role, required this.email, required this.username,
-    required this.userId, required this.onLogout,
+    required this.userId, this.unreadCount = 0, required this.onLogout,
     required this.market, required this.lostFound,
     required this.tab, required this.postFormNonce, required this.postDefaultType,
     required this.submittedClaimItemIds, required this.submittedMatchItemIds,
