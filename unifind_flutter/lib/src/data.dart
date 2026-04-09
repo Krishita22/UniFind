@@ -25,6 +25,8 @@ class MarketplaceItem {
   final String id, title, description, category, condition, image, seller, sellerEmail, location, status;
   final int? sellerId;
   final double price;
+  final double? avgRating;
+  final int ratingCount;
   final DateTime createdAt;
   const MarketplaceItem({
     required this.id,
@@ -37,6 +39,8 @@ class MarketplaceItem {
     required this.seller,
     required this.sellerEmail,
     this.sellerId,
+    this.avgRating,
+    this.ratingCount = 0,
     required this.createdAt,
     required this.location,
     this.status = 'active',

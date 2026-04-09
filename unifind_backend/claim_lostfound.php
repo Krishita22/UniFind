@@ -51,6 +51,18 @@ $uStmt->close();
 if (!$uRow) api_error('User not found.', 404);
 $claimantId = (int)$uRow['id'];
 
+// Check for duplicate claim from same user
+$dupStmt = $conn->prepare('SELECT id FROM lost_found_claims WHERE found_item_id = ? AND claimant_id = ? LIMIT 1');
+if ($dupStmt) {
+    $dupStmt->bind_param('ii', $itemId, $claimantId);
+    $dupStmt->execute();
+    if ($dupStmt->get_result()->fetch_assoc()) {
+        $dupStmt->close();
+        api_error('You have already submitted a claim for this item.', 409);
+    }
+    $dupStmt->close();
+}
+
 // Verify item exists
 $iStmt = $conn->prepare('SELECT id FROM lost_found_items WHERE id = ? LIMIT 1');
 if (!$iStmt) api_error('Server error.', 500);

@@ -593,9 +593,9 @@ class _AdminAppState extends State<AdminApp> {
       setState(() {
         _stats = AdminStats(
           totalActiveListings: int.tryParse(_s(rawStats['total_active_listings'])) ?? 0,
-          pendingApprovals: int.tryParse(_s(rawStats['pending_approvals'])) ?? pending.length,
+          pendingApprovals: pending.length,
           newUsersThisWeek: int.tryParse(_s(rawStats['new_users_this_week'])) ?? 0,
-          openReports: int.tryParse(_s(rawStats['open_reports'])) ?? reports.where((r) => !r.isResolved).length,
+          openReports: reports.where((r) => !r.isResolved).length,
           recentActivity: activity,
         );
         _pending..clear()..addAll(pending);
@@ -1392,7 +1392,20 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                   onPressed: () async {
                                     try {
                                       await adminAcceptClaim(claimId: c.id, itemId: item.id);
-                                      if (ctx.mounted) Navigator.pop(ctx);
+                                      if (ctx.mounted) {
+                                        Navigator.pop(ctx);
+                                        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                          content: Row(children: const [
+                                            Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+                                            SizedBox(width: 8),
+                                            Expanded(child: Text('Claim approved! A chat has been created between the claimant and poster.')),
+                                          ]),
+                                          backgroundColor: _cGreen,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          margin: const EdgeInsets.all(12),
+                                        ));
+                                      }
                                       widget.onRefresh();
                                     } catch (e) {
                                       if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
@@ -1480,6 +1493,17 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     try {
       await adminCreateMatch(lostItemId: _selectedLostId!, foundItemId: _selectedFoundId!);
       setState(() { _selectedLostId = null; _selectedFoundId = null; _showMatched = true; });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Row(children: [
+          Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+          SizedBox(width: 8),
+          Expanded(child: Text('Items matched! A chat has been created between both posters.')),
+        ]),
+        backgroundColor: _cGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ));
       widget.onRefresh();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));

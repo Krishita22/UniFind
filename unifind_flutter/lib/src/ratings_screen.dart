@@ -223,11 +223,23 @@ class ReviewsSheet extends StatefulWidget {
   const ReviewsSheet({super.key, required this.userId, required this.userName});
 
   static Future<void> show(BuildContext context, {required int userId, required String userName}) {
-    return showModalBottomSheet(
+    return showGeneralDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ReviewsSheet(userId: userId, userName: userName),
+      barrierDismissible: true,
+      barrierLabel: 'Reviews',
+      barrierColor: Colors.black.withValues(alpha: 0.45),
+      transitionDuration: kMid,
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim, __, ___) {
+        final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return Opacity(
+          opacity: curved.value,
+          child: Transform.scale(
+            scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
+            child: Center(child: ReviewsSheet(userId: userId, userName: userName)),
+          ),
+        );
+      },
     );
   }
 
@@ -262,59 +274,56 @@ class _ReviewsSheetState extends State<ReviewsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      builder: (ctx, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 460, maxHeight: 520),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
           color: cSurface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: cBorder),
         ),
-        child: Column(children: [
-          // Handle
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: cBorder, borderRadius: BorderRadius.circular(2)),
-          ),
+        child: Material(color: Colors.transparent, child: Column(mainAxisSize: MainAxisSize.min, children: [
           // Header
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
             child: Row(children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('${widget.userName}\'s Reviews',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cText)),
                 if (_count > 0) ...[
                   const SizedBox(height: 4),
                   StarRatingDisplay(rating: _avg, count: _count, size: 14),
                 ],
-              ]),
-              const Spacer(),
-              IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close, color: cMuted)),
+              ])),
+              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close, color: cMuted)),
             ]),
           ),
           const Divider(height: 20),
           // Reviews list
-          Expanded(
+          Flexible(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: cRed))
+                ? const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator(color: cRed)))
                 : _reviews.isEmpty
-                    ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.star_outline_rounded, color: cMuted, size: 40),
-                        const SizedBox(height: 12),
-                        Text('No reviews yet for ${widget.userName}',
-                            style: const TextStyle(color: cMuted, fontSize: 14)),
-                      ]))
+                    ? Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          const Icon(Icons.star_outline_rounded, color: cMuted, size: 40),
+                          const SizedBox(height: 12),
+                          Text('No reviews yet for ${widget.userName}',
+                              style: const TextStyle(color: cMuted, fontSize: 14)),
+                        ]),
+                      )
                     : ListView.separated(
-                        controller: scrollCtrl,
+                        shrinkWrap: true,
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                         itemCount: _reviews.length,
                         separatorBuilder: (_, __) => const Divider(height: 24),
                         itemBuilder: (_, i) => _ReviewTile(review: _reviews[i]),
                       ),
           ),
-        ]),
+        ])),
       ),
     );
   }

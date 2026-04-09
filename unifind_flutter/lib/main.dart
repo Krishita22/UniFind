@@ -672,6 +672,8 @@ class _UniFindAppState extends State<UniFindApp> {
                   DateTime.now(),
               location: _asString(item['location']),
               status: _asString(item['status']).isEmpty ? 'active' : _asString(item['status']),
+              avgRating: item['avg_rating'] != null ? double.tryParse(item['avg_rating'].toString()) : null,
+              ratingCount: int.tryParse((item['rating_count'] ?? 0).toString()) ?? 0,
             ),
           );
         } catch (_) {
@@ -804,6 +806,9 @@ class _UniFindAppState extends State<UniFindApp> {
 
   Future<void> _pollNotifications() async {
     if (_userId == null || !_loggedIn) return;
+    // Send heartbeat for all users (tracks online status)
+    sendHeartbeat(userId: _userId!);
+    if (_userRole == UserRole.admin) return;
     try {
       final count = await getUnreadCount(userId: _userId!);
       if (count > _lastKnownUnread) {
@@ -836,7 +841,7 @@ class _UniFindAppState extends State<UniFindApp> {
       _userId = userId;
       _role = role;
       _userRole = UserRoleExt.fromString(role);
-      _tab = _userRole == UserRole.fac ? 1 : 0;
+      _tab = prefs.getInt('current_tab') ?? (_userRole == UserRole.fac ? 1 : 0);
       _sessionLoaded = true;
     });
 
@@ -1076,6 +1081,7 @@ class _UniFindAppState extends State<UniFindApp> {
       prefs.remove('logged_in_username');
       prefs.remove('logged_in_user_id');
       prefs.remove('logged_in_role');
+      prefs.remove('current_tab');
     });
   }
 
@@ -1124,6 +1130,7 @@ class _UniFindAppState extends State<UniFindApp> {
               editLostFound: _editLostFoundItem,
               onTabChanged: (index) {
                 setState(() => _tab = index);
+                SharedPreferences.getInstance().then((p) => p.setInt('current_tab', index));
                 if (index == 3 || index == 0 || index == 1) {
                   _loadListings();
                   _loadLostFound();
