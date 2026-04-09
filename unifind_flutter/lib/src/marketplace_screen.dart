@@ -1228,7 +1228,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                     child: Column(
@@ -1249,26 +1249,24 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                             ),
                           ],
                         ),
-                        if (widget.item.ratingCount > 0) GestureDetector(
-                          onTap: () {
-                            if (widget.item.sellerId != null) {
-                              ReviewsSheet.show(context, userId: widget.item.sellerId!, userName: widget.item.seller);
-                            }
-                          },
-                          child: Row(
-                            children: [
-                              const Icon(Icons.star_rounded, size: 10, color: Color(0xFFF59E0B)),
-                              const SizedBox(width: 2),
-                              Text('${widget.item.avgRating?.toStringAsFixed(1) ?? '0'} (${widget.item.ratingCount})',
-                                  style: const TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
                         Row(
                           children: [
                             const Icon(Icons.location_on_outlined, size: 9, color: cMuted),
                             const SizedBox(width: 2),
                             Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 9, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            if (widget.item.ratingCount > 0) GestureDetector(
+                              onTap: () {
+                                if (widget.item.sellerId != null) {
+                                  ReviewsSheet.show(context, userId: widget.item.sellerId!, userName: widget.item.seller);
+                                }
+                              },
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                const Icon(Icons.star_rounded, size: 10, color: Color(0xFFF59E0B)),
+                                const SizedBox(width: 2),
+                                Text('${widget.item.avgRating?.toStringAsFixed(1) ?? '0'} (${widget.item.ratingCount})',
+                                    style: const TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
+                              ]),
+                            ),
                             if (widget.currentUserId != null && widget.item.sellerId != null && widget.currentUserId != widget.item.sellerId)
                               GestureDetector(
                                 onTap: _startingChat ? null : _openChat,
