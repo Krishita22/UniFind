@@ -31,6 +31,35 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
   String _cat = 'All';
   LostFilter _filter = LostFilter.all;
   String _q = '';
+  // Maps item ID -> conversation ID for approved claims
+  Map<String, int> _approvedClaimChats = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadApprovedClaims();
+  }
+
+  @override
+  void didUpdateWidget(covariant LostFoundScreen old) {
+    super.didUpdateWidget(old);
+    if (old.currentUserId != widget.currentUserId) _loadApprovedClaims();
+  }
+
+  Future<void> _loadApprovedClaims() async {
+    if (widget.currentUserId == null) return;
+    try {
+      final claims = await getMyApprovedClaims(userId: widget.currentUserId!);
+      if (!mounted) return;
+      final map = <String, int>{};
+      for (final c in claims) {
+        final itemId = c['item_id']?.toString() ?? '';
+        final convId = int.tryParse(c['conversation_id']?.toString() ?? '') ?? 0;
+        if (itemId.isNotEmpty && convId > 0) map[itemId] = convId;
+      }
+      setState(() => _approvedClaimChats = map);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +152,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                     matchSubmittedByMe: widget.submittedMatchItemIds.contains(filtered[i].id),
                     currentUserEmail: widget.currentUserEmail,
                     currentUserId: widget.currentUserId,
+                    approvedChatConvId: _approvedClaimChats[filtered[i].id],
                   ),
                 ),
         ),
@@ -140,6 +170,8 @@ void _showLostFoundPopup(
   required bool claimSubmittedByMe,
   required bool matchSubmittedByMe,
   required String currentUserEmail,
+  int? currentUserId,
+  int? approvedChatConvId,
 }) {
   final isLost = item.type == LostFoundType.lost;
   final typeColor = isLost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60);
@@ -343,7 +375,48 @@ void _showLostFoundPopup(
                                 ),
                               ),
                               const SizedBox(height: 8),
+                              // Chat button for approved claims
+                              if (approvedChatConvId != null && currentUserId != null) ...[
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    final otherId = item.posterId ?? 0;
+                                    Navigator.of(ctx).push(MaterialPageRoute(
+                                      builder: (_) => ConversationScreen(
+                                        conv: Conversation(
+                                          id: approvedChatConvId,
+                                          subject: 'Claim Approved: ${item.title}',
+                                          otherName: item.poster,
+                                          otherId: otherId,
+                                          unread: 0,
+                                        ),
+                                        myId: currentUserId!,
+                                      ),
+                                    ));
+                                  },
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF27AE60),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
+                                        SizedBox(width: 8),
+                                        Text('Open Chat', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                              ],
                               // Hint
+                              if (approvedChatConvId != null)
+                                const Text('Your claim was approved! Use the chat to coordinate.', style: TextStyle(fontSize: 11, color: Color(0xFF27AE60), fontStyle: FontStyle.italic))
+                              else
                               Text(
                                 isLost
                                     ? 'If you found this item, post a "Found" listing and the admin will match them.'
@@ -402,6 +475,7 @@ class _LostFoundCard extends StatefulWidget {
   final bool matchSubmittedByMe;
   final String currentUserEmail;
   final int? currentUserId;
+  final int? approvedChatConvId;
   const _LostFoundCard({
     required this.item,
     required this.onClaim,
@@ -410,6 +484,7 @@ class _LostFoundCard extends StatefulWidget {
     required this.matchSubmittedByMe,
     required this.currentUserEmail,
     this.currentUserId,
+    this.approvedChatConvId,
   });
 
   @override
@@ -602,6 +677,8 @@ class _LostFoundCardState extends State<_LostFoundCard>
           claimSubmittedByMe: isSubmitted,
           matchSubmittedByMe: isMatchSubmitted,
           currentUserEmail: widget.currentUserEmail,
+          currentUserId: widget.currentUserId,
+          approvedChatConvId: widget.approvedChatConvId,
         );
       },
       onTapCancel: () => _c.reverse(),

@@ -202,7 +202,7 @@ Future<Map<String, dynamic>> resetPassword({
 // Returns a List of marketplace item maps
 
 Future<List<Map<String, dynamic>>> getListings({String category = ''}) async {
-  String endpoint = '$_baseUrl/get_listings.php';
+  String endpoint = '$_baseUrl/get_listings_rated.php';
 
   // Append category filter to URL if one was provided
   if (category.isNotEmpty && category != 'All') {
@@ -1083,5 +1083,37 @@ Future<Map<String, dynamic>> markConversationComplete({
     return Map<String, dynamic>.from(data);
   }
   throw ApiException(data['error']?.toString() ?? 'Failed to mark complete.');
+}
+
+// ── APPROVED CLAIMS ──────────────────────────────────────────────────────────
+
+Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) async {
+  try {
+    final response = await http.get(Uri.parse('$_baseUrl/get_my_approved_claims.php?user_id=$userId'));
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true) {
+      return List<Map<String, dynamic>>.from(data['data'] ?? []);
+    }
+  } catch (_) {}
+  return [];
+}
+
+// ── HEARTBEAT & USER STATUS ──────────────────────────────────────────────────
+
+Future<void> sendHeartbeat({required int userId}) async {
+  try {
+    await http.get(Uri.parse('$_baseUrl/heartbeat.php?user_id=$userId'));
+  } catch (_) {}
+}
+
+Future<bool> getUserOnlineStatus({required int userId}) async {
+  try {
+    final response = await http.get(Uri.parse('$_baseUrl/get_user_status.php?user_id=$userId'));
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true) {
+      return data['data']['online'] == true;
+    }
+  } catch (_) {}
+  return false;
 }
 

@@ -493,7 +493,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cText, letterSpacing: -0.3, height: 1.25),
                               ),
                               const SizedBox(height: 6),
-                              // Seller + date row
+                              // Seller + date + rating row
                               Row(
                                 children: [
                                   const Icon(Icons.person_outline_rounded, size: 13, color: cMuted),
@@ -502,6 +502,22 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                     asSellerUsername(),
                                     style: const TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600),
                                   ),
+                                  if (item.ratingCount > 0) ...[
+                                    const SizedBox(width: 8),
+                                    GestureDetector(
+                                      onTap: () {
+                                        if (item.sellerId != null) {
+                                          ReviewsSheet.show(ctx, userId: item.sellerId!, userName: asSellerUsername());
+                                        }
+                                      },
+                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                        const Icon(Icons.star_rounded, size: 13, color: Color(0xFFF59E0B)),
+                                        const SizedBox(width: 2),
+                                        Text('${item.avgRating?.toStringAsFixed(1)} (${item.ratingCount})',
+                                            style: const TextStyle(fontSize: 11, color: cMuted, fontWeight: FontWeight.w600)),
+                                      ]),
+                                    ),
+                                  ],
                                   const SizedBox(width: 10),
                                   const Icon(Icons.circle, size: 3, color: cMuted),
                                   const SizedBox(width: 10),
@@ -1232,6 +1248,21 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                               child: Text(widget.item.condition, style: const TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
                             ),
                           ],
+                        ),
+                        if (widget.item.ratingCount > 0) GestureDetector(
+                          onTap: () {
+                            if (widget.item.sellerId != null) {
+                              ReviewsSheet.show(context, userId: widget.item.sellerId!, userName: widget.item.seller);
+                            }
+                          },
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, size: 10, color: Color(0xFFF59E0B)),
+                              const SizedBox(width: 2),
+                              Text('${widget.item.avgRating?.toStringAsFixed(1) ?? '0'} (${widget.item.ratingCount})',
+                                  style: const TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
                         ),
                         Row(
                           children: [

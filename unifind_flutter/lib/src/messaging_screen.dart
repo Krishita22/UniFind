@@ -232,18 +232,30 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _loading    = true;
   bool _sending    = false;
   bool _completing = false;
+  bool _isComplete = false;
+  bool _otherOnline = false;
   String? _error;
   Timer? _refreshTimer;
+  Timer? _statusTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _checkOnlineStatus();
     _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) => _silentRefresh());
+    _statusTimer = Timer.periodic(const Duration(seconds: 10), (_) => _checkOnlineStatus());
   }
 
   @override
-  void dispose() { _refreshTimer?.cancel(); _ctrl.dispose(); _scroll.dispose(); super.dispose(); }
+  void dispose() { _refreshTimer?.cancel(); _statusTimer?.cancel(); _ctrl.dispose(); _scroll.dispose(); super.dispose(); }
+
+  Future<void> _checkOnlineStatus() async {
+    try {
+      final online = await getUserOnlineStatus(userId: widget.conv.otherId);
+      if (mounted && online != _otherOnline) setState(() => _otherOnline = online);
+    } catch (_) {}
+  }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
@@ -320,6 +332,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       await markConversationComplete(conversationId: widget.conv.id, userId: widget.myId);
       if (!mounted) return;
+      setState(() => _isComplete = true);
       await RatingDialog.show(context,
         targetName:     widget.conv.otherName,
         targetUserId:   widget.conv.otherId,
@@ -330,7 +343,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Interaction marked complete. Thank you!'),
           behavior: SnackBarBehavior.floating));
-      Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -349,8 +361,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         title: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(widget.conv.otherName,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Row(children: [
+            Text(widget.conv.otherName,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(width: 8),
+            Container(
+              width: 8, height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _otherOnline ? const Color(0xFF27AE60) : Colors.white38,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(_otherOnline ? 'Online' : 'Offline',
+                style: TextStyle(fontSize: 10, color: _otherOnline ? const Color(0xFF27AE60) : Colors.white38, fontWeight: FontWeight.w600)),
+          ]),
           Text(widget.conv.subject,
               style: const TextStyle(fontSize: 11, color: Colors.white70),
               maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -390,6 +415,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               msg: _msgs[i], isMine: _msgs[i].senderId == widget.myId),
                         ),
         ),
+        if (_isComplete)
+          Container(
+            color: const Color(0xFF27AE60).withValues(alpha: 0.1),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SafeArea(top: false, child: Row(children: [
+              const Icon(Icons.check_circle_rounded, color: Color(0xFF27AE60), size: 18),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('This conversation has been marked as complete.', style: TextStyle(fontSize: 12, color: Color(0xFF27AE60), fontWeight: FontWeight.w600))),
+            ])),
+          )
+        else
         Container(
           color: cSurface,
           padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + MediaQuery.of(context).viewInsets.bottom),
