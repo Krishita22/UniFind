@@ -202,7 +202,7 @@ Future<Map<String, dynamic>> resetPassword({
 // Returns a List of marketplace item maps
 
 Future<List<Map<String, dynamic>>> getListings({String category = ''}) async {
-  String endpoint = '$_baseUrl/get_listings_rated.php';
+  String endpoint = '$_baseUrl/ratings/get_listings_rated.php';
 
   // Append category filter to URL if one was provided
   if (category.isNotEmpty && category != 'All') {
@@ -946,7 +946,7 @@ Future<Map<String, dynamic>> adminAcceptClaim({
 // ── MESSAGING ─────────────────────────────────────────────────────────────────
 
 Future<List<Map<String, dynamic>>> getInbox({required int userId}) async {
-  final response = await http.get(Uri.parse('$_baseUrl/get_inbox.php?user_id=$userId'));
+  final response = await http.get(Uri.parse('$_baseUrl/messaging/get_inbox.php?user_id=$userId'));
   final data = jsonDecode(response.body);
   if (response.statusCode == 200 && data['success'] == true) {
     return List<Map<String, dynamic>>.from(data['data'] ?? []);
@@ -959,7 +959,7 @@ Future<List<Map<String, dynamic>>> getMessages({
   required int userId,
 }) async {
   final response = await http.get(
-    Uri.parse('$_baseUrl/get_messages.php?conversation_id=$conversationId&user_id=$userId'),
+    Uri.parse('$_baseUrl/messaging/get_messages.php?conversation_id=$conversationId&user_id=$userId'),
   );
   final data = jsonDecode(response.body);
   if (response.statusCode == 200 && data['success'] == true) {
@@ -974,7 +974,7 @@ Future<void> sendMessage({
   required String body,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/send_message.php'),
+    Uri.parse('$_baseUrl/messaging/send_message.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'conversation_id': conversationId, 'sender_id': senderId, 'body': body}),
   );
@@ -990,7 +990,7 @@ Future<Map<String, dynamic>> startConversation({
   required String subject,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/start_conversation.php'),
+    Uri.parse('$_baseUrl/messaging/start_conversation.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'listing_id': listingId,
@@ -1010,7 +1010,7 @@ Future<Map<String, dynamic>> startConversation({
 
 Future<int> getUnreadCount({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/get_unread_count.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/messaging/get_unread_count.php?user_id=$userId'));
     final json = jsonDecode(response.body);
     if (response.statusCode == 200 && json['success'] == true) {
       final data = json['data'] as Map<String, dynamic>?;
@@ -1024,7 +1024,7 @@ Future<int> getUnreadCount({required int userId}) async {
 
 Future<Map<String, dynamic>> getUserRating({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/get_user_rating.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/ratings/get_user_rating.php?user_id=$userId'));
     final json = jsonDecode(response.body);
     if (response.statusCode == 200 && json['success'] == true) {
       return Map<String, dynamic>.from(json['data'] as Map);
@@ -1035,7 +1035,7 @@ Future<Map<String, dynamic>> getUserRating({required int userId}) async {
 
 Future<List<Map<String, dynamic>>> getUserReviews({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/get_user_reviews.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/ratings/get_user_reviews.php?user_id=$userId'));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['success'] == true) {
       return List<Map<String, dynamic>>.from(data['data'] ?? []);
@@ -1052,7 +1052,7 @@ Future<Map<String, dynamic>> submitRating({
   String comment = '',
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/submit_rating.php'),
+    Uri.parse('$_baseUrl/ratings/submit_rating.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'conversation_id': conversationId,
@@ -1074,7 +1074,7 @@ Future<Map<String, dynamic>> markConversationComplete({
   required int userId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/mark_complete.php'),
+    Uri.parse('$_baseUrl/messaging/mark_complete.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'conversation_id': conversationId, 'user_id': userId}),
   );
@@ -1089,7 +1089,7 @@ Future<Map<String, dynamic>> markConversationComplete({
 
 Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/get_my_approved_claims.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/users/get_my_approved_claims.php?user_id=$userId'));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['success'] == true) {
       return List<Map<String, dynamic>>.from(data['data'] ?? []);
@@ -1102,13 +1102,13 @@ Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) as
 
 Future<void> sendHeartbeat({required int userId}) async {
   try {
-    await http.get(Uri.parse('$_baseUrl/heartbeat.php?user_id=$userId'));
+    await http.get(Uri.parse('$_baseUrl/users/heartbeat.php?user_id=$userId'));
   } catch (_) {}
 }
 
 Future<bool> getUserOnlineStatus({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/get_user_status.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/users/get_user_status.php?user_id=$userId'));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['success'] == true) {
       return data['data']['online'] == true;
