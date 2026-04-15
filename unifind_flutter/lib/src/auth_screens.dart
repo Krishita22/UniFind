@@ -1461,7 +1461,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
                                                 recognizer: TapGestureRecognizer()
                                                   ..onTap = () async {
                                                     final uri = Uri.parse(
-                                                      'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/terms.html',
+                                                      'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/docs/terms.html',
                                                     );
                                                     if (await canLaunchUrl(uri)) {
                                                       await launchUrl(uri, mode: LaunchMode.externalApplication);
