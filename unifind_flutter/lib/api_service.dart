@@ -8,7 +8,7 @@ import 'dart:typed_data';
 // On web: use relative URL (same origin) to avoid CORS/mixed-content issues
 // On mobile: use full URL
 
-const String _baseUrl = 'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API';
+const String _baseUrl = 'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API';
 
 class ApiException implements Exception {
   final String message;
