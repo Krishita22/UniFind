@@ -56,6 +56,113 @@ class ChatMessage {
   );
 }
 
+// ── MEETUP MODELS ─────────────────────────────────────────────────────────────
+
+enum MeetupStatus { pending, confirmed, adminReview, denied, cancelled, completed }
+
+class MeetupProposal {
+  final int? id;
+  final int conversationId;
+  final int proposerId;
+  final String proposerName;
+  final DateTime meetDate;
+  final TimeOfDay meetTime;
+  final String safeSpot;
+  final String? note;
+  final MeetupStatus status;
+  final String? denialReason;
+
+  const MeetupProposal({
+    this.id,
+    required this.conversationId,
+    required this.proposerId,
+    required this.proposerName,
+    required this.meetDate,
+    required this.meetTime,
+    required this.safeSpot,
+    this.note,
+    this.status = MeetupStatus.pending,
+    this.denialReason,
+  });
+
+  factory MeetupProposal.fromMap(Map<String, dynamic> m) {
+    MeetupStatus parseStatus(String s) {
+      switch (s.toLowerCase()) {
+        case 'confirmed':    return MeetupStatus.confirmed;
+        case 'admin_review': return MeetupStatus.adminReview;
+        case 'denied':       return MeetupStatus.denied;
+        case 'cancelled':    return MeetupStatus.cancelled;
+        case 'completed':    return MeetupStatus.completed;
+        default:             return MeetupStatus.pending;
+      }
+    }
+    final timeParts = (m['meet_time']?.toString() ?? '12:00').split(':');
+    return MeetupProposal(
+      id:             int.tryParse(m['id'].toString()),
+      conversationId: int.tryParse(m['conversation_id'].toString()) ?? 0,
+      proposerId:     int.tryParse(m['proposer_id'].toString()) ?? 0,
+      proposerName:   m['proposer_name']?.toString() ?? 'User',
+      meetDate:       DateTime.tryParse(m['meet_date'].toString()) ?? DateTime.now(),
+      meetTime:       TimeOfDay(
+                        hour:   int.tryParse(timeParts[0]) ?? 12,
+                        minute: int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0,
+                      ),
+      safeSpot:       m['safe_spot']?.toString() ?? 'Student Center',
+      note:           m['note']?.toString(),
+      status:         parseStatus(m['status']?.toString() ?? ''),
+      denialReason:   m['denial_reason']?.toString(),
+    );
+  }
+
+  String get formattedDate {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const days   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    final wd = days[(meetDate.weekday - 1) % 7];
+    return '$wd, ${months[meetDate.month - 1]} ${meetDate.day}';
+  }
+
+  String get formattedTime {
+    final h  = meetTime.hour % 12 == 0 ? 12 : meetTime.hour % 12;
+    final m  = meetTime.minute.toString().padLeft(2, '0');
+    final ap = meetTime.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $ap';
+  }
+}
+
+// ── SAFE SPOTS ────────────────────────────────────────────────────────────────
+
+class SafeSpotInfo {
+  final String name;
+  final String hours;
+  final int openHour;
+  final int closeHour; // exclusive — last slot starts 1hr before this
+  const SafeSpotInfo({
+    required this.name,
+    required this.hours,
+    required this.openHour,
+    required this.closeHour,
+  });
+}
+
+const List<SafeSpotInfo> kSafeSpotInfos = [
+  SafeSpotInfo(name: 'The Quad',                     hours: 'Open daily during daylight hours',                                        openHour: 7,  closeHour: 20),
+  SafeSpotInfo(name: 'Student Center',               hours: 'Mon–Fri 7 AM–11 PM, Sat–Sun 9 AM–9 PM',                                  openHour: 7,  closeHour: 23),
+  SafeSpotInfo(name: 'Susan A. Cole Hall',           hours: 'Mon–Fri 8 AM–6 PM',                                                      openHour: 8,  closeHour: 18),
+  SafeSpotInfo(name: 'Feliciano School of Business', hours: 'Mon–Fri 8 AM–8 PM',                                                      openHour: 8,  closeHour: 20),
+  SafeSpotInfo(name: 'University Hall',              hours: 'Mon–Fri 8 AM–5 PM',                                                      openHour: 8,  closeHour: 17),
+  SafeSpotInfo(name: 'Sprague Library',              hours: 'Mon–Thu 8 AM–10 PM, Fri 8 AM–6 PM, Sat–Sun 10 AM–6 PM',                  openHour: 8,  closeHour: 22),
+];
+
+// Keep the old map-based list for backward compat with _MeetupCard hours hint
+const List<Map<String, String>> kSafeSpots = [
+  {'name': 'The Quad',                      'hours': 'Open daily during daylight hours'},
+  {'name': 'Student Center',                'hours': 'Mon–Fri 7 AM–11 PM, Sat–Sun 9 AM–9 PM'},
+  {'name': 'Susan A. Cole Hall',            'hours': 'Mon–Fri 8 AM–6 PM'},
+  {'name': 'Feliciano School of Business',  'hours': 'Mon–Fri 8 AM–8 PM'},
+  {'name': 'University Hall',               'hours': 'Mon–Fri 8 AM–5 PM'},
+  {'name': 'Sprague Library',               'hours': 'Mon–Thu 8 AM–10 PM, Fri 8 AM–6 PM, Sat–Sun 10 AM–6 PM'},
+];
+
 // ── MESSAGING SCREEN (INBOX) ──────────────────────────────────────────────────
 
 class MessagingScreen extends StatefulWidget {
@@ -238,6 +345,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Timer? _refreshTimer;
   Timer? _statusTimer;
 
+  MeetupProposal? _meetup;
+
   @override
   void initState() {
     super.initState();
@@ -352,6 +461,94 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
+  void _openProposeMeetupSheet() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => ProposeMeetupDialog(
+        conv: widget.conv,
+        myId: widget.myId,
+        onProposed: (proposal) {
+          setState(() => _meetup = proposal);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Meetup proposal sent!'),
+            behavior: SnackBarBehavior.floating,
+          ));
+        },
+      ),
+    );
+  }
+
+  Future<void> _withdrawMeetup() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Withdraw Proposal'),
+        content: const Text('Are you sure you want to withdraw this meetup proposal?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: cRed, foregroundColor: Colors.white),
+            child: const Text('Withdraw'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _meetup = null);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Meetup proposal withdrawn.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  Future<void> _confirmMeetup() async {
+    setState(() => _meetup = MeetupProposal(
+      id:             _meetup!.id,
+      conversationId: _meetup!.conversationId,
+      proposerId:     _meetup!.proposerId,
+      proposerName:   _meetup!.proposerName,
+      meetDate:       _meetup!.meetDate,
+      meetTime:       _meetup!.meetTime,
+      safeSpot:       _meetup!.safeSpot,
+      note:           _meetup!.note,
+      status:         MeetupStatus.adminReview,
+    ));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Meetup confirmed! Waiting for admin approval.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
+  Future<void> _declineOrCancelMeetup() async {
+    final isProposer = _meetup!.proposerId == widget.myId;
+    final label = isProposer ? 'Cancel' : 'Decline';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('$label Meetup'),
+        content: Text('Are you sure you want to $label this meetup?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: cRed, foregroundColor: Colors.white),
+            child: Text(label),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _meetup = null);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Meetup ${label.toLowerCase()}led.'),
+      behavior: SnackBarBehavior.floating,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -404,16 +601,33 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       const SizedBox(height: 8),
                       ElevatedButton(onPressed: _load, child: const Text('Retry')),
                     ]))
-                  : _msgs.isEmpty
-                      ? const Center(child: Text('No messages yet. Say hello!',
-                          style: TextStyle(color: cMuted)))
-                      : ListView.builder(
-                          controller: _scroll,
-                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-                          itemCount: _msgs.length,
-                          itemBuilder: (_, i) => _MsgBubble(
-                              msg: _msgs[i], isMine: _msgs[i].senderId == widget.myId),
-                        ),
+                  : ListView.builder(
+                      controller: _scroll,
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                      itemCount: _msgs.isEmpty && _meetup == null
+                          ? 1
+                          : _msgs.length + (_meetup != null ? 1 : 0),
+                      itemBuilder: (_, i) {
+                        if (_msgs.isEmpty && _meetup == null) {
+                          return const Center(
+                            heightFactor: 6,
+                            child: Text('No messages yet. Say hello!',
+                                style: TextStyle(color: cMuted)),
+                          );
+                        }
+                        if (_meetup != null && i == _msgs.length) {
+                          return _MeetupCard(
+                            proposal: _meetup!,
+                            myId: widget.myId,
+                            onWithdraw:        _withdrawMeetup,
+                            onConfirm:         _confirmMeetup,
+                            onDeclineOrCancel: _declineOrCancelMeetup,
+                            onProposeNew:      _openProposeMeetupSheet,
+                          );
+                        }
+                        return _MsgBubble(msg: _msgs[i], isMine: _msgs[i].senderId == widget.myId);
+                      },
+                    ),
         ),
         if (_isComplete)
           Container(
@@ -422,57 +636,79 @@ class _ConversationScreenState extends State<ConversationScreen> {
             child: SafeArea(top: false, child: Row(children: [
               const Icon(Icons.check_circle_rounded, color: Color(0xFF27AE60), size: 18),
               const SizedBox(width: 8),
-              const Expanded(child: Text('This conversation has been marked as complete.', style: TextStyle(fontSize: 12, color: Color(0xFF27AE60), fontWeight: FontWeight.w600))),
+              const Expanded(child: Text('This conversation has been marked as complete.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF27AE60), fontWeight: FontWeight.w600))),
             ])),
           )
         else
-        Container(
-          color: cSurface,
-          padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + MediaQuery.of(context).viewInsets.bottom),
-          child: SafeArea(top: false, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: cBg, borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: cBorder),
+          Container(
+            color: cSurface,
+            padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + MediaQuery.of(context).viewInsets.bottom),
+            child: SafeArea(top: false, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              if (_meetup == null) ...[
+                Tooltip(
+                  message: 'Propose a Meetup',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(22),
+                    onTap: _openProposeMeetupSheet,
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: cRedLight,
+                        border: Border.all(color: cRed.withValues(alpha: 0.3)),
+                      ),
+                      child: const Icon(Icons.location_on_outlined, color: cRed, size: 20),
+                    ),
+                  ),
                 ),
-                child: TextField(
-                  controller: _ctrl,
-                  maxLines: 5, minLines: 1,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _send(),
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message…',
-                    hintStyle: TextStyle(color: cMuted),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                const SizedBox(width: 8),
+              ],
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cBg, borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: cBorder),
+                  ),
+                  child: TextField(
+                    controller: _ctrl,
+                    maxLines: 5, minLines: 1,
+                    textCapitalization: TextCapitalization.sentences,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    decoration: const InputDecoration(
+                      hintText: 'Type a message…',
+                      hintStyle: TextStyle(color: cMuted),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: _send,
-              child: AnimatedContainer(
-                duration: kFast,
-                width: 44, height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: _sending ? cMuted : cRed,
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _send,
+                child: AnimatedContainer(
+                  duration: kFast,
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _sending ? cMuted : cRed,
+                  ),
+                  child: _sending
+                      ? const Padding(padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                 ),
-                child: _sending
-                    ? const Padding(padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
               ),
-            ),
-          ])),
-        ),
+            ])),
+          ),
       ]),
     );
   }
 }
+
+// ── MESSAGE BUBBLE ────────────────────────────────────────────────────────────
 
 class _MsgBubble extends StatelessWidget {
   final ChatMessage msg;
@@ -513,18 +749,331 @@ class _MsgBubble extends StatelessWidget {
               border: isMine ? null : Border.all(color: cBorder),
             ),
             child: Text(msg.body,
-                style: TextStyle(
-                  color: isMine ? Colors.white : cText,
-                  fontSize: 14, height: 1.4,
-                )),
+                style: TextStyle(color: isMine ? Colors.white : cText, fontSize: 14, height: 1.4)),
           ),
           Padding(
             padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
-            child: Text(_timeStr(msg.sentAt),
-                style: const TextStyle(fontSize: 10, color: cMuted)),
+            child: Text(_timeStr(msg.sentAt), style: const TextStyle(fontSize: 10, color: cMuted)),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── MEETUP CARD ───────────────────────────────────────────────────────────────
+
+class _MeetupCard extends StatelessWidget {
+  final MeetupProposal proposal;
+  final int myId;
+  final VoidCallback onWithdraw;
+  final VoidCallback onConfirm;
+  final VoidCallback onDeclineOrCancel;
+  final VoidCallback onProposeNew;
+
+  const _MeetupCard({
+    required this.proposal, required this.myId,
+    required this.onWithdraw, required this.onConfirm,
+    required this.onDeclineOrCancel, required this.onProposeNew,
+  });
+
+  bool get _isProposer => proposal.proposerId == myId;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: cSurface, borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: cBorder),
+            ),
+            child: Text(
+              _isProposer ? 'You proposed a meetup' : '${proposal.proposerName} proposed a meetup',
+              style: const TextStyle(fontSize: 11, color: cMuted),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          margin: EdgeInsets.only(left: _isProposer ? 40 : 0, right: _isProposer ? 0 : 40),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: cSurface, borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _statusBorderColor()),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: _statusIconBg()),
+                child: Icon(_statusIcon(), color: _statusIconColor(), size: 16),
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Meetup Proposal',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+                Text(_statusSubtitle(), style: const TextStyle(fontSize: 11, color: cMuted)),
+              ])),
+              _StatusBadge(status: proposal.status),
+            ]),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: cBorder),
+            const SizedBox(height: 10),
+            _InfoRow(icon: Icons.calendar_today_outlined, label: proposal.formattedDate),
+            const SizedBox(height: 6),
+            _InfoRow(icon: Icons.access_time_outlined, label: proposal.formattedTime),
+            const SizedBox(height: 6),
+            _InfoRow(icon: Icons.location_on_outlined, label: '${proposal.safeSpot}, MSU'),
+            ..._hoursHint(),
+            if (proposal.note != null && proposal.note!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: cBg, borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: cBorder),
+                ),
+                child: Text(proposal.note!,
+                    style: const TextStyle(fontSize: 12, color: cMuted, height: 1.4)),
+              ),
+            ],
+            if (proposal.status == MeetupStatus.denied && proposal.denialReason != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: cRedLight, borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: cRed.withValues(alpha: 0.3)),
+                ),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Icon(Icons.info_outline, color: cRed, size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text('Reason: ${proposal.denialReason}',
+                      style: const TextStyle(fontSize: 12, color: cRed, height: 1.4))),
+                ]),
+              ),
+            ],
+            if (proposal.status == MeetupStatus.adminReview) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE6F1FB), borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.info_outline, color: Color(0xFF185FA5), size: 13),
+                  SizedBox(width: 6),
+                  Expanded(child: Text('Waiting for admin approval.',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF185FA5)))),
+                ]),
+              ),
+            ],
+            ..._buildActions(),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  List<Widget> _hoursHint() {
+    final spot = kSafeSpots.firstWhere(
+      (s) => s['name'] == proposal.safeSpot, orElse: () => {},
+    );
+    if (spot.isEmpty) return [];
+    return [
+      const SizedBox(height: 4),
+      Padding(
+        padding: const EdgeInsets.only(left: 24),
+        child: Text(spot['hours']!, style: const TextStyle(fontSize: 10, color: cMuted)),
+      ),
+    ];
+  }
+
+  List<Widget> _buildActions() {
+    if (proposal.status == MeetupStatus.confirmed) return [];
+    if (proposal.status == MeetupStatus.completed) return [];
+    if (proposal.status == MeetupStatus.denied) {
+      return [
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: onProposeNew,
+            icon: const Icon(Icons.add_location_alt_outlined, size: 16),
+            label: const Text('Propose new time'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: cRed, foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+          ),
+        ),
+      ];
+    }
+    if (proposal.status == MeetupStatus.pending) {
+      if (_isProposer) {
+        return [
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: onWithdraw,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: cRed,
+                side: BorderSide(color: cRed.withValues(alpha: 0.5)),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Withdraw', style: TextStyle(fontSize: 13)),
+            ),
+          ),
+        ];
+      } else {
+        return [
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: onDeclineOrCancel,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: cRed,
+                  side: BorderSide(color: cRed.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Decline', style: TextStyle(fontSize: 13)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: onConfirm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cRed, foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+                child: const Text('Confirm', style: TextStyle(fontSize: 13)),
+              ),
+            ),
+          ]),
+        ];
+      }
+    }
+    if (proposal.status == MeetupStatus.adminReview) {
+      return [
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: onDeclineOrCancel,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: cRed,
+              side: BorderSide(color: cRed.withValues(alpha: 0.5)),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Cancel meetup', style: TextStyle(fontSize: 13)),
+          ),
+        ),
+      ];
+    }
+    return [];
+  }
+
+  Color _statusBorderColor() {
+    switch (proposal.status) {
+      case MeetupStatus.confirmed:   return const Color(0xFFC0DD97);
+      case MeetupStatus.denied:      return const Color(0xFFF09595);
+      case MeetupStatus.adminReview: return const Color(0xFFB5D4F4);
+      default:                       return cBorder;
+    }
+  }
+
+  Color _statusIconBg() {
+    switch (proposal.status) {
+      case MeetupStatus.confirmed:   return const Color(0xFFEAF3DE);
+      case MeetupStatus.denied:      return const Color(0xFFFCEBEB);
+      case MeetupStatus.adminReview: return const Color(0xFFE6F1FB);
+      default:                       return cRedLight;
+    }
+  }
+
+  Color _statusIconColor() {
+    switch (proposal.status) {
+      case MeetupStatus.confirmed:   return const Color(0xFF3B6D11);
+      case MeetupStatus.denied:      return cRed;
+      case MeetupStatus.adminReview: return const Color(0xFF185FA5);
+      default:                       return cRed;
+    }
+  }
+
+  IconData _statusIcon() {
+    switch (proposal.status) {
+      case MeetupStatus.confirmed:   return Icons.check_circle_outline;
+      case MeetupStatus.denied:      return Icons.cancel_outlined;
+      case MeetupStatus.adminReview: return Icons.pending_outlined;
+      default:                       return Icons.location_on_outlined;
+    }
+  }
+
+  String _statusSubtitle() {
+    switch (proposal.status) {
+      case MeetupStatus.pending:     return _isProposer ? 'Waiting for confirmation' : 'Awaiting your response';
+      case MeetupStatus.adminReview: return 'Both confirmed — pending admin';
+      case MeetupStatus.confirmed:   return 'Admin approved this meetup';
+      case MeetupStatus.denied:      return 'Admin denied this proposal';
+      case MeetupStatus.cancelled:   return 'Meetup was cancelled';
+      case MeetupStatus.completed:   return 'Meetup completed';
+    }
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _InfoRow({required this.icon, required this.label});
+  @override
+  Widget build(BuildContext context) => Row(children: [
+    Icon(icon, size: 14, color: cMuted),
+    const SizedBox(width: 8),
+    Text(label, style: const TextStyle(fontSize: 13, color: cText, fontWeight: FontWeight.w600)),
+  ]);
+}
+
+class _StatusBadge extends StatelessWidget {
+  final MeetupStatus status;
+  const _StatusBadge({required this.status});
+  @override
+  Widget build(BuildContext context) {
+    Color bg; Color fg; String label;
+    switch (status) {
+      case MeetupStatus.pending:
+        bg = const Color(0xFFFAEEDA); fg = const Color(0xFF854F0B); label = 'Pending'; break;
+      case MeetupStatus.adminReview:
+        bg = const Color(0xFFE6F1FB); fg = const Color(0xFF185FA5); label = 'Admin review'; break;
+      case MeetupStatus.confirmed:
+        bg = const Color(0xFFEAF3DE); fg = const Color(0xFF3B6D11); label = 'Confirmed'; break;
+      case MeetupStatus.denied:
+        bg = const Color(0xFFFCEBEB); fg = const Color(0xFFA32D2D); label = 'Denied'; break;
+      case MeetupStatus.cancelled:
+        bg = const Color(0xFFF1EFE8); fg = const Color(0xFF5F5E5A); label = 'Cancelled'; break;
+      case MeetupStatus.completed:
+        bg = const Color(0xFFEAF3DE); fg = const Color(0xFF3B6D11); label = 'Completed'; break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
+      child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: fg)),
     );
   }
 }
