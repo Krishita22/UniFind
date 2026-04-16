@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/../../config.php';
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -10,13 +10,12 @@ if (!function_exists('api_success')) {
     function api_error(string $message, int $status = 400) { http_response_code($status); header('Content-Type: application/json'); echo json_encode(['success' => false, 'error' => $message]); exit; }
 }
 
-$userId = (int)($_GET['user_id'] ?? 0);
+$userId = (int)($_GET['user_id'] ?? $_POST['user_id'] ?? 0);
 if ($userId <= 0) api_error('user_id required.', 400);
 
-$stmt = $conn->prepare('SELECT ROUND(AVG(stars),1) AS avg_stars, COUNT(*) AS total FROM ratings WHERE target_id = ?');
+$stmt = $conn->prepare('UPDATE users SET last_active = NOW() WHERE id = ?');
 if (!$stmt) api_error('Server error.', 500);
 $stmt->bind_param('i', $userId);
 $stmt->execute();
-$row = $stmt->get_result()->fetch_assoc();
 $stmt->close();
-api_success(['avg' => $row['avg_stars'] !== null ? (float)$row['avg_stars'] : 0.0, 'count' => (int)($row['total'] ?? 0)]);
+api_success(['updated' => true]);
