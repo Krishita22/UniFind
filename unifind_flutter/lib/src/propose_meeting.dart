@@ -151,12 +151,51 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
   SafeSpotInfo get _spotInfo =>
       kSafeSpotInfos.firstWhere((s) => s.name == _selectedSpot);
 
+  List<String> _bookedSlots = [];
+  bool _loadingSlots = false;
+
+  Future<void> _fetchBookedSlots() async {
+    if (_date == null) return;
+    setState(() => _loadingSlots = true);
+    final dateStr = '${_date!.year}-${_date!.month.toString().padLeft(2,'0')}-${_date!.day.toString().padLeft(2,'0')}';
+    final booked = await getBookedSlots(safeSpot: _selectedSpot, date: dateStr);
+    if (!mounted) return;
+    setState(() {
+      _bookedSlots = booked;
+      // clear selected time if it just became booked
+      if (_timeSlot != null && _isSlotBooked(_timeSlot!)) _timeSlot = null;
+      _loadingSlots = false;
+    });
+  }
+
+  // FIX 1: _isSlotBooked now converts the display label to HH:mm:00 format
+  // and compares correctly against the server-returned strings.
+  bool _isSlotBooked(String slot) {
+    final tod = _parseSlot(slot);
+    final h = tod.hour.toString().padLeft(2, '0');
+    final m = tod.minute.toString().padLeft(2, '0');
+    return _bookedSlots.contains('$h:$m:00');
+  }
+
   List<String> get _timeSlots {
     final info = _spotInfo;
-    return [
-      for (int h = info.openHour; h < info.closeHour; h++)
-        '${h % 12 == 0 ? 12 : h % 12}:00 ${h >= 12 ? 'PM' : 'AM'}'
-    ];
+
+    final day = _date?.weekday ?? DateTime.now().weekday;
+    final hours = info.weeklyHours[day];
+
+    if (hours == null) return [];
+
+    final slots = <String>[];
+
+    for (int h = hours.openHour; h < hours.closeHour; h++) {
+      for (int m = 0; m < 60; m += 15) {
+        final displayH = h % 12 == 0 ? 12 : h % 12;
+        final ampm = h >= 12 ? 'PM' : 'AM';
+        final minStr = m.toString().padLeft(2, '0');
+        slots.add('$displayH:$minStr $ampm');
+      }
+    }
+    return slots;
   }
 
   bool get _stepValid {
@@ -188,21 +227,34 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
 
   Future<void> _submit() async {
     setState(() => _submitting = true);
-    final proposal = MeetupProposal(
-      conversationId: widget.conv.id,
-      proposerId:     widget.myId,
-      proposerName:   'You',
-      meetDate:       _date!,
-      meetTime:       _parseSlot(_timeSlot!),
-      safeSpot:       _selectedSpot,
-      note:           _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-      status:         MeetupStatus.pending,
-    );
-    // TODO: await proposeMeetup(...)
-    if (!mounted) return;
+
+    try {
+      debugPrint("Submitting meetup...");
+      debugPrint("itemId: ${widget.conv.listingId}");
+      debugPrint("buyerId: ${widget.myId}");
+      debugPrint("sellerId: ${widget.conv.otherId}");
+      debugPrint("date: ${_date}");
+      debugPrint("time: ${_timeSlot}");
+      debugPrint("location: $_selectedSpot");
+
+      final meetupId = await createMeetup(
+        itemId: widget.conv.listingId ?? 0,
+        buyerId: widget.myId,
+        sellerId: widget.conv.otherId,
+        date: _date!.toIso8601String().split('T')[0],
+        time: _parseSlot(_timeSlot!).format(context),
+        location: _selectedSpot,
+      );
+
+      debugPrint("Meetup created with ID: $meetupId");
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      debugPrint("Create meetup failed: $e");
+    }
+
     setState(() => _submitting = false);
-    Navigator.of(context).pop();
-    widget.onProposed(proposal);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -422,7 +474,10 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
             child: isLast
                 ? ElevatedButton.icon(
                     key: const ValueKey('send'),
-                    onPressed: _submitting ? null : _submit,
+                    onPressed: () {
+                      debugPrint("SEND BUTTON PRESSED");
+                      _submit();
+                    },
                     icon: _submitting
                         ? const SizedBox(
                             width: 14, height: 14,
@@ -472,18 +527,34 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
     if (step == 0) {
       return _StepWhere(
         selectedSpot: _selectedSpot,
-        onSelect: (spot) => setState(() => _selectedSpot = spot),
+        onSelect: (spot) {
+          setState(() => _selectedSpot = spot);
+          _fetchBookedSlots();
+        }
       );
     } else if (step == 1) {
       return _StepWhen(
         selectedDate: _date,
-        onSelect: (d) => setState(() => _date = d),
+        onSelect: (d) { 
+          setState(() => _date = d);
+          _fetchBookedSlots();
+        }
       );
     } else if (step == 2) {
+      final bookedLabels = _timeSlots.where(_isSlotBooked).toSet();
+
+      final day = _date?.weekday ?? DateTime.now().weekday;
+      final hours = _spotInfo.weeklyHours[day];
+
+      final spotHoursText = hours == null
+          ? "Closed today"
+          : "${hours.openHour}:00 - ${hours.closeHour}:00";
       return _StepTime(
         timeSlots: _timeSlots,
         selectedSlot: _timeSlot,
-        spotHours: _spotInfo.hours,
+        spotHours: spotHoursText,
+        bookedSlotLabels: bookedLabels,
+        isLoading: _loadingSlots,
         onSelect: (s) => setState(() => _timeSlot = s),
       );
     } else if (step == 3) {
@@ -804,36 +875,28 @@ class _StepTime extends StatelessWidget {
   final List<String> timeSlots;
   final String? selectedSlot;
   final String spotHours;
+  // FIX 3: Renamed from `bookedSlots` to `bookedSlotLabels` — these are now
+  // display-format labels (e.g. "9:00 AM") pre-computed by the wizard using
+  // _isSlotBooked, so the comparison inside this widget is always apples-to-apples.
+  final Set<String> bookedSlotLabels;
+  final bool isLoading;
   final void Function(String) onSelect;
 
   const _StepTime({
     required this.timeSlots,
     required this.selectedSlot,
     required this.spotHours,
+    required this.bookedSlotLabels,
+    required this.isLoading,
     required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Hours hint
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: cRedLight,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cRed.withValues(alpha: 0.2)),
-        ),
-        child: Row(children: [
-          const Icon(Icons.info_outline, size: 13, color: cRed),
-          const SizedBox(width: 8),
-          Expanded(child: Text(spotHours,
-              style: const TextStyle(fontSize: 11, color: cRed))),
-        ]),
-      ),
-      const SizedBox(height: 12),
-      // Time grid — 3 per row
-      GridView.builder(
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [      // Time grid — 3 per row
+      isLoading
+        ? const Center(child: CircularProgressIndicator(color: cRed))
+        : GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -845,12 +908,13 @@ class _StepTime extends StatelessWidget {
         itemCount: timeSlots.length,
         itemBuilder: (_, i) {
           final slot = timeSlots[i];
-          final sel  = slot == selectedSlot;
+          final booked = bookedSlotLabels.contains(slot);
           return _TimeSlotChip(
-            label: slot,
-            selected: sel,
-            index: i,
-            onTap: () => onSelect(slot),
+            label:    slot,
+            selected: slot == selectedSlot,
+            booked:   booked,
+            index:    i,
+            onTap:    booked ? null : () => onSelect(slot),
           );
         },
       ),
@@ -858,14 +922,20 @@ class _StepTime extends StatelessWidget {
   }
 }
 
+// FIX 4: Added missing `booked` field to _TimeSlotChip and wired up its
+// visual state (dimmed + strikethrough) and disabled tap behaviour.
 class _TimeSlotChip extends StatefulWidget {
   final String label;
   final bool selected;
+  final bool booked;
   final int index;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _TimeSlotChip({
-    required this.label, required this.selected,
-    required this.index, required this.onTap,
+    required this.label,
+    required this.selected,
+    required this.booked,
+    required this.index,
+    required this.onTap,
   });
   @override
   State<_TimeSlotChip> createState() => _TimeSlotChipState();
@@ -897,7 +967,11 @@ class _TimeSlotChipState extends State<_TimeSlotChip> with SingleTickerProviderS
         child: AnimatedContainer(
           duration: kFast,
           decoration: BoxDecoration(
-            color: widget.selected ? cRed : cSurface,
+            color: widget.booked
+                ? cBorder
+                : widget.selected
+                    ? cRed
+                    : cSurface,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: widget.selected ? cRed : cBorder,
@@ -905,11 +979,20 @@ class _TimeSlotChipState extends State<_TimeSlotChip> with SingleTickerProviderS
             ),
           ),
           child: Center(
-            child: Text(widget.label,
-                style: TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w700,
-                  color: widget.selected ? Colors.white : cText,
-                )),
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: widget.booked
+                    ? cMuted
+                    : widget.selected
+                        ? Colors.white
+                        : cText,
+                decoration: widget.booked ? TextDecoration.lineThrough : null,
+                decorationColor: cMuted,
+              ),
+            ),
           ),
         ),
       ),

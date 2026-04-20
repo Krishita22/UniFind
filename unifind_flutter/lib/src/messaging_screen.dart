@@ -134,23 +134,112 @@ class MeetupProposal {
 class SafeSpotInfo {
   final String name;
   final String hours;
-  final int openHour;
-  final int closeHour; // exclusive — last slot starts 1hr before this
+
+  final Map<int, DayHours> weeklyHours; 
+  // key: weekday (Mon=1 ... Sun=7)
+
   const SafeSpotInfo({
     required this.name,
     required this.hours,
+    required this.weeklyHours,
+  });
+}
+
+class DayHours {
+  final int openHour;
+  final int closeHour;
+
+  const DayHours({
     required this.openHour,
     required this.closeHour,
   });
 }
 
 const List<SafeSpotInfo> kSafeSpotInfos = [
-  SafeSpotInfo(name: 'The Quad',                     hours: 'Open daily during daylight hours',                                        openHour: 7,  closeHour: 20),
-  SafeSpotInfo(name: 'Student Center',               hours: 'Mon–Fri 7 AM–11 PM, Sat–Sun 9 AM–9 PM',                                  openHour: 7,  closeHour: 23),
-  SafeSpotInfo(name: 'Susan A. Cole Hall',           hours: 'Mon–Fri 8 AM–6 PM',                                                      openHour: 8,  closeHour: 18),
-  SafeSpotInfo(name: 'Feliciano School of Business', hours: 'Mon–Fri 8 AM–8 PM',                                                      openHour: 8,  closeHour: 20),
-  SafeSpotInfo(name: 'University Hall',              hours: 'Mon–Fri 8 AM–5 PM',                                                      openHour: 8,  closeHour: 17),
-  SafeSpotInfo(name: 'Sprague Library',              hours: 'Mon–Thu 8 AM–10 PM, Fri 8 AM–6 PM, Sat–Sun 10 AM–6 PM',                  openHour: 8,  closeHour: 22),
+  SafeSpotInfo(
+    name: 'The Quad',
+    hours: 'Open daily 7 AM–7 PM',
+    weeklyHours: {
+      1: DayHours(openHour: 7, closeHour: 19),
+      2: DayHours(openHour: 7, closeHour: 19),
+      3: DayHours(openHour: 7, closeHour: 19),
+      4: DayHours(openHour: 7, closeHour: 19),
+      5: DayHours(openHour: 7, closeHour: 19),
+      6: DayHours(openHour: 7, closeHour: 19),
+      7: DayHours(openHour: 7, closeHour: 19),
+    },
+  ),
+
+  SafeSpotInfo(
+    name: 'Student Center',
+    hours: 'Open daily 7 AM–10 PM',
+    weeklyHours: {
+      1: DayHours(openHour: 7, closeHour: 22),
+      2: DayHours(openHour: 7, closeHour: 22),
+      3: DayHours(openHour: 7, closeHour: 22),
+      4: DayHours(openHour: 7, closeHour: 22),
+      5: DayHours(openHour: 7, closeHour: 22),
+      6: DayHours(openHour: 7, closeHour: 22),
+      7: DayHours(openHour: 7, closeHour: 22),
+    },
+  ),
+
+  SafeSpotInfo(
+    name: 'Susan A. Cole Hall',
+    hours: 'Open daily 8 AM–8 PM',
+    weeklyHours: {
+      1: DayHours(openHour: 8, closeHour: 20),
+      2: DayHours(openHour: 8, closeHour: 20),
+      3: DayHours(openHour: 8, closeHour: 20),
+      4: DayHours(openHour: 8, closeHour: 20),
+      5: DayHours(openHour: 8, closeHour: 20),
+      6: DayHours(openHour: 8, closeHour: 20),
+      7: DayHours(openHour: 8, closeHour: 20),
+    },
+  ),
+
+  SafeSpotInfo(
+    name: 'Feliciano School of Business',
+    hours: 'Open daily 8 AM–8 PM',
+    weeklyHours: {
+      1: DayHours(openHour: 8, closeHour: 20),
+      2: DayHours(openHour: 8, closeHour: 20),
+      3: DayHours(openHour: 8, closeHour: 20),
+      4: DayHours(openHour: 8, closeHour: 20),
+      5: DayHours(openHour: 8, closeHour: 20),
+      6: DayHours(openHour: 8, closeHour: 20),
+      7: DayHours(openHour: 8, closeHour: 20),
+    },
+  ),
+
+  SafeSpotInfo(
+    name: 'University Hall',
+    hours: 'Open daily 8 AM–5 PM',
+    weeklyHours: {
+      1: DayHours(openHour: 8, closeHour: 17),
+      2: DayHours(openHour: 8, closeHour: 17),
+      3: DayHours(openHour: 8, closeHour: 17),
+      4: DayHours(openHour: 8, closeHour: 17),
+      5: DayHours(openHour: 8, closeHour: 17),
+      6: DayHours(openHour: 8, closeHour: 17),
+      7: DayHours(openHour: 8, closeHour: 17),
+    },
+  ),
+  
+  SafeSpotInfo(
+    name: 'Sprague Library',
+    hours: 'Thu 8 AM–10 PM, Fri 8 AM–8 PM, Sat 9 AM–5 PM, Sun 12–9 PM, Mon–Wed 8 AM–12 AM',
+    weeklyHours: {
+      4: DayHours(openHour: 8, closeHour: 22),   // Thursday
+      5: DayHours(openHour: 8, closeHour: 20),   // Friday
+      6: DayHours(openHour: 9, closeHour: 17),   // Saturday
+      7: DayHours(openHour: 12, closeHour: 21),  // Sunday
+
+      1: DayHours(openHour: 8, closeHour: 24),   // Monday
+      2: DayHours(openHour: 8, closeHour: 24),   // Tuesday
+      3: DayHours(openHour: 8, closeHour: 24),   // Wednesday
+    },
+  ),
 ];
 
 // Keep the old map-based list for backward compat with _MeetupCard hours hint
@@ -644,7 +733,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           Container(
             color: cSurface,
             padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + MediaQuery.of(context).viewInsets.bottom),
-            child: SafeArea(top: false, child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            child: SafeArea(top: false, child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
               if (_meetup == null) ...[
                 Tooltip(
                   message: 'Propose a Meetup',
@@ -652,7 +741,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     borderRadius: BorderRadius.circular(22),
                     onTap: _openProposeMeetupSheet,
                     child: Container(
-                      width: 40, height: 40,
+                      width: 44, height: 44,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: cRedLight,
@@ -792,7 +881,7 @@ class _MeetupCard extends StatelessWidget {
               border: Border.all(color: cBorder),
             ),
             child: Text(
-              _isProposer ? 'You proposed a meetup' : '${proposal.proposerName} proposed a meetup',
+              _isProposer ? 'You Proposed a Meetup' : '${proposal.proposerName} proposed a meetup',
               style: const TextStyle(fontSize: 11, color: cMuted),
             ),
           ),
