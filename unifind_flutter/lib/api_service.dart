@@ -1123,7 +1123,6 @@ Future<Map<String, dynamic>> createAdminUser({
   required String lastName,
   required String username,
   required String email,
-  required String password,
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/admin/users/create_admin_user.php'),
@@ -1133,7 +1132,6 @@ Future<Map<String, dynamic>> createAdminUser({
       'last_name':  lastName,
       'username':   username,
       'email':      email,
-      'password':   password,
     }),
   );
   final data = jsonDecode(response.body);
