@@ -586,7 +586,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                     Navigator.of(ctx).pop(); // close popup
                                     await Navigator.of(ctx).push(MaterialPageRoute(
                                       builder: (_) => ConversationScreen(
-                                        conv: Conversation(id: convId, subject: 'Interested in: ${item.title}', otherName: asSellerUsername(), otherId: sellerId, unread: 0),
+                                        conv: Conversation(id: convId, subject: 'Interested in: ${item.title}', otherName: asSellerUsername(), otherFirstName: '', otherEmail: '', otherId: sellerId, unread: 0),
                                         myId: myId,
                                       ),
                                     ));
@@ -1156,7 +1156,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
       if (convId <= 0 || !mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => ConversationScreen(
-          conv: Conversation(id: convId, subject: widget.item.title, otherName: widget.item.seller, otherId: sellerId, unread: 0),
+          conv: Conversation(id: convId, subject: widget.item.title, otherName: widget.item.seller, otherEmail: '', otherFirstName: '', otherId: sellerId, unread: 0),
           myId: myId,
         ),
       ));

@@ -7,7 +7,7 @@ part of '../main.dart';
 class ProposeMeetupDialog extends StatelessWidget {
   final Conversation conv;
   final int myId;
-  final void Function(MeetupProposal) onProposed;
+  final void Function(int meetupId, String date, String time, String location) onProposed;
 
   const ProposeMeetupDialog({
     super.key,
@@ -37,7 +37,7 @@ class ProposeMeetupDialog extends StatelessWidget {
 class _ProposeMeetupWizard extends StatefulWidget {
   final Conversation conv;
   final int myId;
-  final void Function(MeetupProposal) onProposed;
+  final void Function(int meetupId, String date, String time, String location) onProposed;
 
   const _ProposeMeetupWizard({
     required this.conv,
@@ -62,6 +62,7 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
   String? _timeSlot;
   final TextEditingController _noteCtrl = TextEditingController();
   bool _submitting = false;
+  String? _submitError;
 
   // ── animation controllers ────────────────────────────────────────────────
   late final AnimationController _progressCtrl;
@@ -73,9 +74,8 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
   late Animation<double> _fadeIn;
   late Animation<double> _fadeOut;
 
-  // We keep two "pages" for the cross-fade/slide: current and previous.
-  int _visibleStep = 0;         // the step currently painted as "current"
-  int _exitingStep = -1;        // the step animating out (-1 = none)
+  int _visibleStep = 0;
+  int _exitingStep = -1;
 
   @override
   void initState() {
@@ -92,7 +92,7 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
     _slideCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
-      value: 1.0, // start fully visible so step 0 isn't faded out
+      value: 1.0,
     );
     _rebuildSlideAnimations();
   }
@@ -122,7 +122,6 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
     _step         = target;
     _rebuildSlideAnimations();
 
-    // Animate progress bar
     final newFrac = (target + 1) / _totalSteps;
     _progressAnim = Tween<double>(
       begin: _progressAnim.value,
@@ -132,7 +131,6 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
       ..reset()
       ..forward();
 
-    // Animate slide
     _slideCtrl.reset();
     await _slideCtrl.forward();
     if (mounted) setState(() { _visibleStep = _step; _exitingStep = -1; });
@@ -162,14 +160,11 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
     if (!mounted) return;
     setState(() {
       _bookedSlots = booked;
-      // clear selected time if it just became booked
       if (_timeSlot != null && _isSlotBooked(_timeSlot!)) _timeSlot = null;
       _loadingSlots = false;
     });
   }
 
-  // FIX 1: _isSlotBooked now converts the display label to HH:mm:00 format
-  // and compares correctly against the server-returned strings.
   bool _isSlotBooked(String slot) {
     final tod = _parseSlot(slot);
     final h = tod.hour.toString().padLeft(2, '0');
@@ -179,14 +174,10 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
 
   List<String> get _timeSlots {
     final info = _spotInfo;
-
     final day = _date?.weekday ?? DateTime.now().weekday;
     final hours = info.weeklyHours[day];
-
     if (hours == null) return [];
-
     final slots = <String>[];
-
     for (int h = hours.openHour; h < hours.closeHour; h++) {
       for (int m = 0; m < 60; m += 15) {
         final displayH = h % 12 == 0 ? 12 : h % 12;
@@ -226,35 +217,70 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
   }
 
   Future<void> _submit() async {
-    setState(() => _submitting = true);
+    setState(() { _submitting = true; _submitError = null; });
 
     try {
-      debugPrint("Submitting meetup...");
-      debugPrint("itemId: ${widget.conv.listingId}");
-      debugPrint("buyerId: ${widget.myId}");
-      debugPrint("sellerId: ${widget.conv.otherId}");
-      debugPrint("date: ${_date}");
-      debugPrint("time: ${_timeSlot}");
-      debugPrint("location: $_selectedSpot");
+      final tod     = _parseSlot(_timeSlot!);
+      final timeStr = '${tod.hour.toString().padLeft(2,'0')}:${tod.minute.toString().padLeft(2,'0')}:00';
+      final dateStr = _date!.toIso8601String().split('T')[0];
 
-      final meetupId = await createMeetup(
-        itemId: widget.conv.listingId ?? 0,
-        buyerId: widget.myId,
-        sellerId: widget.conv.otherId,
-        date: _date!.toIso8601String().split('T')[0],
-        time: _parseSlot(_timeSlot!).format(context),
-        location: _selectedSpot,
+      // ── Step 1: create meetup row ──────────────────────────────────────
+      final meetupResp = await http.post(
+        Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/create_meetup.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'item_id':     widget.conv.listingId,
+          'buyer_id':    widget.myId,
+          'seller_id':   widget.conv.otherId,
+          'meetup_date': dateStr,
+          'meetup_time': timeStr,
+          'location':    _selectedSpot,
+        }),
       );
 
-      debugPrint("Meetup created with ID: $meetupId");
+      debugPrint('createMeetup status: ${meetupResp.statusCode}');
+      debugPrint('createMeetup body:   ${meetupResp.body}');
+
+      if (meetupResp.statusCode != 200) {
+        throw Exception('Server returned ${meetupResp.statusCode}: ${meetupResp.body}');
+      }
+
+      final meetupJson = jsonDecode(meetupResp.body) as Map<String, dynamic>;
+      if (meetupJson['success'] != true) {
+        throw Exception('createMeetup failed: ${meetupJson['error']}');
+      }
+
+      final meetupId = (meetupJson['data']['meetup_id'] as num).toInt();
+      debugPrint('meetupId: $meetupId');
+
+      // ── Step 2: post system message so both users see the card ─────────
+      final payload = jsonEncode({
+        'type':          'meetup_proposal',
+        'meetup_id':     meetupId,
+        'date':          dateStr,
+        'time':          timeStr,
+        'location':      _selectedSpot,
+        'note':          _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        'proposer_id':   widget.myId,
+        'proposer_name': 'You',
+      });
+
+      await sendMessage(
+        conversationId: widget.conv.id,
+        senderId:       widget.myId,
+        body:           '__meetup__$payload',
+      );
 
       if (!mounted) return;
-      Navigator.of(context).pop();
-    } catch (e) {
-      debugPrint("Create meetup failed: $e");
-    }
 
-    setState(() => _submitting = false);
+      Navigator.of(context).pop();
+      widget.onProposed(meetupId, dateStr, timeStr, _selectedSpot);
+      } catch (e) {
+        debugPrint('Submit meetup error: $e');
+        if (mounted) setState(() => _submitError = 'Failed to send proposal: $e');
+      } finally {
+        if (mounted) setState(() => _submitting = false);
+      }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -263,11 +289,11 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
 
   @override
   Widget build(BuildContext context) {
-      return ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 480,
-          maxHeight: MediaQuery.of(context).size.height * 0.92,
-        ),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: 480,
+        maxHeight: MediaQuery.of(context).size.height * 0.92,
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Material(
@@ -277,6 +303,14 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
               _buildHeader(),
               _buildProgressBar(),
               Expanded(child: _buildBody()),
+              if (_submitError != null)
+                Container(
+                  width: double.infinity,
+                  color: cRedLight,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(_submitError!,
+                      style: const TextStyle(color: cRed, fontSize: 12)),
+                ),
               _buildFooter(),
             ],
           ),
@@ -285,10 +319,8 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
     );
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
-
   Widget _buildHeader() {
-    final titles = ['Safe Spot', 'Which day?', 'What time?', 'Any notes?'];
+    final titles    = ['Safe Spot', 'Which day?', 'What time?', 'Any notes?'];
     final subtitles = [
       'Pick a safe campus location to meet ${widget.conv.otherName}',
       'Choose a date that works',
@@ -306,22 +338,11 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  titles[_step],
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
+                Text(titles[_step],
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
                 const SizedBox(height: 2),
-                Text(
-                  subtitles[_step],
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.white54,
-                  ),
-                ),
+                Text(subtitles[_step],
+                    style: const TextStyle(fontSize: 11, color: Colors.white54)),
               ],
             ),
           ),
@@ -340,9 +361,7 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
                       borderRadius: BorderRadius.circular(3),
                       color: i == _step
                           ? Colors.white
-                          : i < _step
-                              ? Colors.white54
-                              : Colors.white24,
+                          : i < _step ? Colors.white54 : Colors.white24,
                     ),
                   );
                 }),
@@ -352,17 +371,9 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
                 onTap: () => Navigator.of(context).pop(),
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: const BoxDecoration(
-                    color: Colors.white12,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white70,
-                    size: 15,
-                  ),
+                  width: 28, height: 28,
+                  decoration: const BoxDecoration(color: Colors.white12, shape: BoxShape.circle),
+                  child: const Icon(Icons.close, color: Colors.white70, size: 15),
                 ),
               ),
             ],
@@ -371,8 +382,6 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
       ),
     );
   }
-
-  // ── Progress bar ──────────────────────────────────────────────────────────
 
   Widget _buildProgressBar() {
     return AnimatedBuilder(
@@ -386,30 +395,20 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
     );
   }
 
-  // ── Body (slide transition) ───────────────────────────────────────────────
-
   Widget _buildBody() {
     return AnimatedBuilder(
       animation: _slideCtrl,
       builder: (ctx, _) {
         return Stack(
           children: [
-            // Exiting page
             if (_exitingStep >= 0)
               FractionalTranslation(
                 translation: _slideOut.value,
-                child: Opacity(
-                  opacity: _fadeOut.value,
-                  child: _stepContent(_exitingStep),
-                ),
+                child: Opacity(opacity: _fadeOut.value, child: _stepContent(_exitingStep)),
               ),
-            // Entering page
             FractionalTranslation(
               translation: _slideIn.value,
-              child: Opacity(
-                opacity: _fadeIn.value,
-                child: _stepContent(_step),
-              ),
+              child: Opacity(opacity: _fadeIn.value, child: _stepContent(_step)),
             ),
           ],
         );
@@ -427,8 +426,6 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
     );
   }
 
-  // ── Footer ────────────────────────────────────────────────────────────────
-
   Widget _buildFooter() {
     final isLast = _step == _totalSteps - 1;
     return Container(
@@ -438,7 +435,6 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
       ),
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
       child: Row(children: [
-        // Back
         if (_step > 0)
           InkWell(
             onTap: () {
@@ -474,15 +470,11 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
             child: isLast
                 ? ElevatedButton.icon(
                     key: const ValueKey('send'),
-                    onPressed: () {
-                      debugPrint("SEND BUTTON PRESSED");
-                      _submit();
-                    },
+                    onPressed: _submitting ? null : _submit,
                     icon: _submitting
                         ? const SizedBox(
                             width: 14, height: 14,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.send_rounded, size: 16),
                     label: const Text('Send proposal',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
@@ -530,32 +522,30 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
         onSelect: (spot) {
           setState(() => _selectedSpot = spot);
           _fetchBookedSlots();
-        }
+        },
       );
     } else if (step == 1) {
       return _StepWhen(
         selectedDate: _date,
-        onSelect: (d) { 
+        onSelect: (d) {
           setState(() => _date = d);
           _fetchBookedSlots();
-        }
+        },
       );
     } else if (step == 2) {
       final bookedLabels = _timeSlots.where(_isSlotBooked).toSet();
-
       final day = _date?.weekday ?? DateTime.now().weekday;
       final hours = _spotInfo.weeklyHours[day];
-
       final spotHoursText = hours == null
-          ? "Closed today"
-          : "${hours.openHour}:00 - ${hours.closeHour}:00";
+          ? 'Closed today'
+          : '${hours.openHour}:00 – ${hours.closeHour}:00';
       return _StepTime(
-        timeSlots: _timeSlots,
-        selectedSlot: _timeSlot,
-        spotHours: spotHoursText,
+        timeSlots:        _timeSlots,
+        selectedSlot:     _timeSlot,
+        spotHours:        spotHoursText,
         bookedSlotLabels: bookedLabels,
-        isLoading: _loadingSlots,
-        onSelect: (s) => setState(() => _timeSlot = s),
+        isLoading:        _loadingSlots,
+        onSelect:         (s) => setState(() => _timeSlot = s),
       );
     } else if (step == 3) {
       return _StepNotes(
@@ -595,20 +585,15 @@ class _StepWhere extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1.25,
+        crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 1.25,
       ),
       itemCount: _kSpotAssets.length,
       itemBuilder: (_, i) {
         final spot = _kSpotAssets[i];
         final selected = spot['name'] == selectedSpot;
         return _AnimatedSpotCard(
-          name: spot['name']!,
-          image: spot['image']!,
-          selected: selected,
-          index: i,
+          name: spot['name']!, image: spot['image']!,
+          selected: selected, index: i,
           onTap: () => onSelect(spot['name']!),
         );
       },
@@ -637,12 +622,8 @@ class _AnimatedSpotCardState extends State<_AnimatedSpotCard>
   @override
   void initState() {
     super.initState();
-    _entryCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
+    _entryCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
     _entryAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutBack);
-    // Stagger by index
     Future.delayed(Duration(milliseconds: 50 + widget.index * 55), () {
       if (mounted) _entryCtrl.forward();
     });
@@ -661,10 +642,7 @@ class _AnimatedSpotCardState extends State<_AnimatedSpotCard>
           duration: kFast,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: widget.selected ? cRed : cBorder,
-              width: widget.selected ? 2.5 : 1,
-            ),
+            border: Border.all(color: widget.selected ? cRed : cBorder, width: widget.selected ? 2.5 : 1),
             boxShadow: widget.selected
                 ? [BoxShadow(color: cRed.withValues(alpha: 0.22), blurRadius: 8, spreadRadius: 1)]
                 : [],
@@ -672,47 +650,32 @@ class _AnimatedSpotCardState extends State<_AnimatedSpotCard>
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Stack(fit: StackFit.expand, children: [
-              Image.asset(
-                widget.image,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: cRedLight,
-                  child: const Icon(Icons.location_on_outlined, color: cRed, size: 32),
-                ),
-              ),
-              // Gradient overlay
+              Image.asset(widget.image, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: cRedLight,
+                    child: const Icon(Icons.location_on_outlined, color: cRed, size: 32),
+                  )),
               DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
                     colors: [Colors.transparent, Colors.black.withValues(alpha: 0.72)],
                     stops: const [0.35, 1.0],
                   ),
                 ),
               ),
-              // Name
               Positioned(
                 left: 8, right: 8, bottom: 7,
-                child: Text(
-                  widget.name,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.w800,
-                    color: Colors.white, height: 1.25,
-                  ),
-                ),
+                child: Text(widget.name,
+                    textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white, height: 1.25)),
               ),
-              // Selection overlay
               AnimatedContainer(
                 duration: kFast,
                 decoration: BoxDecoration(
                   color: widget.selected ? cRed.withValues(alpha: 0.18) : Colors.transparent,
                 ),
               ),
-              // Checkmark
               if (widget.selected)
                 Positioned(
                   top: 7, right: 7,
@@ -755,14 +718,10 @@ class _StepWhenState extends State<_StepWhen> {
   void _prevMonth() {
     final now = DateTime.now();
     final prev = DateTime(_month.year, _month.month - 1);
-    if (!prev.isBefore(DateTime(now.year, now.month))) {
-      setState(() => _month = prev);
-    }
+    if (!prev.isBefore(DateTime(now.year, now.month))) setState(() => _month = prev);
   }
 
-  void _nextMonth() {
-    setState(() => _month = DateTime(_month.year, _month.month + 1));
-  }
+  void _nextMonth() => setState(() => _month = DateTime(_month.year, _month.month + 1));
 
   @override
   Widget build(BuildContext context) {
@@ -770,58 +729,35 @@ class _StepWhenState extends State<_StepWhen> {
     final today = DateTime(now.year, now.month, now.day);
     final firstDay = DateTime(_month.year, _month.month, 1);
     final daysInMonth = DateTime(_month.year, _month.month + 1, 0).day;
-    // weekday: Mon=1..Sun=7, we want Sun=0 offset
-    int startOffset = firstDay.weekday % 7; // Sun=0,Mon=1,...Sat=6
+    final startOffset = firstDay.weekday % 7;
 
-    const monthNames = [
-      'January','February','March','April','May','June',
-      'July','August','September','October','November','December'
-    ];
+    const monthNames = ['January','February','March','April','May','June',
+        'July','August','September','October','November','December'];
     const dayLabels = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Month nav
       Row(children: [
-        IconButton(
-          onPressed: _prevMonth,
-          icon: const Icon(Icons.chevron_left, color: cMuted),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        ),
-        Expanded(
-          child: Text(
-            '${monthNames[_month.month - 1]} ${_month.year}',
+        IconButton(onPressed: _prevMonth, icon: const Icon(Icons.chevron_left, color: cMuted),
+            padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 32, minHeight: 32)),
+        Expanded(child: Text('${monthNames[_month.month - 1]} ${_month.year}',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText),
-          ),
-        ),
-        IconButton(
-          onPressed: _nextMonth,
-          icon: const Icon(Icons.chevron_right, color: cMuted),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-        ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText))),
+        IconButton(onPressed: _nextMonth, icon: const Icon(Icons.chevron_right, color: cMuted),
+            padding: EdgeInsets.zero, constraints: const BoxConstraints(minWidth: 32, minHeight: 32)),
       ]),
       const SizedBox(height: 6),
-      // Day-of-week headers
       Row(
         children: dayLabels.map((d) => Expanded(
-          child: Center(
-            child: Text(d,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cMuted)),
-          ),
+          child: Center(child: Text(d,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cMuted))),
         )).toList(),
       ),
       const SizedBox(height: 6),
-      // Calendar grid
       GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 7,
-          mainAxisSpacing: 4,
-          crossAxisSpacing: 4,
-          childAspectRatio: 1,
+          crossAxisCount: 7, mainAxisSpacing: 4, crossAxisSpacing: 4, childAspectRatio: 1,
         ),
         itemCount: startOffset + daysInMonth,
         itemBuilder: (_, i) {
@@ -829,9 +765,9 @@ class _StepWhenState extends State<_StepWhen> {
           final day = DateTime(_month.year, _month.month, i - startOffset + 1);
           final isPast = day.isBefore(today);
           final isSelected = widget.selectedDate != null &&
-              day.year  == widget.selectedDate!.year &&
+              day.year == widget.selectedDate!.year &&
               day.month == widget.selectedDate!.month &&
-              day.day   == widget.selectedDate!.day;
+              day.day == widget.selectedDate!.day;
           final isToday = day == today;
 
           return GestureDetector(
@@ -841,23 +777,15 @@ class _StepWhenState extends State<_StepWhen> {
               decoration: BoxDecoration(
                 color: isSelected ? cRed : isToday ? cRedLight : Colors.transparent,
                 shape: BoxShape.circle,
-                border: isToday && !isSelected
-                    ? Border.all(color: cRed, width: 1.5)
-                    : null,
+                border: isToday && !isSelected ? Border.all(color: cRed, width: 1.5) : null,
               ),
               child: Center(
-                child: Text(
-                  '${day.day}',
+                child: Text('${day.day}',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w400,
-                    color: isSelected
-                        ? Colors.white
-                        : isPast
-                            ? cMuted.withValues(alpha: 0.4)
-                            : cText,
-                  ),
-                ),
+                    color: isSelected ? Colors.white : isPast ? cMuted.withValues(alpha: 0.4) : cText,
+                  )),
               ),
             ),
           );
@@ -875,55 +803,55 @@ class _StepTime extends StatelessWidget {
   final List<String> timeSlots;
   final String? selectedSlot;
   final String spotHours;
-  // FIX 3: Renamed from `bookedSlots` to `bookedSlotLabels` — these are now
-  // display-format labels (e.g. "9:00 AM") pre-computed by the wizard using
-  // _isSlotBooked, so the comparison inside this widget is always apples-to-apples.
   final Set<String> bookedSlotLabels;
   final bool isLoading;
   final void Function(String) onSelect;
 
   const _StepTime({
-    required this.timeSlots,
-    required this.selectedSlot,
-    required this.spotHours,
-    required this.bookedSlotLabels,
-    required this.isLoading,
-    required this.onSelect,
+    required this.timeSlots, required this.selectedSlot,
+    required this.spotHours, required this.bookedSlotLabels,
+    required this.isLoading, required this.onSelect,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [      // Time grid — 3 per row
-      isLoading
-        ? const Center(child: CircularProgressIndicator(color: cRed))
-        : GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-          childAspectRatio: 2.5,
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cRedLight, borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: cRed.withValues(alpha: 0.2)),
         ),
-        itemCount: timeSlots.length,
-        itemBuilder: (_, i) {
-          final slot = timeSlots[i];
-          final booked = bookedSlotLabels.contains(slot);
-          return _TimeSlotChip(
-            label:    slot,
-            selected: slot == selectedSlot,
-            booked:   booked,
-            index:    i,
-            onTap:    booked ? null : () => onSelect(slot),
-          );
-        },
+        child: Row(children: [
+          const Icon(Icons.info_outline, size: 13, color: cRed),
+          const SizedBox(width: 8),
+          Expanded(child: Text(spotHours, style: const TextStyle(fontSize: 11, color: cRed))),
+        ]),
       ),
+      const SizedBox(height: 12),
+      isLoading
+          ? const Center(child: CircularProgressIndicator(color: cRed))
+          : GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 2.5,
+              ),
+              itemCount: timeSlots.length,
+              itemBuilder: (_, i) {
+                final slot = timeSlots[i];
+                final booked = bookedSlotLabels.contains(slot);
+                return _TimeSlotChip(
+                  label: slot, selected: slot == selectedSlot,
+                  booked: booked, index: i,
+                  onTap: booked ? null : () => onSelect(slot),
+                );
+              },
+            ),
     ]);
   }
 }
 
-// FIX 4: Added missing `booked` field to _TimeSlotChip and wired up its
-// visual state (dimmed + strikethrough) and disabled tap behaviour.
 class _TimeSlotChip extends StatefulWidget {
   final String label;
   final bool selected;
@@ -931,11 +859,8 @@ class _TimeSlotChip extends StatefulWidget {
   final int index;
   final VoidCallback? onTap;
   const _TimeSlotChip({
-    required this.label,
-    required this.selected,
-    required this.booked,
-    required this.index,
-    required this.onTap,
+    required this.label, required this.selected,
+    required this.booked, required this.index, required this.onTap,
   });
   @override
   State<_TimeSlotChip> createState() => _TimeSlotChipState();
@@ -967,32 +892,18 @@ class _TimeSlotChipState extends State<_TimeSlotChip> with SingleTickerProviderS
         child: AnimatedContainer(
           duration: kFast,
           decoration: BoxDecoration(
-            color: widget.booked
-                ? cBorder
-                : widget.selected
-                    ? cRed
-                    : cSurface,
+            color: widget.booked ? cBorder : widget.selected ? cRed : cSurface,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: widget.selected ? cRed : cBorder,
-              width: widget.selected ? 1.5 : 1,
-            ),
+            border: Border.all(color: widget.selected ? cRed : cBorder, width: widget.selected ? 1.5 : 1),
           ),
           child: Center(
-            child: Text(
-              widget.label,
+            child: Text(widget.label,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: widget.booked
-                    ? cMuted
-                    : widget.selected
-                        ? Colors.white
-                        : cText,
+                fontSize: 12, fontWeight: FontWeight.w700,
+                color: widget.booked ? cMuted : widget.selected ? Colors.white : cText,
                 decoration: widget.booked ? TextDecoration.lineThrough : null,
                 decorationColor: cMuted,
-              ),
-            ),
+              )),
           ),
         ),
       ),
@@ -1037,12 +948,10 @@ class _StepNotesState extends State<_StepNotes> with SingleTickerProviderStateMi
     return FadeTransition(
       opacity: _anim,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Summary card
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: cSurface,
-            borderRadius: BorderRadius.circular(14),
+            color: cSurface, borderRadius: BorderRadius.circular(14),
             border: Border.all(color: cBorder),
           ),
           child: Column(children: [
@@ -1062,8 +971,7 @@ class _StepNotesState extends State<_StepNotes> with SingleTickerProviderStateMi
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: cBg,
-            borderRadius: BorderRadius.circular(12),
+            color: cBg, borderRadius: BorderRadius.circular(12),
             border: Border.all(color: cBorder),
           ),
           child: TextField(
