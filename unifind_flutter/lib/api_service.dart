@@ -1102,13 +1102,13 @@ Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) as
 
 Future<void> sendHeartbeat({required int userId}) async {
   try {
-    await http.get(Uri.parse('$_baseUrl/users/status/heartbeat.php?user_id=$userId'));
+    await http.get(Uri.parse('$_baseUrl/messaging/users/status/heartbeat.php?user_id=$userId'));
   } catch (_) {}
 }
 
 Future<bool> getUserOnlineStatus({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/users/status/get_user_status.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/messaging/users/status/get_user_status.php?user_id=$userId'));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['success'] == true) {
       return data['data']['online'] == true;
@@ -1117,3 +1117,31 @@ Future<bool> getUserOnlineStatus({required int userId}) async {
   return false;
 }
 
+// ─── ADMIN: CREATE ADMIN USER ─────────────────────────────────────────────────
+Future<Map<String, dynamic>> createAdminUser({
+  required String firstName,
+  required String lastName,
+  required String username,
+  required String email,
+  required String password,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/users/create_admin_user.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'first_name': firstName,
+      'last_name':  lastName,
+      'username':   username,
+      'email':      email,
+      'password':   password,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to create admin account.',
+    code: data['error_code']?.toString(),
+  );
+}
