@@ -2045,8 +2045,6 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
     final lastCtrl     = TextEditingController();
     final usernameCtrl = TextEditingController();
     final emailCtrl    = TextEditingController();
-    final passwordCtrl = TextEditingController();
-    bool obscurePassword = true;
     bool loading = false;
     String? error;
     bool success = false;
@@ -2163,37 +2161,13 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                             _AdminFormField(controller: emailCtrl, label: 'Email Address', hint: 'jane@montclair.edu', icon: Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress),
                             const SizedBox(height: 12),
 
-                            // Password
-                            StatefulBuilder(builder: (_, setSub) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              const Text('Password', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
-                              const SizedBox(height: 6),
-                              TextField(
-                                controller: passwordCtrl,
-                                obscureText: obscurePassword,
-                                decoration: InputDecoration(
-                                  hintText: 'Min. 6 characters',
-                                  hintStyle: const TextStyle(color: cMuted, fontSize: 14),
-                                  prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: cMuted),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, size: 18, color: cMuted),
-                                    onPressed: () => setSub(() => obscurePassword = !obscurePassword),
-                                  ),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
-                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
-                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
-                                  filled: true, fillColor: cBg,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                ),
-                              ),
-                            ])),
-                            const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(color: const Color(0xFFFFF8EC), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFFFE082))),
                               child: const Row(children: [
-                                Icon(Icons.mail_outline_rounded, size: 14, color: Color(0xFFE67E22)),
+                                Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFFE67E22)),
                                 SizedBox(width: 8),
-                                Expanded(child: Text('The username and password will be emailed to the new admin after the account is created.', style: TextStyle(fontSize: 11, color: Color(0xFF7B5800), height: 1.4))),
+                                Expanded(child: Text('A secure temporary password will be auto-generated and emailed to the new admin.', style: TextStyle(fontSize: 11, color: Color(0xFF7B5800), height: 1.4))),
                               ]),
                             ),
 
@@ -2229,13 +2203,8 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                                   final uname    = usernameCtrl.text.trim();
                                   final mail     = emailCtrl.text.trim();
 
-                                  final pass = passwordCtrl.text.trim();
-                                  if (first.isEmpty || last.isEmpty || uname.isEmpty || mail.isEmpty || pass.isEmpty) {
+                                  if (first.isEmpty || last.isEmpty || uname.isEmpty || mail.isEmpty) {
                                     setS(() => error = 'All fields are required.');
-                                    return;
-                                  }
-                                  if (pass.length < 6) {
-                                    setS(() => error = 'Password must be at least 6 characters.');
                                     return;
                                   }
                                   if (!mail.contains('@')) {
@@ -2245,7 +2214,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
 
                                   setS(() { loading = true; error = null; });
                                   try {
-                                    await createAdminUser(firstName: first, lastName: last, username: uname, email: mail, password: pass);
+                                    await createAdminUser(firstName: first, lastName: last, username: uname, email: mail);
                                     setS(() { loading = false; success = true; });
                                   } catch (e) {
                                     setS(() { loading = false; error = e.toString(); });
@@ -3125,5 +3094,4 @@ class _AdminProfileTabState extends State<_AdminProfileTab> {
     );
   }
 }
-
 
