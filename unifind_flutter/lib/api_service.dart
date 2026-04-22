@@ -1298,3 +1298,39 @@ Future<List<Offer>> getListingOffers({
   }
   throw ApiException(json['error']?.toString() ?? 'Failed to load listing offers.');
 }
+
+/// Count of unseen offer events for the Offers-tab badge. Includes:
+///   - pending offers the user has received (not yet seen)
+///   - responses (accept/reject/counter/withdraw/supersede) to offers
+///     the user sent, whose responded_at is newer than the user's seen_at
+///
+/// Returns 0 on any failure — the badge is a nice-to-have, it shouldn't
+/// crash the poll loop if the backend is briefly unreachable.
+Future<int> getOfferNotificationCount({required int userId}) async {
+  try {
+    final response = await http.get(Uri.parse(
+        '$_baseUrl/get_offer_notifications.php?user_id=$userId'));
+    final json = jsonDecode(response.body);
+    if (response.statusCode == 200 && json['success'] == true) {
+      return (json['data']?['count'] as num?)?.toInt() ?? 0;
+    }
+  } catch (_) {}
+  return 0;
+}
+
+/// Mark every notification-worthy offer for the user as seen, clearing the
+/// badge. Called when the user opens the Offers tab and after any action
+/// (accept/reject/counter/withdraw) so the badge drops instantly rather
+/// than waiting for the next poll cycle.
+///
+/// Safe to fire-and-forget — the server is idempotent and swallowed errors
+/// just mean the badge will clear on the next poll.
+Future<void> markOffersSeen({required int userId}) async {
+  try {
+    await http.post(
+      Uri.parse('$_baseUrl/mark_offers_seen.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'user_id': userId}),
+    );
+  } catch (_) {}
+}

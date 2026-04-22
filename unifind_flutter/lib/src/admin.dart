@@ -182,10 +182,12 @@ class RoleAuthWrapper extends StatelessWidget {
   final String email, username;
   final int? userId;
   final int unreadCount;
+  final int unseenOfferCount;
   final VoidCallback onLogout;
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
   final int tab, postFormNonce;
+  final int offersNonce;
   final ListingType postDefaultType;
   final Set<String> submittedClaimItemIds, submittedMatchItemIds;
   final void Function([ListingType]) goToPostTab;
@@ -199,9 +201,12 @@ class RoleAuthWrapper extends StatelessWidget {
   const RoleAuthWrapper({
     super.key,
     required this.role, required this.email, required this.username,
-    required this.userId, this.unreadCount = 0, required this.onLogout,
+    required this.userId, this.unreadCount = 0, this.unseenOfferCount = 0,
+    required this.onLogout,
     required this.market, required this.lostFound,
-    required this.tab, required this.postFormNonce, required this.postDefaultType,
+    required this.tab, required this.postFormNonce,
+    this.offersNonce = 0,
+    required this.postDefaultType,
     required this.submittedClaimItemIds, required this.submittedMatchItemIds,
     required this.goToPostTab, required this.addListing,
     required this.claimLostItem, required this.postFoundMatch,
@@ -217,8 +222,10 @@ class RoleAuthWrapper extends StatelessWidget {
     return _StandardUserShell(
       email: email, username: username, userId: userId, role: role,
       unreadCount: unreadCount,
+      unseenOfferCount: unseenOfferCount,
       onLogout: onLogout, market: market, lostFound: lostFound,
       tab: tab, postFormNonce: postFormNonce, postDefaultType: postDefaultType,
+      offersNonce: offersNonce,
       submittedClaimItemIds: submittedClaimItemIds, submittedMatchItemIds: submittedMatchItemIds,
       goToPostTab: goToPostTab, addListing: addListing,
       claimLostItem: claimLostItem, postFoundMatch: postFoundMatch,
@@ -233,10 +240,12 @@ class _StandardUserShell extends StatelessWidget {
   final int? userId;
   final UserRole role;
   final int unreadCount;
+  final int unseenOfferCount;
   final VoidCallback onLogout;
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
   final int tab, postFormNonce;
+  final int offersNonce;
   final ListingType postDefaultType;
   final Set<String> submittedClaimItemIds, submittedMatchItemIds;
   final void Function([ListingType]) goToPostTab;
@@ -249,9 +258,12 @@ class _StandardUserShell extends StatelessWidget {
 
   const _StandardUserShell({
     required this.email, required this.username, required this.userId,
-    required this.role, this.unreadCount = 0, required this.onLogout,
+    required this.role, this.unreadCount = 0, this.unseenOfferCount = 0,
+    required this.onLogout,
     required this.market, required this.lostFound,
-    required this.tab, required this.postFormNonce, required this.postDefaultType,
+    required this.tab, required this.postFormNonce,
+    this.offersNonce = 0,
+    required this.postDefaultType,
     required this.submittedClaimItemIds, required this.submittedMatchItemIds,
     required this.goToPostTab, required this.addListing,
     required this.claimLostItem, required this.postFoundMatch,
@@ -277,6 +289,7 @@ class _StandardUserShell extends StatelessWidget {
     _TopNavItem(icon: Icons.search_outlined,         activeIcon: Icons.search_rounded,          label: 'Lost & Found',tabIndex: 1),
     _TopNavItem(icon: Icons.list_alt_outlined,       activeIcon: Icons.list_alt_rounded,        label: 'My Listings', tabIndex: 3),
     _TopNavItem(icon: Icons.chat_bubble_outline,     activeIcon: Icons.chat_bubble_rounded,     label: 'Messages',    tabIndex: 4),
+    _TopNavItem(icon: Icons.local_offer_outlined,    activeIcon: Icons.local_offer_rounded,     label: 'Offers',      tabIndex: 6),
     _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 5),
   ];
 
@@ -300,7 +313,9 @@ class _StandardUserShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeNavIndex = _navIndexForTab(tab);
 
-    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile
+    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile, 6=Offers
+    // IndexedStack is keyed on tab index, so list position must match the
+    // tabIndex values used in _studentNavItems and _facultyNavItems above.
     final screens = [
       MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email, currentUserId: userId),
       LostFoundScreen(
@@ -324,6 +339,17 @@ class _StandardUserShell extends StatelessWidget {
       ),
       MessagingScreen(userId: userId ?? 0, userEmail: email),
       ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
+      // Slot 6: Offers. Faculty never reach this (their nav doesn't expose it
+      // and their default tab is 1); we still include a placeholder-safe
+      // widget for IndexedStack to render when userId is null.
+      // Keying on offersNonce forces a fresh initState/_load() whenever the
+      // parent bumps the nonce — i.e. when the user clicks the Offers tab
+      // or the poll detects new server-side activity. Without this, the
+      // screen holds its initial fetch forever because IndexedStack keeps
+      // the widget mounted.
+      userId != null
+          ? OffersScreen(key: ValueKey('offers-$offersNonce'), userId: userId!)
+          : const Center(child: Text('Sign in to view offers.')),
     ];
 
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -374,7 +400,18 @@ class _StandardUserShell extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(mainAxisSize: MainAxisSize.min, children: [
                           for (int i = 0; i < _navItems.length; i++) ...[
-                            _TopNavTab(item: _navItems[i], isActive: activeNavIndex == i, onTap: () => onTabChanged(_navItems[i].tabIndex), badgeCount: _navItems[i].tabIndex == 4 ? unreadCount : 0),
+                            _TopNavTab(
+                              item: _navItems[i],
+                              isActive: activeNavIndex == i,
+                              onTap: () => onTabChanged(_navItems[i].tabIndex),
+                              // Messages badge comes from unreadCount; Offers
+                              // badge (tab 6) comes from unseenOfferCount.
+                              badgeCount: _navItems[i].tabIndex == 4
+                                  ? unreadCount
+                                  : _navItems[i].tabIndex == 6
+                                      ? unseenOfferCount
+                                      : 0,
+                            ),
                             if (role != UserRole.fac && i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
                           ],
                         ]),
@@ -411,17 +448,26 @@ class _StandardUserShell extends StatelessWidget {
               ],
             )
               : NavigationBar(
-              selectedIndex: tab,
+              // Student mobile nav destinations map to tabs explicitly:
+              //   dest 0 -> tab 0 (Market)
+              //   dest 1 -> tab 1 (Lost/Found)
+              //   dest 2 -> tab 2 (Post)
+              //   dest 3 -> tab 3 (Listings)
+              //   dest 4 -> tab 4 (Messages)
+              //   dest 5 -> tab 6 (Offers)   ← not 5, because Offers came later
+              //   dest 6 -> tab 5 (Profile)
+              selectedIndex: tab == 6 ? 5 : tab == 5 ? 6 : tab,
               backgroundColor: cNavBg,
               indicatorColor: Colors.white.withValues(alpha: 0.2),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              onDestinationSelected: onTabChanged,
+              onDestinationSelected: (i) => onTabChanged(i == 5 ? 6 : i == 6 ? 5 : i),
               destinations: [
                 const NavigationDestination(icon: Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
                 const NavigationDestination(icon: Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
                 const NavigationDestination(icon: Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
                 const NavigationDestination(icon: Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'Listings'),
                 NavigationDestination(icon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_outline, color: Colors.white70)), selectedIcon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_rounded, color: Colors.white)), label: 'Messages'),
+                NavigationDestination(icon: Badge(isLabelVisible: unseenOfferCount > 0, label: Text('$unseenOfferCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.local_offer_outlined, color: Colors.white70)), selectedIcon: Badge(isLabelVisible: unseenOfferCount > 0, label: Text('$unseenOfferCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.local_offer_rounded, color: Colors.white)), label: 'Offers'),
                 const NavigationDestination(icon: Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
               ],
             ))
