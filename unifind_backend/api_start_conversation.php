@@ -2,6 +2,7 @@
 // upload as: start_conversation.php
 declare(strict_types=1);
 require_once __DIR__ . '/api_helpers.php';
+require_once __DIR__ . '/includes/crypto.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') api_error('Method not allowed.', 405);
 
 $body    = api_body();
@@ -33,7 +34,13 @@ $ins->close();
 
 // Opening message
 $opener = "Hi! I wanted to reach out about your post. Can we arrange a time to meet?";
+try {
+    $openerCipher = encrypt_message_body($opener);
+} catch (Throwable $e) {
+    error_log('start_conversation encrypt: ' . $e->getMessage());
+    api_error('Server error.', 500);
+}
 $mIns = $conn->prepare('INSERT INTO messages (conversation_id, sender_id, body, is_read, sent_at) VALUES (?, ?, ?, 0, NOW())');
-if ($mIns) { $mIns->bind_param('iis', $convId, $u1, $opener); $mIns->execute(); $mIns->close(); }
+if ($mIns) { $mIns->bind_param('iis', $convId, $u1, $openerCipher); $mIns->execute(); $mIns->close(); }
 
 api_success(['id' => $convId, 'is_new' => true]);
