@@ -342,6 +342,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         imageUrl = await uploadImage(
           _selectedImage!.path,
           _selectedImageBytes!,
+          type: _type == ListingType.marketplace ? 'marketplace' : 'lostfound',
         );
       }
 

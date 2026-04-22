@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 
-// Allow cross-origin requests from the Flutter app
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -24,10 +23,17 @@ if (empty($_FILES['file'])) {
     exit;
 }
 
-$file   = $_FILES['file'];
+// Which subfolder to save into (marketplace, lostfound, meetup, avatars)
+$allowed_types = ['marketplace', 'lostfound', 'meetup', 'avatars'];
+$type = trim($_POST['type'] ?? 'marketplace');
+if (!in_array($type, $allowed_types, true)) {
+    $type = 'marketplace';
+}
+
+$file     = $_FILES['file'];
 $maxBytes = 5 * 1024 * 1024; // 5 MB
 
-// Check for PHP-level upload errors first
+// PHP-level upload error
 if ($file['error'] !== UPLOAD_ERR_OK) {
     $phpErrors = [
         UPLOAD_ERR_INI_SIZE   => 'The image is too large (server limit exceeded). Please use an image under 5 MB.',
@@ -44,27 +50,27 @@ if ($file['error'] !== UPLOAD_ERR_OK) {
     exit;
 }
 
-// Size check
+// File size check
 if ($file['size'] > $maxBytes) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'error' => 'Image is too large (' . round($file['size'] / 1048576, 1) . ' MB). Please use an image under 5 MB.',
+        'error'   => 'Image is too large (' . round($file['size'] / 1048576, 1) . ' MB). Please use an image under 5 MB.',
     ]);
     exit;
 }
 
-// MIME type validation via finfo
+// MIME type validation
 $finfo    = finfo_open(FILEINFO_MIME_TYPE);
 $mimeType = finfo_file($finfo, $file['tmp_name']);
 finfo_close($finfo);
 
-$allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-if (!in_array($mimeType, $allowed, true)) {
+$allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+if (!in_array($mimeType, $allowedMimes, true)) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'error' => 'Unsupported image format. Please upload a JPEG, PNG, WEBP, or GIF file.',
+        'error'   => 'Unsupported image format. Please upload a JPEG, PNG, WEBP, or GIF file.',
     ]);
     exit;
 }
@@ -77,8 +83,8 @@ $ext = match ($mimeType) {
     default      => 'jpg',
 };
 
-// Save to listings/ subdirectory
-$uploadDir = __DIR__ . '/listings/';
+// Save to the correct subfolder
+$uploadDir = __DIR__ . '/' . $type . '/';
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0755, true);
 }
@@ -92,10 +98,10 @@ if (!move_uploaded_file($file['tmp_name'], $destPath)) {
     exit;
 }
 
-// Build a public URL — derive base from server vars
-$scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$dir      = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
-$publicUrl = "$scheme://$host$dir/listings/$filename";
+// Build public URL
+$scheme    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host      = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$dir       = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+$publicUrl = "$scheme://$host$dir/$type/$filename";
 
 echo json_encode(['success' => true, 'url' => $publicUrl]);

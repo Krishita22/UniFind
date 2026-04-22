@@ -498,7 +498,12 @@ Future<Map<String, dynamic>> claimLostFoundItem({
 // Sends an image file to the cPanel server at uploads/upload_image.php
 // Returns the public URL of the uploaded image
 
-Future<String> uploadImage(String filePath, Uint8List fileBytes) async {
+// type: 'marketplace' | 'lostfound' | 'meetup' | 'avatars'
+Future<String> uploadImage(
+  String filePath,
+  Uint8List fileBytes, {
+  String type = 'marketplace',
+}) async {
   if (fileBytes.isEmpty) {
     throw Exception('Image data is empty. Please select a valid image file.');
   }
@@ -514,7 +519,8 @@ Future<String> uploadImage(String filePath, Uint8List fileBytes) async {
   final uri = Uri.parse('$_baseUrl/../uploads/upload_image.php');
   final request = http.MultipartRequest('POST', uri);
 
-  // Derive a safe filename from the path, fallback to upload.jpg
+  request.fields['type'] = type;
+
   final name = filePath.isNotEmpty
       ? filePath.split('/').last.split('\\').last
       : 'upload.jpg';
@@ -543,13 +549,10 @@ Future<String> uploadImage(String filePath, Uint8List fileBytes) async {
     throw Exception(serverMsg);
   }
 
-  // Parse server error body for a user-friendly message
   try {
     final data = jsonDecode(response.body);
     final serverMsg = data['error']?.toString();
-    if (serverMsg != null && serverMsg.isNotEmpty) {
-      throw Exception(serverMsg);
-    }
+    if (serverMsg != null && serverMsg.isNotEmpty) throw Exception(serverMsg);
   } catch (_) {}
 
   if (response.statusCode == 413) {
