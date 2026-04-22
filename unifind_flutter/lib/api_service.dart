@@ -1188,6 +1188,37 @@ Future<Map<String, dynamic>> requestRefund({
   throw ApiException(data['error']?.toString() ?? 'Failed to request refund.');
 }
 
+Future<void> sendPaymentInvoice({
+  required String offerId,
+  required String buyerEmail,
+  required String buyerName,
+  required String itemTitle,
+  required double itemPrice,
+  required String itemCategory,
+  required String itemCondition,
+  required String itemImage,
+  required String billingAddress,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/payments/send_invoice.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'offer_id':        offerId,
+      'buyer_email':     buyerEmail,
+      'buyer_name':      buyerName,
+      'item_title':      itemTitle,
+      'item_price':      itemPrice,
+      'item_category':   itemCategory,
+      'item_condition':  itemCondition,
+      'item_image':      itemImage,
+      'billing_address': billingAddress,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) return;
+  throw ApiException(data['error']?.toString() ?? 'Failed to send invoice.');
+}
+
 Future<List<Map<String, dynamic>>> getUserOffers({required int userId}) async {
   try {
     final response = await http.get(

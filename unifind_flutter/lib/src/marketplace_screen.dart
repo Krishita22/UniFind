@@ -624,9 +624,10 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                         Navigator.of(ctx).pop();
                                         Navigator.of(context).push(MaterialPageRoute(
                                           builder: (_) => PaymentScreen(
-                                            item:     item,
-                                            buyerId:  currentUserId,
-                                            sellerId: item.sellerId!,
+                                            item:       item,
+                                            buyerId:    currentUserId,
+                                            sellerId:   item.sellerId!,
+                                            buyerEmail: currentUserEmail,
                                           ),
                                         ));
                                       },
