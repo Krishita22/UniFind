@@ -328,32 +328,75 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                     const SizedBox(height: 14),
                   ],
 
-                  // Contact Seller button
-                  GestureDetector(
-                    onTap: _startingChat ? null : _contactSeller,
-                    child: AnimatedContainer(
-                      duration: kFast,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _startingChat ? cMuted : cRed,
-                        borderRadius: BorderRadius.circular(12),
+                  // Action buttons row
+                  Row(
+                    children: [
+                      // Contact Seller
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _startingChat ? null : _contactSeller,
+                          child: AnimatedContainer(
+                            duration: kFast,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: _startingChat ? cMuted : cRed,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: _startingChat
+                                  ? const SizedBox(width: 20, height: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.message_rounded, color: Colors.white, size: 17),
+                                        SizedBox(width: 8),
+                                        Text('Contact Seller',
+                                          style: TextStyle(color: Colors.white, fontSize: 14,
+                                              fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
                       ),
-                      child: Center(
-                        child: _startingChat
-                            ? const SizedBox(width: 20, height: 20,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                      // Only show Pay if this is not the user's own listing
+                      if (widget.currentUserId != null &&
+                          widget.item.sellerId != null &&
+                          widget.currentUserId != widget.item.sellerId) ...[
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => PaymentScreen(
+                              item:     widget.item,
+                              buyerId:  widget.currentUserId!,
+                              sellerId: widget.item.sellerId!,
+                            ),
+                          )),
+                          child: AnimatedContainer(
+                            duration: kFast,
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF27AE60),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.message_rounded, color: Colors.white, size: 17),
-                                  SizedBox(width: 8),
-                                  Text('Contact Seller',
+                                  Icon(Icons.payments_outlined, color: Colors.white, size: 17),
+                                  SizedBox(width: 6),
+                                  Text('Pay',
                                     style: TextStyle(color: Colors.white, fontSize: 14,
                                         fontWeight: FontWeight.w800, letterSpacing: 0.2)),
                                 ],
                               ),
-                      ),
-                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
