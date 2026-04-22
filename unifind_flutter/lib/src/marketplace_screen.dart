@@ -560,58 +560,96 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                               const SizedBox(height: 24),
 
 
-                              // Contact Seller button
-                              GestureDetector(
-                                onTap: () async {
-                                  final myId = currentUserId;
-                                  final sellerId = item.sellerId;
-                                  if (myId == null || sellerId == null) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Could not start conversation — user info unavailable.'), behavior: SnackBarBehavior.floating));
-                                    return;
-                                  }
-                                  if (myId == sellerId) {
-                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('This is your own listing.'), behavior: SnackBarBehavior.floating));
-                                    return;
-                                  }
-                                  try {
-                                    final result = await startConversation(
-                                      listingId: int.tryParse(item.id) ?? 0,
-                                      user1Id: myId,
-                                      user2Id: sellerId,
-                                      subject: 'Interested in: ${item.title}',
-                                    );
-                                    final convId = int.tryParse(result['id']?.toString() ?? '') ?? 0;
-                                    if (convId <= 0) throw Exception('Invalid conversation ID.');
-                                    if (!ctx.mounted) return;
-                                    Navigator.of(ctx).pop(); // close popup
-                                    await Navigator.of(ctx).push(MaterialPageRoute(
-                                      builder: (_) => ConversationScreen(
-                                        conv: Conversation(id: convId, subject: 'Interested in: ${item.title}', otherName: asSellerUsername(), otherId: sellerId, unread: 0),
-                                        myId: myId,
+                              // Action buttons row
+                              Row(
+                                children: [
+                                  // Contact Seller
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        final myId = currentUserId;
+                                        final sellerId = item.sellerId;
+                                        if (myId == null || sellerId == null) {
+                                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Could not start conversation — user info unavailable.'), behavior: SnackBarBehavior.floating));
+                                          return;
+                                        }
+                                        if (myId == sellerId) {
+                                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('This is your own listing.'), behavior: SnackBarBehavior.floating));
+                                          return;
+                                        }
+                                        try {
+                                          final result = await startConversation(
+                                            listingId: int.tryParse(item.id) ?? 0,
+                                            user1Id: myId,
+                                            user2Id: sellerId,
+                                            subject: 'Interested in: ${item.title}',
+                                          );
+                                          final convId = int.tryParse(result['id']?.toString() ?? '') ?? 0;
+                                          if (convId <= 0) throw Exception('Invalid conversation ID.');
+                                          if (!ctx.mounted) return;
+                                          Navigator.of(ctx).pop();
+                                          await Navigator.of(ctx).push(MaterialPageRoute(
+                                            builder: (_) => ConversationScreen(
+                                              conv: Conversation(id: convId, subject: 'Interested in: ${item.title}', otherName: asSellerUsername(), otherId: sellerId, unread: 0),
+                                              myId: myId,
+                                            ),
+                                          ));
+                                        } catch (e) {
+                                          if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Could not open chat: $e'), behavior: SnackBarBehavior.floating));
+                                        }
+                                      },
+                                      child: Container(
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: cRed,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.message_rounded, color: Colors.white, size: 17),
+                                            SizedBox(width: 8),
+                                            Text('Contact Seller',
+                                              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                                          ],
+                                        ),
                                       ),
-                                    ));
-                                  } catch (e) {
-                                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Could not open chat: $e'), behavior: SnackBarBehavior.floating));
-                                  }
-                                },
-                                child: Container(
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: cRed,
-                                    borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.message_rounded, color: Colors.white, size: 17),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Contact Seller',
-                                        style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                                  // Pay button — only for other users' listings
+                                  if (currentUserId != null && item.sellerId != null && currentUserId != item.sellerId) ...[
+                                    const SizedBox(width: 10),
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(ctx).pop();
+                                        Navigator.of(context).push(MaterialPageRoute(
+                                          builder: (_) => PaymentScreen(
+                                            item:     item,
+                                            buyerId:  currentUserId,
+                                            sellerId: item.sellerId!,
+                                          ),
+                                        ));
+                                      },
+                                      child: Container(
+                                        height: 48,
+                                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF27AE60),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.payments_outlined, color: Colors.white, size: 17),
+                                            SizedBox(width: 6),
+                                            Text('Pay',
+                                              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                                          ],
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
