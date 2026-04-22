@@ -368,9 +368,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                         GestureDetector(
                           onTap: () => Navigator.of(context).push(MaterialPageRoute(
                             builder: (_) => PaymentScreen(
-                              item:     widget.item,
-                              buyerId:  widget.currentUserId!,
-                              sellerId: widget.item.sellerId!,
+                              item:       widget.item,
+                              buyerId:    widget.currentUserId!,
+                              sellerId:   widget.item.sellerId!,
+                              buyerEmail: widget.currentUserEmail,
                             ),
                           )),
                           child: AnimatedContainer(
