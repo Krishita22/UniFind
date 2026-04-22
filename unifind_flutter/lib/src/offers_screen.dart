@@ -46,6 +46,11 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
+    // Fire-and-forget: viewing the offers list counts as acknowledging the
+    // notifications, so clear the badge server-side. The call is cheap and
+    // its own errors don't matter here — worst case the badge re-clears on
+    // the next poll.
+    markOffersSeen(userId: widget.userId);
     try {
       // Two parallel list calls rather than one "both" call so the tab counts
       // can be shown in the TabBar without a second pass through the data.
@@ -409,6 +414,10 @@ class _ResponseActionsState extends State<_ResponseActions> {
         userId:  widget.userId,
         action:  action,
       );
+      // Clear any freshly-created "response to sent offer" rows that the
+      // backend will produce for *me* as the side that acted. This is a
+      // self-triggered event — I don't need to be badged about my own click.
+      markOffersSeen(userId: widget.userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Offer ${action == 'accept' ? 'accepted' : 'rejected'}.'),
@@ -454,6 +463,9 @@ class _ResponseActionsState extends State<_ResponseActions> {
         note:          result.note,
         parentOfferId: widget.offer.id,
       );
+      // Sending a counter also flips my received-parent to 'countered', but
+      // that's still a self-caused event — no need to badge myself about it.
+      markOffersSeen(userId: widget.userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Counter of \$${result.amount.toStringAsFixed(2)} sent.'),
@@ -545,6 +557,7 @@ class _WithdrawActionState extends State<_WithdrawAction> {
         userId:  widget.userId,
         action:  'withdraw',
       );
+      markOffersSeen(userId: widget.userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Offer withdrawn.'),
