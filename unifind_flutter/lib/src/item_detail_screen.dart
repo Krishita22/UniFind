@@ -148,6 +148,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
             id:        convId,
             subject:   'Interested in: ${widget.item.title}',
             otherName: _asSellerUsername(),
+otherFirstName: '',
+            otherEmail: '',
             otherId:   ctx.sellerId,
             unread:    0,
           ),

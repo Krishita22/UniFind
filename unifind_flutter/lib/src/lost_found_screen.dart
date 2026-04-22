@@ -387,6 +387,8 @@ void _showLostFoundPopup(
                                           id: approvedChatConvId,
                                           subject: 'Claim Approved: ${item.title}',
                                           otherName: item.poster,
+                                          otherEmail: '',
+                                          otherFirstName: '',
                                           otherId: otherId,
                                           unread: 0,
                                         ),

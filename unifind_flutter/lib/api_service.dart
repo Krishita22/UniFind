@@ -1020,6 +1020,52 @@ Future<int> getUnreadCount({required int userId}) async {
   return 0;
 }
 
+Future<List<String>> getBookedSlots({
+  required String safeSpot,
+  required String date,
+}) async {
+  final response = await http.get(Uri.parse(
+    '$_baseUrl/messaging/meetup/get_booked_slots.php'
+    '?safe_spot=${Uri.encodeComponent(safeSpot)}'
+    '&date=${Uri.encodeComponent(date)}',
+  ));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<String>.from(data['data']);
+  }
+  return [];
+}
+
+Future<int> createMeetup({
+  required int itemId,
+  required int buyerId,
+  required int sellerId,
+  required String date,  
+  required String time,    
+  required String location,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/messaging/meetup/create_meetup.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'item_id': itemId,
+      'buyer_id': buyerId,
+      'seller_id': sellerId,
+      'meetup_date': date,
+      'meetup_time': time,
+      'location': location,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode == 200 && data['success'] == true) {
+    return data['data']['meetup_id'];
+  }
+
+  throw Exception(data['error'] ?? 'Failed to create meetup');
+}
+
 // ── RATINGS ───────────────────────────────────────────────────────────────────
 
 Future<Map<String, dynamic>> getUserRating({required int userId}) async {
@@ -1333,4 +1379,31 @@ Future<void> markOffersSeen({required int userId}) async {
       body: jsonEncode({'user_id': userId}),
     );
   } catch (_) {}
+}
+
+// ─── ADMIN: CREATE ADMIN USER ─────────────────────────────────────────────────
+Future<Map<String, dynamic>> createAdminUser({
+  required String firstName,
+  required String lastName,
+  required String username,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/users/create_admin_user.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'first_name': firstName,
+      'last_name':  lastName,
+      'username':   username,
+      'email':      email,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to create admin account.',
+    code: data['error_code']?.toString(),
+  );
 }
