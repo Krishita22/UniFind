@@ -495,35 +495,67 @@ Future<Map<String, dynamic>> claimLostFoundItem({
 
 
 // UPLOAD IMAGE
-// Sends an image file from the device to upload_image.php
-// Returns the public URL of the uploaded image on the server
+// Sends an image file to the cPanel server at uploads/upload_image.php
+// Returns the public URL of the uploaded image
 
 Future<String> uploadImage(String filePath, Uint8List fileBytes) async {
   if (fileBytes.isEmpty) {
-    throw Exception('Image data is empty.');
+    throw Exception('Image data is empty. Please select a valid image file.');
   }
 
-  final uri = Uri.parse('https://api.cloudinary.com/v1_1/dj4lyjpnv/image/upload');
+  const int maxBytes = 5 * 1024 * 1024; // 5 MB
+  if (fileBytes.length > maxBytes) {
+    final sizeMb = (fileBytes.length / 1048576).toStringAsFixed(1);
+    throw Exception(
+      'Image is too large ($sizeMb MB). Please use an image under 5 MB.',
+    );
+  }
+
+  final uri = Uri.parse('$_baseUrl/../uploads/upload_image.php');
   final request = http.MultipartRequest('POST', uri);
-  
-  request.fields['upload_preset'] = 'Unifind';
+
+  // Derive a safe filename from the path, fallback to upload.jpg
+  final name = filePath.isNotEmpty
+      ? filePath.split('/').last.split('\\').last
+      : 'upload.jpg';
+
   request.files.add(
-    http.MultipartFile.fromBytes(
-      'file',
-      fileBytes,
-      filename: 'upload.jpg',
-    ),
+    http.MultipartFile.fromBytes('file', fileBytes, filename: name),
   );
 
-  final streamedResponse = await request.send();
+  http.StreamedResponse streamedResponse;
+  try {
+    streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+  } on TimeoutException {
+    throw Exception('Image upload timed out. Please check your connection and try again.');
+  } catch (e) {
+    throw Exception('Failed to connect to server for image upload. Please try again.');
+  }
+
   final response = await http.Response.fromStream(streamedResponse);
-  final data = jsonDecode(response.body);
 
   if (response.statusCode == 200) {
-    return data['secure_url'];
-  } else {
-    throw Exception(data['error']['message'] ?? 'Failed to upload image.');
+    final data = jsonDecode(response.body);
+    if (data['success'] == true && data['url'] != null) {
+      return data['url'] as String;
+    }
+    final serverMsg = data['error']?.toString() ?? 'Upload failed.';
+    throw Exception(serverMsg);
   }
+
+  // Parse server error body for a user-friendly message
+  try {
+    final data = jsonDecode(response.body);
+    final serverMsg = data['error']?.toString();
+    if (serverMsg != null && serverMsg.isNotEmpty) {
+      throw Exception(serverMsg);
+    }
+  } catch (_) {}
+
+  if (response.statusCode == 413) {
+    throw Exception('Image is too large for the server. Please use an image under 5 MB.');
+  }
+  throw Exception('Image upload failed (HTTP ${response.statusCode}). Please try again.');
 }
 
 
@@ -1090,6 +1122,77 @@ Future<Map<String, dynamic>> markConversationComplete({
 Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) async {
   try {
     final response = await http.get(Uri.parse('$_baseUrl/users/claims/get_my_approved_claims.php?user_id=$userId'));
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true) {
+      return List<Map<String, dynamic>>.from(data['data'] ?? []);
+    }
+  } catch (_) {}
+  return [];
+}
+
+// ── PAYMENTS (simulated — no real money, data not stored) ────────────────────
+
+Future<Map<String, dynamic>> createOffer({
+  required int listingId,
+  required int buyerId,
+  required int sellerId,
+  required double amount,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/payments/create_offer.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'listing_id': listingId,
+      'buyer_id':   buyerId,
+      'seller_id':  sellerId,
+      'amount':     amount,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data['data'] ?? data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to create offer.');
+}
+
+Future<Map<String, dynamic>> processPayment({
+  required String offerId,
+  required int userId,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/payments/process_payment.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'offer_id': offerId, 'user_id': userId}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data['data'] ?? data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to process payment.');
+}
+
+Future<Map<String, dynamic>> requestRefund({
+  required String offerId,
+  required int userId,
+  required String reason,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/payments/request_refund.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'offer_id': offerId, 'user_id': userId, 'reason': reason}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data['data'] ?? data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to request refund.');
+}
+
+Future<List<Map<String, dynamic>>> getUserOffers({required int userId}) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/payments/get_user_offers.php?user_id=$userId'),
+    );
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['success'] == true) {
       return List<Map<String, dynamic>>.from(data['data'] ?? []);
