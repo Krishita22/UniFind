@@ -35,6 +35,7 @@ part 'src/terms_conditions_screen.dart';
 part 'src/messaging_screen.dart';
 part 'src/notifications_service.dart';
 part 'src/ratings_screen.dart';
+part 'src/offers_screen.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [

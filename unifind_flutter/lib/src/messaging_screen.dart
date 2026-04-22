@@ -125,7 +125,19 @@ class _MessagingScreenState extends State<MessagingScreen> {
         backgroundColor: cNavBg,
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
+        actions: [
+          // Entry point into the counter-offer negotiation center. Lives in
+          // the Messages app bar because offers are conceptually adjacent to
+          // conversations, and the bottom-nav already has a fixed tab count.
+          IconButton(
+            icon: const Icon(Icons.local_offer_outlined),
+            tooltip: 'Offers',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => OffersScreen(userId: widget.userId),
+            )),
+          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _load,
