@@ -1,22 +1,27 @@
 <?php
-// upload as: get_listing_offers.php
+// get_listing_offers.php — offers on a specific listing, scoped to the caller.
 //
-// List offers on a specific listing from the caller's perspective.
-// The caller sees only offers in which they are the sender OR the recipient;
-// this means the seller sees every offer (they're the recipient of every
-// opener, sender of their own counters) while a buyer sees only their own
-// negotiation threads — without us needing a server-side listing-ownership
-// check that would require coupling to marketplace_items vs. listings.
+// Caller sees only offers in which they are sender or recipient, so the
+// seller sees every offer on their listing, a buyer sees only their own
+// negotiation threads — no server-side listing-ownership check needed.
 //
 // Query params:
 //   listing_id (required, int)
 //   user_id    (required, int)
-//
-// Response is the same shape as api_get_offers.php.
 
 declare(strict_types=1);
-require_once __DIR__ . '/api_helpers.php';
-require_once __DIR__ . '/includes/crypto.php';
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../crypto.php';
+
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
+
+if (!function_exists('api_success')) {
+    function api_success($data) { header('Content-Type: application/json'); echo json_encode(['success' => true, 'data' => $data]); exit; }
+    function api_error(string $message, int $status = 400) { http_response_code($status); header('Content-Type: application/json'); echo json_encode(['success' => false, 'error' => $message]); exit; }
+}
 
 $listingId = (int)($_GET['listing_id'] ?? 0);
 $userId    = (int)($_GET['user_id']    ?? 0);
@@ -37,8 +42,7 @@ $sql =
      LEFT JOIN users ur ON ur.id = o.recipient_id
      WHERE o.listing_id = ?
        AND (o.sender_id = ? OR o.recipient_id = ?)
-     ORDER BY o.created_at ASC'; // oldest-first so the UI can render each
-                                 // thread's opener -> counters in natural order
+     ORDER BY o.created_at ASC';
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) api_error('Server error.', 500);

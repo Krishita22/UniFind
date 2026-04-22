@@ -1219,7 +1219,7 @@ Future<Map<String, dynamic>> makeOffer({
   if (note != null && note.trim().isNotEmpty) payload['note'] = note.trim();
 
   final response = await http.post(
-    Uri.parse('$_baseUrl/make_offer.php'),
+    Uri.parse('$_baseUrl/offers/make_offer.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode(payload),
   );
@@ -1240,7 +1240,7 @@ Future<Map<String, dynamic>> respondOffer({
   required String action,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/respond_offer.php'),
+    Uri.parse('$_baseUrl/offers/respond_offer.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'offer_id': offerId,
@@ -1274,7 +1274,7 @@ Future<List<Offer>> getOffers({
   if (status    != null && status.isNotEmpty) q['status']     = status;
   if (listingId != null)                      q['listing_id'] = '$listingId';
 
-  final uri = Uri.parse('$_baseUrl/get_offers.php').replace(queryParameters: q);
+  final uri = Uri.parse('$_baseUrl/offers/get_offers.php').replace(queryParameters: q);
   final response = await http.get(uri);
   final json = jsonDecode(response.body);
   if (response.statusCode == 200 && json['success'] == true) {
@@ -1290,7 +1290,7 @@ Future<List<Offer>> getListingOffers({
   required int userId,
 }) async {
   final response = await http.get(Uri.parse(
-      '$_baseUrl/get_listing_offers.php?listing_id=$listingId&user_id=$userId'));
+      '$_baseUrl/offers/get_listing_offers.php?listing_id=$listingId&user_id=$userId'));
   final json = jsonDecode(response.body);
   if (response.statusCode == 200 && json['success'] == true) {
     final rows = List<Map<String, dynamic>>.from(json['data'] ?? const []);
@@ -1309,7 +1309,7 @@ Future<List<Offer>> getListingOffers({
 Future<int> getOfferNotificationCount({required int userId}) async {
   try {
     final response = await http.get(Uri.parse(
-        '$_baseUrl/get_offer_notifications.php?user_id=$userId'));
+        '$_baseUrl/offers/get_offer_notifications.php?user_id=$userId'));
     final json = jsonDecode(response.body);
     if (response.statusCode == 200 && json['success'] == true) {
       return (json['data']?['count'] as num?)?.toInt() ?? 0;
@@ -1328,7 +1328,7 @@ Future<int> getOfferNotificationCount({required int userId}) async {
 Future<void> markOffersSeen({required int userId}) async {
   try {
     await http.post(
-      Uri.parse('$_baseUrl/mark_offers_seen.php'),
+      Uri.parse('$_baseUrl/offers/mark_offers_seen.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'user_id': userId}),
     );

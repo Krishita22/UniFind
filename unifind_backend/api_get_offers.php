@@ -1,44 +1,25 @@
 <?php
-// upload as: get_offers.php
-//
-// List offers for the current user. Returns every offer where the user is
-// either sender or recipient, so a single call powers both "outgoing" and
-// "incoming" offer views in the UI.
+// get_offers.php — list offers for the current user (sender or recipient).
 //
 // Query params:
-//   user_id   (required, int)
-//   filter    (optional: 'sent' | 'received'; default = both)
-//   status    (optional: one of pending|accepted|rejected|countered|
-//              withdrawn|superseded; default = all)
-//   listing_id (optional, int; narrow to a single listing)
-//
-// Response (JSON):
-//   {
-//     "success": true,
-//     "data": [
-//       {
-//         "id": int,
-//         "listing_id": int,
-//         "sender_id": int,
-//         "sender_name": string|null,
-//         "recipient_id": int,
-//         "recipient_name": string|null,
-//         "amount": float,
-//         "status": string,
-//         "parent_offer_id": int|null,
-//         "note": string|null,                  // decrypted
-//         "created_at": datetime string,
-//         "responded_at": datetime string|null,
-//         "role": "sender"|"recipient",        // role of the caller on this row
-//         "can_respond": bool                   // true iff status=pending and caller=recipient
-//       },
-//       ...
-//     ]
-//   }
+//   user_id    (required, int)
+//   filter     (optional: 'sent' | 'received'; default = both)
+//   status     (optional: pending|accepted|rejected|countered|withdrawn|superseded)
+//   listing_id (optional, int; narrow to one listing)
 
 declare(strict_types=1);
-require_once __DIR__ . '/api_helpers.php';
-require_once __DIR__ . '/includes/crypto.php';
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../crypto.php';
+
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
+
+if (!function_exists('api_success')) {
+    function api_success($data) { header('Content-Type: application/json'); echo json_encode(['success' => true, 'data' => $data]); exit; }
+    function api_error(string $message, int $status = 400) { http_response_code($status); header('Content-Type: application/json'); echo json_encode(['success' => false, 'error' => $message]); exit; }
+}
 
 $userId    = (int)($_GET['user_id'] ?? 0);
 $filter    = strtolower(trim((string)($_GET['filter'] ?? '')));
@@ -55,9 +36,6 @@ if ($filter !== '' && $filter !== 'sent' && $filter !== 'received') {
     api_error("filter must be 'sent' or 'received'.", 400);
 }
 
-// -----------------------------------------------------------------------
-// Build the WHERE clause dynamically while keeping everything parameterized.
-// -----------------------------------------------------------------------
 $where  = [];
 $types  = '';
 $params = [];
@@ -73,7 +51,7 @@ switch ($filter) {
         $types   .= 'i';
         $params[] = $userId;
         break;
-    default: // both
+    default:
         $where[]  = '(o.sender_id = ? OR o.recipient_id = ?)';
         $types   .= 'ii';
         $params[] = $userId;
