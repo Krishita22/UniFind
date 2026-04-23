@@ -88,10 +88,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       return;
     }
 
-    final result = await showModalBottomSheet<_OfferFormResult>(
+    final result = await showDialog<_OfferFormResult>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => MakeOfferSheet(
         listingTitle: widget.item.title,
         listingPrice: widget.item.price,
@@ -402,32 +400,76 @@ otherFirstName: '',
                     const SizedBox(height: 14),
                   ],
 
-                  // Contact Seller button
-                  GestureDetector(
-                    onTap: _startingChat ? null : _contactSeller,
-                    child: AnimatedContainer(
-                      duration: kFast,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _startingChat ? cMuted : cRed,
-                        borderRadius: BorderRadius.circular(12),
+                  // Action buttons row
+                  Row(
+                    children: [
+                      // Contact Seller
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _startingChat ? null : _contactSeller,
+                          child: AnimatedContainer(
+                            duration: kFast,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: _startingChat ? cMuted : cRed,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: _startingChat
+                                  ? const SizedBox(width: 20, height: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                  : const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.message_rounded, color: Colors.white, size: 17),
+                                        SizedBox(width: 8),
+                                        Text('Contact Seller',
+                                          style: TextStyle(color: Colors.white, fontSize: 14,
+                                              fontWeight: FontWeight.w800, letterSpacing: 0.2)),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ),
                       ),
-                      child: Center(
-                        child: _startingChat
-                            ? const SizedBox(width: 20, height: 20,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                      // Only show Pay if this is not the user's own listing
+                      if (widget.currentUserId != null &&
+                          widget.item.sellerId != null &&
+                          widget.currentUserId != widget.item.sellerId) ...[
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => PaymentScreen(
+                              item:       widget.item,
+                              buyerId:    widget.currentUserId!,
+                              sellerId:   widget.item.sellerId!,
+                              buyerEmail: widget.currentUserEmail,
+                            ),
+                          )),
+                          child: AnimatedContainer(
+                            duration: kFast,
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF27AE60),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.message_rounded, color: Colors.white, size: 17),
-                                  SizedBox(width: 8),
-                                  Text('Contact Seller',
+                                  Icon(Icons.payments_outlined, color: Colors.white, size: 17),
+                                  SizedBox(width: 6),
+                                  Text('Buy',
                                     style: TextStyle(color: Colors.white, fontSize: 14,
                                         fontWeight: FontWeight.w800, letterSpacing: 0.2)),
                                 ],
                               ),
-                      ),
-                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 10),
 
@@ -581,28 +623,16 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
     final title  = _isCounter ? 'Counter Offer' : 'Make an Offer';
     final listed = widget.listingPrice.toStringAsFixed(2);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: insets),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: cSurface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: cSurface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, 24 + insets),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  color: cBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
             Text(title,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cText)),
             const SizedBox(height: 4),

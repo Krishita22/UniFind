@@ -314,7 +314,6 @@ class _StandardUserShell extends StatelessWidget {
     // IndexedStack is keyed on tab index, so list position must match the
     // tabIndex values used in _studentNavItems and _facultyNavItems above.
     final screens = [
-    final screens = [
       MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email, currentUserId: userId),
       LostFoundScreen(
         items: lostFound,

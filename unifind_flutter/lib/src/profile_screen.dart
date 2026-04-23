@@ -284,6 +284,14 @@ String get _displayHandle {
         ),
         const SizedBox(height: 20),
 
+        // ── Past Purchases section ──────────────────────────────────────
+        if (widget.userId != null) ...[
+          _ProfileSectionHeader(label: 'Past Purchases'),
+          const SizedBox(height: 8),
+          _PastPurchasesSection(userId: widget.userId!),
+          const SizedBox(height: 20),
+        ],
+
         // ── Security section ────────────────────────────────────────────
         _ProfileSectionHeader(label: 'Security'),
         const SizedBox(height: 8),
@@ -372,6 +380,391 @@ String get _displayHandle {
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+// ─── PAST PURCHASES SECTION ───────────────────────────────────────────────────
+
+class _PastPurchasesSection extends StatefulWidget {
+  final int userId;
+  const _PastPurchasesSection({required this.userId});
+  @override
+  State<_PastPurchasesSection> createState() => _PastPurchasesSectionState();
+}
+
+class _PastPurchasesSectionState extends State<_PastPurchasesSection> {
+  List<Map<String, dynamic>>? _offers;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final offers = await getUserOffers(userId: widget.userId);
+      if (mounted) setState(() { _offers = offers; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _offers = []; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: cSurface, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
+        child: const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: cRed))),
+      );
+    }
+
+    final offers = _offers ?? [];
+    if (offers.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: cSurface, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
+        child: Row(children: [
+          Container(width: 36, height: 36, decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.receipt_long_outlined, size: 18, color: cRed)),
+          const SizedBox(width: 14),
+          const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('No purchases yet', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
+            SizedBox(height: 2),
+            Text('Items you buy will appear here', style: TextStyle(fontSize: 12, color: cMuted)),
+          ]),
+        ]),
+      );
+    }
+
+    return Column(
+      children: offers.map((o) => _PurchaseTile(offer: o, onRefresh: _load)).toList(),
+    );
+  }
+}
+
+class _PurchaseTile extends StatefulWidget {
+  final Map<String, dynamic> offer;
+  final VoidCallback onRefresh;
+  const _PurchaseTile({required this.offer, required this.onRefresh});
+  @override
+  State<_PurchaseTile> createState() => _PurchaseTileState();
+}
+
+class _PurchaseTileState extends State<_PurchaseTile> {
+  static const _statusLabel = <String, String>{
+    'pending':   'Active',
+    'completed': 'Completed',
+    'refunded':  'Refunded',
+    'cancelled': 'Cancelled',
+  };
+  static const _statusFg = <String, Color>{
+    'pending':   Color(0xFFD97706),
+    'completed': Color(0xFF16A34A),
+    'refunded':  Color(0xFF2563EB),
+    'cancelled': Color(0xFF6B7280),
+  };
+  static const _statusBg = <String, Color>{
+    'pending':   Color(0xFFFFFBEB),
+    'completed': Color(0xFFF0FDF4),
+    'refunded':  Color(0xFFEFF6FF),
+    'cancelled': Color(0xFFF3F4F6),
+  };
+
+  String _formatDate(String raw) {
+    // raw is 'YYYY-MM-DD HH:MM:SS'
+    try {
+      final dt = DateTime.parse(raw);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      return raw.length > 10 ? raw.substring(0, 10) : raw;
+    }
+  }
+
+  void _openDetail() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _OfferDetailSheet(
+        offer: widget.offer,
+        onProcessed: () {
+          Navigator.pop(context);
+          widget.onRefresh();
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final status     = (widget.offer['status'] as String?) ?? 'pending';
+    final amount     = double.tryParse(widget.offer['amount']?.toString() ?? '0') ?? 0.0;
+    final rawDate    = widget.offer['created_at'] as String? ?? '';
+    final itemTitle  = (widget.offer['item_title'] as String?)?.isNotEmpty == true
+        ? widget.offer['item_title'] as String
+        : 'Marketplace Item';
+
+    final label = _statusLabel[status] ?? status;
+    final fg    = _statusFg[status]    ?? const Color(0xFF6B7280);
+    final bg    = _statusBg[status]    ?? const Color(0xFFF3F4F6);
+
+    return GestureDetector(
+      onTap: _openDetail,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: cSurface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: cBorder),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.receipt_outlined, size: 18, color: cRed),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(itemTitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: cText)),
+                  const SizedBox(height: 2),
+                  Row(children: [
+                    Text('\$${amount.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cRed)),
+                    if (rawDate.isNotEmpty) ...[
+                      const Text('  ·  ', style: TextStyle(fontSize: 11, color: cMuted)),
+                      Text(_formatDate(rawDate), style: const TextStyle(fontSize: 11, color: cMuted)),
+                    ],
+                  ]),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+                  child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fg)),
+                ),
+                const SizedBox(height: 4),
+                const Icon(Icons.chevron_right_rounded, size: 16, color: cMuted),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── OFFER DETAIL SHEET ───────────────────────────────────────────────────────
+
+class _OfferDetailSheet extends StatefulWidget {
+  final Map<String, dynamic> offer;
+  final VoidCallback onProcessed;
+  const _OfferDetailSheet({required this.offer, required this.onProcessed});
+  @override
+  State<_OfferDetailSheet> createState() => _OfferDetailSheetState();
+}
+
+class _OfferDetailSheetState extends State<_OfferDetailSheet> {
+  bool _processing = false;
+  String? _error;
+
+  String _formatDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+    } catch (_) {
+      return raw.length > 10 ? raw.substring(0, 10) : raw;
+    }
+  }
+
+  Future<void> _confirmPayment(int userId) async {
+    setState(() { _processing = true; _error = null; });
+    try {
+      await processPayment(
+        offerId: widget.offer['offer_id']?.toString() ?? '',
+        userId:  userId,
+      );
+      widget.onProcessed();
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceFirst('Exception: ', '');
+          _processing = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final offer      = widget.offer;
+    final status     = (offer['status'] as String?) ?? 'pending';
+    final amount     = double.tryParse(offer['amount']?.toString() ?? '0') ?? 0.0;
+    final offerId    = offer['offer_id']?.toString()    ?? '';
+    final itemTitle  = (offer['item_title'] as String?)?.isNotEmpty == true
+        ? offer['item_title'] as String : 'Marketplace Item';
+    final rawDate    = offer['created_at'] as String? ?? '';
+    final address    = (offer['billing_address'] as String?)?.isNotEmpty == true
+        ? offer['billing_address'] as String : 'Express checkout';
+    final buyerEmail = offer['buyer_email'] as String? ?? '';
+    final isPending  = status == 'pending';
+
+    // get userId from context — find nearest ProfileScreen ancestor or pass down
+    // For now we derive it from buyer_id stored in the offer
+    final buyerId = int.tryParse(offer['buyer_id']?.toString() ?? '0') ?? 0;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: cBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // drag handle
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: cBorder, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 20),
+
+          // header
+          Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(12)),
+              child: const Icon(Icons.receipt_long_rounded, size: 22, color: cRed),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(itemTitle, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cText)),
+              const SizedBox(height: 2),
+              Text('\$${amount.toStringAsFixed(2)}',
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cRed)),
+            ])),
+          ]),
+          const SizedBox(height: 20),
+
+          // detail rows
+          _DetailRow(label: 'Reference', value: offerId),
+          _DetailRow(label: 'Date', value: rawDate.isNotEmpty ? _formatDate(rawDate) : '—'),
+          _DetailRow(label: 'Amount', value: '\$${amount.toStringAsFixed(2)}'),
+          _DetailRow(label: 'Status', value: isPending ? 'Active' : status[0].toUpperCase() + status.substring(1),
+              valueColor: isPending ? const Color(0xFFD97706) : const Color(0xFF16A34A)),
+          if (address != 'Express checkout') _DetailRow(label: 'Billing', value: address),
+          if (buyerEmail.isNotEmpty) _DetailRow(label: 'Email', value: buyerEmail),
+          const SizedBox(height: 8),
+
+          if (_error != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3F4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFDF1B41).withValues(alpha: 0.3)),
+              ),
+              child: Text(_error!, style: const TextStyle(fontSize: 12, color: Color(0xFFDF1B41))),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          if (isPending) ...[
+            // info banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDE68A).withValues(alpha: 0.8)),
+              ),
+              child: const Row(children: [
+                Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFD97706)),
+                SizedBox(width: 8),
+                Expanded(child: Text(
+                  'Only confirm once you have met the seller and received the item.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.4),
+                )),
+              ]),
+            ),
+            const SizedBox(height: 16),
+
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _processing ? null : () => _confirmPayment(buyerId),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: cNavBg,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: _processing
+                    ? const SizedBox(width: 20, height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(Icons.check_circle_outline_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Confirm Payment', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                      ]),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: cRed,
+                  side: const BorderSide(color: cBorder),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Close', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  const _DetailRow({required this.label, required this.value, this.valueColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 9),
+      child: Row(children: [
+        Text(label, style: const TextStyle(fontSize: 13, color: cMuted, fontWeight: FontWeight.w600)),
+        const Spacer(),
+        Text(value,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                color: valueColor ?? cText)),
+      ]),
     );
   }
 }
