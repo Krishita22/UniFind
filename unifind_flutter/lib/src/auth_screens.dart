@@ -29,21 +29,24 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   void dispose() { _c.dispose(); super.dispose(); }
 
   String _loginErrorMessage(ApiException e) {
-    switch (e.code) {
-      case 'INVALID_CREDENTIALS':
-        return 'Invalid username or password.';
-      case 'USER_NOT_FOUND':
-        return 'No account found for this username. Please sign up first.';
-      case 'EMAIL_NOT_FOUND':
-        return 'No account found for this username. Please sign up first.';
-      case 'ACCOUNT_UNVERIFIED':
-        return 'Your account is not verified yet. Please complete verification.';
-      case 'ACCOUNT_BANNED':
-        return 'Your account has been permanently banned from UniFind.';
-      default:
-        return e.message;
-    }
+  if (_username.trim().contains('@')) {
+    return 'Please enter your username, not your email address.';
   }
+  switch (e.code) {
+    case 'INVALID_CREDENTIALS':
+      return 'Invalid username or password.';
+    case 'USER_NOT_FOUND':
+      return 'No account found for this username. Please sign up first.';
+    case 'EMAIL_NOT_FOUND':
+      return 'No account found for this username. Please sign up first.';
+    case 'ACCOUNT_UNVERIFIED':
+      return 'Your account is not verified yet. Please complete verification.';
+    case 'ACCOUNT_BANNED':
+      return 'Your account has been permanently banned from UniFind.';
+    default:
+      return e.message;
+  }
+}
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;

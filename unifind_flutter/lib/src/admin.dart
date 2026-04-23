@@ -335,7 +335,7 @@ class _StandardUserShell extends StatelessWidget {
         onEditLostFound: editLostFound,
       ),
       MessagingScreen(userId: userId ?? 0, userEmail: email),
-      ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
+      ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId, role: role),
       // Slot 6: Offers. Faculty never reach this (their nav doesn't expose it
       // and their default tab is 1); we still include a placeholder-safe
       // widget for IndexedStack to render when userId is null.
@@ -371,54 +371,58 @@ class _StandardUserShell extends StatelessWidget {
               actions: [IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18), onPressed: onLogout)],
             )
           : PreferredSize(
-              preferredSize: const Size.fromHeight(80),
-              child: Container(
-                color: cNavBg,
-                child: SafeArea(
-                  bottom: false,
-                  child: SizedBox(
-                    height: 80,
-                    child: Stack(children: [
-                      Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Row(mainAxisSize: MainAxisSize.min, children: [
-                          Image.asset('assets/images/whitelogo.png', height: 22, fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3))),
-                          if (role == UserRole.fac) ...[
+            preferredSize: const Size.fromHeight(88),
+            child: Container(
+              color: cNavBg,
+              child: SafeArea(
+                bottom: false,
+                child: SizedBox(
+                  height: 88,
+                  child: Stack(children: [
+                    Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Image.asset('assets/images/whitelogo.png', height: 32, fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3))),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        for (int i = 0; i < _navItems.length; i++) ...[
+                          _TopNavTab(
+                            item: _navItems[i],
+                            isActive: activeNavIndex == i,
+                            onTap: () => onTabChanged(_navItems[i].tabIndex),
+                            badgeCount: _navItems[i].tabIndex == 4
+                                ? unreadCount
+                                : _navItems[i].tabIndex == 6
+                                    ? unseenOfferCount
+                                    : 0,
+                          ),
+                          if (i == 1) ...[
                             const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
-                              child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
-                            ),
-                          ],
-                        ]),
-                        const SizedBox(height: 4),
-                        Row(mainAxisSize: MainAxisSize.min, children: [
-                          for (int i = 0; i < _navItems.length; i++) ...[
                             _TopNavTab(
-                              item: _navItems[i],
-                              isActive: activeNavIndex == i,
-                              onTap: () => onTabChanged(_navItems[i].tabIndex),
-                              // Messages badge comes from unreadCount; Offers
-                              // badge (tab 6) comes from unseenOfferCount.
-                              badgeCount: _navItems[i].tabIndex == 4
-                                  ? unreadCount
-                                  : _navItems[i].tabIndex == 6
-                                      ? unseenOfferCount
-                                      : 0,
+                              item: const _TopNavItem(
+                                icon: Icons.add_circle_outline,
+                                activeIcon: Icons.add_circle_rounded,
+                                label: 'Post',
+                                tabIndex: 2,
+                              ),
+                              isActive: tab == 2,
+                              onTap: () => goToPostTab(role == UserRole.fac ? ListingType.lost : ListingType.marketplace),
                             ),
-                            if (role != UserRole.fac && i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
+                            const SizedBox(width: 6),
                           ],
-                        ]),
-                      ])),
-                      Positioned(top: 0, right: 4, bottom: 0, child: Center(
-                        child: IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white), onPressed: onLogout),
-                      )),
-                    ]),
-                  ),
+                        ],
+                      ]),
+                    ])),
+                    Positioned(top: 0, right: 4, bottom: 0, child: Center(
+                      child: IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white), onPressed: onLogout),
+                    )),
+                  ]),
                 ),
-              ),
             ),
+            ),
+          ),
       body: IndexedStack(index: tab, children: screens),
       bottomNavigationBar: isMobile
           ? Theme(
@@ -666,29 +670,17 @@ class _AdminAppState extends State<AdminApp> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0F0),
       appBar: AppBar(
-        backgroundColor: cNavBgDark, foregroundColor: Colors.white, elevation: 0, centerTitle: true,
-        title: LayoutBuilder(builder: (ctx, c) {
-          final compact = c.maxWidth < 280;
-          return Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.admin_panel_settings_rounded, size: 14, color: Colors.white),
-                if (!compact) ...[
-                  const SizedBox(width: 6),
-                  const Text('ADMIN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white)),
-                ],
-              ]),
-            ),
-            const SizedBox(width: 8),
-            Flexible(child: Text(widget.adminUsername, style: const TextStyle(fontSize: 14, color: Colors.white70), overflow: TextOverflow.ellipsis)),
-          ]);
-        }),
+        backgroundColor: cNavBgDark, foregroundColor: Colors.white, elevation: 0, centerTitle: true, toolbarHeight: 70,
+        title: Column(mainAxisSize: MainAxisSize.min, children: [
+          Image.asset('assets/images/whitelogo.png', height: 33, fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white))),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+            child: const Text('ADMIN', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+          ),
+        ]),
         actions: [
           IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh_rounded), onPressed: _loadAll),
           IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded), onPressed: widget.onLogout),
