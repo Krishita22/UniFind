@@ -16,7 +16,9 @@ jobs:
 
       - name: Build Flutter web
         working-directory: unifind_flutter
-        run: flutter build web --base-href /~ivanovs1/UniFind/
+        run: |
+          flutter clean
+          flutter build web --base-href /~ivanovs1/UniFind/
 
       - name: Deploy to cPanel via File Manager API
         run: |
