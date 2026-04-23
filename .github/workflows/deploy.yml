@@ -4,24 +4,32 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.27.4'
+          channel: 'stable'
 
       - name: Build Flutter web
         working-directory: unifind_flutter
         run: flutter build web --base-href /~ivanovs1/UniFind/
 
-      - name: Deploy via SCP
+      - name: Push built files to gh-deploy branch
         run: |
-          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" \
-            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no \
-            ivanovs1@cyan.csam.montclair.edu \
-            "rm -rf /home/ivanovs1/public_html/UniFind && mkdir -p /home/ivanovs1/public_html/UniFind"
-          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" \
-            scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r \
-            unifind_flutter/build/web/. \
-            ivanovs1@cyan.csam.montclair.edu:/home/ivanovs1/public_html/UniFind/
+          cp .cpanel.yml unifind_flutter/build/web/.cpanel.yml
+          cd unifind_flutter/build/web
+          git init
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add .
+          git commit -m "Deploy built Flutter web"
+          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Krishita22/UniFind.git HEAD:gh-deploy
