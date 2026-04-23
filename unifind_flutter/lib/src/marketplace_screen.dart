@@ -643,7 +643,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                           children: [
                                             Icon(Icons.payments_outlined, color: Colors.white, size: 17),
                                             SizedBox(width: 6),
-                                            Text('Pay',
+                                            Text('Buy',
                                               style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
                                           ],
                                         ),

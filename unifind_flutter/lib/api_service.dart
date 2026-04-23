@@ -1133,22 +1133,30 @@ Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) as
   return [];
 }
 
-// ── PAYMENTS (simulated — no real money, data not stored) ────────────────────
+// ── PAYMENTS ──────────────────────────────────────────────────────────────────
 
 Future<Map<String, dynamic>> createOffer({
   required int listingId,
   required int buyerId,
   required int sellerId,
   required double amount,
+  String buyerName = '',
+  String buyerEmail = '',
+  String billingAddress = '',
+  String itemTitle = '',
 }) async {
   final response = await http.post(
     Uri.parse('$_baseUrl/payments/create_offer.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
-      'listing_id': listingId,
-      'buyer_id':   buyerId,
-      'seller_id':  sellerId,
-      'amount':     amount,
+      'listing_id':       listingId,
+      'buyer_id':         buyerId,
+      'seller_id':        sellerId,
+      'amount':           amount,
+      'buyer_name':       buyerName,
+      'buyer_email':      buyerEmail,
+      'billing_address':  billingAddress,
+      'item_title':       itemTitle,
     }),
   );
   final data = jsonDecode(response.body);
