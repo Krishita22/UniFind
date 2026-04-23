@@ -1020,6 +1020,52 @@ Future<int> getUnreadCount({required int userId}) async {
   return 0;
 }
 
+Future<List<String>> getBookedSlots({
+  required String safeSpot,
+  required String date,
+}) async {
+  final response = await http.get(Uri.parse(
+    '$_baseUrl/messaging/meetup/get_booked_slots.php'
+    '?safe_spot=${Uri.encodeComponent(safeSpot)}'
+    '&date=${Uri.encodeComponent(date)}',
+  ));
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return List<String>.from(data['data']);
+  }
+  return [];
+}
+
+Future<int> createMeetup({
+  required int itemId,
+  required int buyerId,
+  required int sellerId,
+  required String date,  
+  required String time,    
+  required String location,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/messaging/meetup/create_meetup.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'item_id': itemId,
+      'buyer_id': buyerId,
+      'seller_id': sellerId,
+      'meetup_date': date,
+      'meetup_time': time,
+      'location': location,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode == 200 && data['success'] == true) {
+    return data['data']['meetup_id'];
+  }
+
+  throw Exception(data['error'] ?? 'Failed to create meetup');
+}
+
 // ── RATINGS ───────────────────────────────────────────────────────────────────
 
 Future<Map<String, dynamic>> getUserRating({required int userId}) async {
@@ -1089,7 +1135,7 @@ Future<Map<String, dynamic>> markConversationComplete({
 
 Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/users/claims/get_my_approved_claims.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/messaging/users/claims/get_my_approved_claims.php?user_id=$userId'));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['success'] == true) {
       return List<Map<String, dynamic>>.from(data['data'] ?? []);
@@ -1102,13 +1148,13 @@ Future<List<Map<String, dynamic>>> getMyApprovedClaims({required int userId}) as
 
 Future<void> sendHeartbeat({required int userId}) async {
   try {
-    await http.get(Uri.parse('$_baseUrl/users/status/heartbeat.php?user_id=$userId'));
+    await http.get(Uri.parse('$_baseUrl/messaging/users/status/heartbeat.php?user_id=$userId'));
   } catch (_) {}
 }
 
 Future<bool> getUserOnlineStatus({required int userId}) async {
   try {
-    final response = await http.get(Uri.parse('$_baseUrl/users/status/get_user_status.php?user_id=$userId'));
+    final response = await http.get(Uri.parse('$_baseUrl/messaging/users/status/get_user_status.php?user_id=$userId'));
     final data = jsonDecode(response.body);
     if (response.statusCode == 200 && data['success'] == true) {
       return data['data']['online'] == true;
@@ -1117,3 +1163,247 @@ Future<bool> getUserOnlineStatus({required int userId}) async {
   return false;
 }
 
+// ── COUNTER-OFFERS ────────────────────────────────────────────────────────────
+//
+// Endpoints (all JSON):
+//   POST /make_offer.php       — create opener or counter
+//   POST /respond_offer.php    — accept / reject / withdraw a pending offer
+//   GET  /get_offers.php       — list offers where user is sender or recipient
+//   GET  /get_listing_offers   — offers on a specific listing, scoped to user
+//
+// Backend enforces that only the recipient can accept/reject/counter, and
+// only the sender can withdraw. Accepting auto-supersedes other pending
+// offers on the same listing.
+
+/// Typed view of an offer row returned by the backend. Mirrors the payload
+/// shape from api_get_offers.php / api_get_listing_offers.php.
+class Offer {
+  final int id;
+  final int listingId;
+  final int senderId;
+  final String? senderName;
+  final int recipientId;
+  final String? recipientName;
+  final double amount;
+  final String status; // pending|accepted|rejected|countered|withdrawn|superseded
+  final int? parentOfferId;
+  final String? note;
+  final DateTime createdAt;
+  final DateTime? respondedAt;
+  final String role;         // "sender" or "recipient" from caller's POV
+  final bool canRespond;     // true iff pending && caller is recipient
+
+  const Offer({
+    required this.id,
+    required this.listingId,
+    required this.senderId,
+    required this.senderName,
+    required this.recipientId,
+    required this.recipientName,
+    required this.amount,
+    required this.status,
+    required this.parentOfferId,
+    required this.note,
+    required this.createdAt,
+    required this.respondedAt,
+    required this.role,
+    required this.canRespond,
+  });
+
+  bool get isPending      => status == 'pending';
+  bool get isAccepted     => status == 'accepted';
+  bool get isRejected     => status == 'rejected';
+  bool get isCountered    => status == 'countered';
+  bool get isWithdrawn    => status == 'withdrawn';
+  bool get isSuperseded   => status == 'superseded';
+  bool get isTerminal     => !isPending && !isCountered;
+
+  factory Offer.fromJson(Map<String, dynamic> m) {
+    DateTime? parseDt(dynamic v) {
+      if (v == null) return null;
+      final s = v.toString();
+      if (s.isEmpty) return null;
+      return DateTime.tryParse(s.contains('T') ? s : s.replaceFirst(' ', 'T'));
+    }
+    return Offer(
+      id:            (m['id']            as num).toInt(),
+      listingId:     (m['listing_id']    as num).toInt(),
+      senderId:      (m['sender_id']     as num).toInt(),
+      senderName:    m['sender_name']?.toString(),
+      recipientId:   (m['recipient_id']  as num).toInt(),
+      recipientName: m['recipient_name']?.toString(),
+      amount:        (m['amount']        as num).toDouble(),
+      status:        m['status'].toString(),
+      parentOfferId: m['parent_offer_id'] == null ? null : (m['parent_offer_id'] as num).toInt(),
+      note:          m['note']?.toString(),
+      createdAt:     parseDt(m['created_at'])   ?? DateTime.fromMillisecondsSinceEpoch(0),
+      respondedAt:   parseDt(m['responded_at']),
+      role:          m['role']?.toString()       ?? 'sender',
+      canRespond:    m['can_respond']            == true,
+    );
+  }
+}
+
+/// Create a new offer. Pass [parentOfferId] (and leave [recipientId] null) to
+/// counter a received offer; otherwise this is an opener and [recipientId]
+/// must be the listing's seller.
+Future<Map<String, dynamic>> makeOffer({
+  required int listingId,
+  required int senderId,
+  int? recipientId,
+  required double amount,
+  String? note,
+  int? parentOfferId,
+}) async {
+  final payload = <String, dynamic>{
+    'listing_id': listingId,
+    'sender_id':  senderId,
+    'amount':     amount,
+  };
+  if (recipientId   != null) payload['recipient_id']    = recipientId;
+  if (parentOfferId != null) payload['parent_offer_id'] = parentOfferId;
+  if (note != null && note.trim().isNotEmpty) payload['note'] = note.trim();
+
+  final response = await http.post(
+    Uri.parse('$_baseUrl/offers/make_offer.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode(payload),
+  );
+  final json = jsonDecode(response.body);
+  if (response.statusCode == 200 && json['success'] == true) {
+    return Map<String, dynamic>.from(json['data'] as Map);
+  }
+  throw ApiException(
+    json['error']?.toString() ?? 'Failed to create offer.',
+    code: json['error_code']?.toString(),
+  );
+}
+
+/// Resolve a pending offer. [action] must be one of: accept, reject, withdraw.
+Future<Map<String, dynamic>> respondOffer({
+  required int offerId,
+  required int userId,
+  required String action,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/offers/respond_offer.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'offer_id': offerId,
+      'user_id':  userId,
+      'action':   action,
+    }),
+  );
+  final json = jsonDecode(response.body);
+  if (response.statusCode == 200 && json['success'] == true) {
+    return Map<String, dynamic>.from(json['data'] as Map);
+  }
+  throw ApiException(
+    json['error']?.toString() ?? 'Failed to update offer.',
+    code: json['error_code']?.toString(),
+  );
+}
+
+/// List offers where [userId] is sender or recipient.
+///
+/// [filter] may be "sent", "received", or null (both).
+/// [status] narrows to a single status if provided.
+/// [listingId] narrows to one listing if provided.
+Future<List<Offer>> getOffers({
+  required int userId,
+  String? filter,
+  String? status,
+  int? listingId,
+}) async {
+  final q = <String, String>{'user_id': '$userId'};
+  if (filter    != null && filter.isNotEmpty) q['filter']     = filter;
+  if (status    != null && status.isNotEmpty) q['status']     = status;
+  if (listingId != null)                      q['listing_id'] = '$listingId';
+
+  final uri = Uri.parse('$_baseUrl/offers/get_offers.php').replace(queryParameters: q);
+  final response = await http.get(uri);
+  final json = jsonDecode(response.body);
+  if (response.statusCode == 200 && json['success'] == true) {
+    final rows = List<Map<String, dynamic>>.from(json['data'] ?? const []);
+    return rows.map(Offer.fromJson).toList();
+  }
+  throw ApiException(json['error']?.toString() ?? 'Failed to load offers.');
+}
+
+/// Offers on one listing, scoped to threads [userId] is a party in.
+Future<List<Offer>> getListingOffers({
+  required int listingId,
+  required int userId,
+}) async {
+  final response = await http.get(Uri.parse(
+      '$_baseUrl/offers/get_listing_offers.php?listing_id=$listingId&user_id=$userId'));
+  final json = jsonDecode(response.body);
+  if (response.statusCode == 200 && json['success'] == true) {
+    final rows = List<Map<String, dynamic>>.from(json['data'] ?? const []);
+    return rows.map(Offer.fromJson).toList();
+  }
+  throw ApiException(json['error']?.toString() ?? 'Failed to load listing offers.');
+}
+
+/// Count of unseen offer events for the Offers-tab badge. Includes:
+///   - pending offers the user has received (not yet seen)
+///   - responses (accept/reject/counter/withdraw/supersede) to offers
+///     the user sent, whose responded_at is newer than the user's seen_at
+///
+/// Returns 0 on any failure — the badge is a nice-to-have, it shouldn't
+/// crash the poll loop if the backend is briefly unreachable.
+Future<int> getOfferNotificationCount({required int userId}) async {
+  try {
+    final response = await http.get(Uri.parse(
+        '$_baseUrl/offers/get_offer_notifications.php?user_id=$userId'));
+    final json = jsonDecode(response.body);
+    if (response.statusCode == 200 && json['success'] == true) {
+      return (json['data']?['count'] as num?)?.toInt() ?? 0;
+    }
+  } catch (_) {}
+  return 0;
+}
+
+/// Mark every notification-worthy offer for the user as seen, clearing the
+/// badge. Called when the user opens the Offers tab and after any action
+/// (accept/reject/counter/withdraw) so the badge drops instantly rather
+/// than waiting for the next poll cycle.
+///
+/// Safe to fire-and-forget — the server is idempotent and swallowed errors
+/// just mean the badge will clear on the next poll.
+Future<void> markOffersSeen({required int userId}) async {
+  try {
+    await http.post(
+      Uri.parse('$_baseUrl/offers/mark_offers_seen.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'user_id': userId}),
+    );
+  } catch (_) {}
+}
+
+// ─── ADMIN: CREATE ADMIN USER ─────────────────────────────────────────────────
+Future<Map<String, dynamic>> createAdminUser({
+  required String firstName,
+  required String lastName,
+  required String username,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/users/create_admin_user.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'first_name': firstName,
+      'last_name':  lastName,
+      'username':   username,
+      'email':      email,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(
+    data['error']?.toString() ?? 'Failed to create admin account.',
+    code: data['error_code']?.toString(),
+  );
+}

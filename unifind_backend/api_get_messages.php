@@ -2,6 +2,7 @@
 // upload as: get_messages.php
 declare(strict_types=1);
 require_once __DIR__ . '/api_helpers.php';
+require_once __DIR__ . '/includes/crypto.php';
 
 $convId = (int)($_GET['conversation_id'] ?? 0);
 $userId = (int)($_GET['user_id'] ?? 0);
@@ -21,6 +22,9 @@ $stmt->bind_param('i', $convId);
 $stmt->execute();
 $rows = [];
 $res  = $stmt->get_result();
-while ($row = $res->fetch_assoc()) $rows[] = $row;
+while ($row = $res->fetch_assoc()) {
+    $row['body'] = decrypt_message_body($row['body'] ?? null);
+    $rows[] = $row;
+}
 $stmt->close();
 api_success($rows);
