@@ -15,10 +15,13 @@ jobs:
         working-directory: unifind_flutter
         run: flutter build web --base-href /~ivanovs1/UniFind/
 
-      - name: Deploy via SFTP
+      - name: Deploy via SCP
         run: |
           sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" \
-            rsync -avz --delete \
-            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-            unifind_flutter/build/web/ \
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no \
+            ivanovs1@cyan.csam.montclair.edu \
+            "rm -rf /home/ivanovs1/public_html/UniFind && mkdir -p /home/ivanovs1/public_html/UniFind"
+          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" \
+            scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -r \
+            unifind_flutter/build/web/. \
             ivanovs1@cyan.csam.montclair.edu:/home/ivanovs1/public_html/UniFind/
