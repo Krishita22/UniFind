@@ -29,6 +29,11 @@ return [
         'verification_token_ttl_hours' => 24,
         'resend_cooldown_seconds' => 120,
         'max_upload_bytes' => 5 * 1024 * 1024,
+        // 32-byte key for AES-256-GCM encryption of message bodies at rest.
+        // Generate with: php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
+        // Rotate by re-encrypting rows under a new key (out of scope for v1).
+        // IMPORTANT: losing this key means losing all stored message contents.
+        'message_key' => '',
     ],
     'listings' => [
         'categories' => [

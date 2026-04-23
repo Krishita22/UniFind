@@ -586,7 +586,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                     Navigator.of(ctx).pop(); // close popup
                                     await Navigator.of(ctx).push(MaterialPageRoute(
                                       builder: (_) => ConversationScreen(
-                                        conv: Conversation(id: convId, subject: 'Interested in: ${item.title}', otherName: asSellerUsername(), otherId: sellerId, unread: 0),
+                                        conv: Conversation(id: convId, subject: 'Interested in: ${item.title}', otherName: asSellerUsername(), otherFirstName: '', otherEmail: '', otherId: sellerId, unread: 0),
                                         myId: myId,
                                       ),
                                     ));
@@ -608,6 +608,91 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                       Text(
                                         'Contact Seller',
                                         style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Make an Offer button — opens the shared
+                              // MakeOfferSheet (defined in item_detail_screen.dart)
+                              // which collects an amount and optional note, then
+                              // submits to the backend via makeOffer().
+                              GestureDetector(
+                                onTap: () async {
+                                  final myId = currentUserId;
+                                  final sellerId = item.sellerId;
+                                  if (myId == null || sellerId == null) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                                      content: Text('User info unavailable.'),
+                                      behavior: SnackBarBehavior.floating));
+                                    return;
+                                  }
+                                  if (myId == sellerId) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                                      content: Text('This is your own listing.'),
+                                      behavior: SnackBarBehavior.floating));
+                                    return;
+                                  }
+                                  final listingId = int.tryParse(item.id) ?? 0;
+                                  if (listingId <= 0) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                                      content: Text('Could not determine listing ID.'),
+                                      behavior: SnackBarBehavior.floating));
+                                    return;
+                                  }
+                                  // MakeOfferSheet returns an _OfferFormResult.
+                                  // Both files are parts of the same library so
+                                  // the private type is visible here.
+                                  final result = await showModalBottomSheet<_OfferFormResult>(
+                                    context: ctx,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (_) => MakeOfferSheet(
+                                      listingTitle: item.title,
+                                      listingPrice: item.price,
+                                    ),
+                                  );
+                                  if (result == null || !ctx.mounted) return;
+                                  try {
+                                    await makeOffer(
+                                      listingId:   listingId,
+                                      senderId:    myId,
+                                      recipientId: sellerId,
+                                      amount:      result.amount,
+                                      note:        result.note,
+                                    );
+                                    if (!ctx.mounted) return;
+                                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                      content: Text('Offer of \$${result.amount.toStringAsFixed(2)} sent to ${asSellerUsername()}.'),
+                                      behavior: SnackBarBehavior.floating,
+                                      backgroundColor: cRed));
+                                  } on ApiException catch (e) {
+                                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                      content: Text('Offer failed: ${e.message}'),
+                                      behavior: SnackBarBehavior.floating));
+                                  } catch (e) {
+                                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                      content: Text('Offer failed: $e'),
+                                      behavior: SnackBarBehavior.floating));
+                                  }
+                                },
+                                child: Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: cSurface,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: cRed, width: 1.5),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.local_offer_outlined, color: cRed, size: 17),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Make an Offer',
+                                        style: TextStyle(color: cRed, fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
                                       ),
                                     ],
                                   ),
@@ -1156,7 +1241,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
       if (convId <= 0 || !mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => ConversationScreen(
-          conv: Conversation(id: convId, subject: widget.item.title, otherName: widget.item.seller, otherId: sellerId, unread: 0),
+          conv: Conversation(id: convId, subject: widget.item.title, otherName: widget.item.seller, otherEmail: '', otherFirstName: '', otherId: sellerId, unread: 0),
           myId: myId,
         ),
       ));
