@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,23 +21,10 @@ jobs:
 
       - name: Build Flutter web
         working-directory: unifind_flutter
-        run: flutter build web --base-href /~ivanovs1/UniFind/
+        run: flutter build web --base-href /UniFind/
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H cyan.csam.montclair.edu >> ~/.ssh/known_hosts
-
-      - name: Deploy via SFTP
-        run: |
-          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" sftp \
-            -i ~/.ssh/id_rsa \
-            -o StrictHostKeyChecking=no \
-            -o BatchMode=no \
-            ivanovs1@cyan.csam.montclair.edu <<EOF
-          lcd unifind_flutter/build/web
-          cd /home/ivanovs1/public_html/UniFind
-          put -r .
-          EOF
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: unifind_flutter/build/web
