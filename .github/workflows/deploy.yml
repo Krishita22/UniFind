@@ -20,10 +20,20 @@ jobs:
         working-directory: unifind_flutter
         run: flutter build web --base-href /~ivanovs1/UniFind/
 
-      - name: Deploy to cPanel via SFTP
+      - name: Setup SSH key
         run: |
-          sudo apt-get install -y sshpass
-          sshpass -p "${{ secrets.FTP_PASS }}" sftp -o StrictHostKeyChecking=no -o Port=22 ${{ secrets.FTP_USER }}@${{ secrets.FTP_HOST }} <<EOF
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H cyan.csam.montclair.edu >> ~/.ssh/known_hosts
+
+      - name: Deploy via SFTP
+        run: |
+          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" sftp \
+            -i ~/.ssh/id_rsa \
+            -o StrictHostKeyChecking=no \
+            -o BatchMode=no \
+            ivanovs1@cyan.csam.montclair.edu <<EOF
           lcd unifind_flutter/build/web
           cd /home/ivanovs1/public_html/UniFind
           put -r .
