@@ -22,31 +22,31 @@ jobs:
         run: |
           cd unifind_flutter/build/web
 
+          AUTH="-H 'Authorization: Basic $(echo -n ${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }} | base64)'"
+
           # Delete old files first
-          curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
-            "https://cyan.csam.montclair.edu:2083/execute/Fileman/delete" \
-            --data "dir=/home/ivanovs1/public_html&names=UniFind" || true
+          curl -sk -k \
+            -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
+            "https://cyan.csam.montclair.edu:2083/execute/Fileman/delete?dir=%2Fhome%2Fivanovs1%2Fpublic_html&names=UniFind" || true
 
           # Create fresh UniFind directory
-          curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
-            "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir" \
-            --data "path=/home/ivanovs1/public_html&name=UniFind"
+          curl -sk -k \
+            -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
+            "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir?path=%2Fhome%2Fivanovs1%2Fpublic_html&name=UniFind"
 
           # Upload each file
           find . -type f | while read file; do
             filepath="${file#./}"
             dir=$(dirname "$filepath")
 
-            # Create subdirectory if needed
             if [ "$dir" != "." ]; then
-              curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
-                "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir" \
-                --data "path=/home/ivanovs1/public_html/UniFind&name=$dir" || true
+              curl -sk -k \
+                -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
+                "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir?path=%2Fhome%2Fivanovs1%2Fpublic_html%2FUniFind&name=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$dir"'"))')" || true
             fi
 
-            # Upload file
-            curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
-              "https://cyan.csam.montclair.edu:2083/execute/Fileman/upload_files" \
-              -F "dir=/home/ivanovs1/public_html/UniFind/$dir" \
+            curl -sk -k \
+              -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
+              "https://cyan.csam.montclair.edu:2083/execute/Fileman/upload_files?dir=%2Fhome%2Fivanovs1%2Fpublic_html%2FUniFind%2F$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$dir"'"))')" \
               -F "file-1=@$file"
           done
