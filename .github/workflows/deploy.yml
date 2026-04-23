@@ -85,7 +85,7 @@ jobs:
               split -b 800000 "$file" /tmp/chunk_
               chunk_num=0
               for chunk in $(ls /tmp/chunk_* | sort); do
-                encoded=$(base64 "$chunk")
+                encoded=$(base64 -i "$chunk")
                 curl -sk "https://cyan.csam.montclair.edu/~ivanovs1/assemble.php" \
                   --data-urlencode "secret=unifind_deploy_2026" \
                   --data-urlencode "action=chunk" \
