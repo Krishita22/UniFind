@@ -17,11 +17,8 @@ jobs:
 
       - name: Deploy via SFTP
         run: |
-          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" sftp \
-            -i ~/.ssh/id_rsa \
-            -o StrictHostKeyChecking=no \
-            ivanovs1@cyan.csam.montclair.edu <<EOF
-          lcd unifind_flutter/build/web
-          cd /home/ivanovs1/public_html/UniFind
-          put -r .
-          EOF
+          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" \
+            rsync -avz --delete \
+            -e "ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            unifind_flutter/build/web/ \
+            ivanovs1@cyan.csam.montclair.edu:/home/ivanovs1/public_html/UniFind/
