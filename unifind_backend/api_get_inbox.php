@@ -2,6 +2,7 @@
 // upload as: get_inbox.php
 declare(strict_types=1);
 require_once __DIR__ . '/api_helpers.php';
+require_once __DIR__ . '/includes/crypto.php';
 
 $userId = (int)($_GET['user_id'] ?? 0);
 if ($userId <= 0) api_error('user_id required.', 400);
@@ -23,6 +24,9 @@ $stmt->bind_param('iii', $userId, $userId, $userId);
 $stmt->execute();
 $rows = [];
 $res  = $stmt->get_result();
-while ($row = $res->fetch_assoc()) $rows[] = $row;
+while ($row = $res->fetch_assoc()) {
+    $row['last_msg'] = decrypt_message_body($row['last_msg'] ?? null);
+    $rows[] = $row;
+}
 $stmt->close();
 api_success($rows);

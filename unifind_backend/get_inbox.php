@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../includes/crypto.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/crypto.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -13,25 +13,28 @@ if (!function_exists('api_success')) {
     function api_error(string $message, int $status = 400) { http_response_code($status); header('Content-Type: application/json'); echo json_encode(['success' => false, 'error' => $message]); exit; }
 }
 
-$convId = (int)($_GET['conversation_id'] ?? 0);
 $userId = (int)($_GET['user_id'] ?? 0);
-if ($convId <= 0 || $userId <= 0) api_error('conversation_id and user_id required.', 400);
-
-$upd = $conn->prepare('UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND sender_id != ? AND is_read = 0');
-if ($upd) { $upd->bind_param('ii', $convId, $userId); $upd->execute(); $upd->close(); }
+if ($userId <= 0) api_error('user_id required.', 400);
 
 $stmt = $conn->prepare(
-    'SELECT m.id, m.sender_id, u.username AS sender_name, m.body, m.is_read, m.sent_at
-     FROM messages m JOIN users u ON u.id = m.sender_id
-     WHERE m.conversation_id = ? ORDER BY m.sent_at ASC'
+    'SELECT c.id, c.subject, c.listing_id, c.user1_id, c.user2_id,
+            u1.username AS user1_name, u2.username AS user2_name,
+            (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.sent_at DESC LIMIT 1) AS last_msg,
+            (SELECT m.sent_at FROM messages m WHERE m.conversation_id = c.id ORDER BY m.sent_at DESC LIMIT 1) AS last_at,
+            (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.sender_id != ? AND m.is_read = 0) AS unread
+     FROM conversations c
+     JOIN users u1 ON u1.id = c.user1_id
+     JOIN users u2 ON u2.id = c.user2_id
+     WHERE c.user1_id = ? OR c.user2_id = ?
+     ORDER BY last_at DESC'
 );
 if (!$stmt) api_error('Server error.', 500);
-$stmt->bind_param('i', $convId);
+$stmt->bind_param('iii', $userId, $userId, $userId);
 $stmt->execute();
 $rows = [];
 $res  = $stmt->get_result();
 while ($row = $res->fetch_assoc()) {
-    $row['body'] = decrypt_message_body($row['body'] ?? null);
+    $row['last_msg'] = decrypt_message_body($row['last_msg'] ?? null);
     $rows[] = $row;
 }
 $stmt->close();
