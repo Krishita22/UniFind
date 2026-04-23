@@ -5,6 +5,7 @@ class ProfileScreen extends StatefulWidget {
   final String username;
   final VoidCallback onLogout;
   final int? userId;
+  final UserRole role;
 
   const ProfileScreen({
     super.key,
@@ -12,6 +13,7 @@ class ProfileScreen extends StatefulWidget {
     required this.username,
     required this.onLogout,
     this.userId,
+    this.role = UserRole.student,
   });
 
   @override
@@ -197,7 +199,7 @@ String get _displayHandle {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                       ),
-                      child: const Text('MSU Student', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
+                      child: Text(widget.role == UserRole.fac ? 'MSU Faculty' : 'MSU Student', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
                     ),
                   ],
                 ),
@@ -276,7 +278,6 @@ String get _displayHandle {
                       StarRatingDisplay(rating: _ratingAvg!, count: _ratingCount, size: 13),
                     ])),
                     const Column(mainAxisSize: MainAxisSize.min, children: [
-                      Text('View all', style: TextStyle(fontSize: 12, color: cRed, fontWeight: FontWeight.w700)),
                       Icon(Icons.chevron_right_rounded, color: cRed, size: 18),
                     ]),
                   ]),
@@ -285,7 +286,7 @@ String get _displayHandle {
         const SizedBox(height: 20),
 
         // ── Past Purchases section ──────────────────────────────────────
-        if (widget.userId != null) ...[
+        if (widget.userId != null && widget.role != UserRole.fac) ...[
           _ProfileSectionHeader(label: 'Past Purchases'),
           const SizedBox(height: 8),
           _PastPurchasesSection(userId: widget.userId!),
