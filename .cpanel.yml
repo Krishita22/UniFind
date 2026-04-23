@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/ivanovs1/public_html/UniFind/
+    - /bin/cp -rf $HOME/repositories/UniFind/* $DEPLOYPATH
