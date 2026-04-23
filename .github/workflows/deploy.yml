@@ -20,11 +20,11 @@ jobs:
         working-directory: unifind_flutter
         run: flutter build web --base-href /~ivanovs1/UniFind/
 
-      - name: Deploy to cPanel via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USER }}
-          password: ${{ secrets.FTP_PASS }}
-          local-dir: unifind_flutter/build/web/
-          server-dir: /public_html/UniFind/
+      - name: Deploy to cPanel via SFTP
+        run: |
+          sudo apt-get install -y sshpass
+          sshpass -p "${{ secrets.FTP_PASS }}" sftp -o StrictHostKeyChecking=no -o Port=22 ${{ secrets.FTP_USER }}@${{ secrets.FTP_HOST }} <<EOF
+          lcd unifind_flutter/build/web
+          cd /home/ivanovs1/public_html/UniFind
+          put -r .
+          EOF
