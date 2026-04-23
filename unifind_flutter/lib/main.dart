@@ -36,6 +36,8 @@ part 'src/messaging_screen.dart';
 part 'src/notifications_service.dart';
 part 'src/ratings_screen.dart';
 part 'src/payment_screen.dart';
+part 'src/offers_screen.dart';
+part 'src/propose_meeting.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
@@ -64,8 +66,8 @@ const Duration kSlow = Duration(milliseconds: 520);
 const Duration kPage = Duration(milliseconds: 420);
 
 // ─── BREADCRUMB LABELS ───────────────────────────────────────────────────────
-// Student tabs: 0=Marketplace, 1=Lost&Found, 2=PostItem, 3=MyListings, 4=Messages, 5=Profile
-// Faculty tabs: 0=Lost&Found, 1=Messages, 2=Profile
+// Student tabs: 0=Marketplace, 1=Lost&Found, 2=PostItem, 3=MyListings, 4=Messages, 5=Profile, 6=Offers
+// Faculty tabs: 0=Lost&Found, 1=Messages, 2=Profile (no Offers — faculty don't buy/sell)
 const List<List<String>> _tabBreadcrumbs = [
   ['Home', 'Marketplace'],
   ['Home', 'Lost & Found'],
@@ -73,6 +75,7 @@ const List<List<String>> _tabBreadcrumbs = [
   ['Home', 'My Listings'],
   ['Home', 'Messages'],
   ['Home', 'Profile'],
+  ['Home', 'Offers'],
 ];
 
 // ─── BREADCRUMB BAR ──────────────────────────────────────────────────────────
@@ -452,6 +455,12 @@ class _TopNotificationBannerState extends State<_TopNotificationBanner> with Sin
 class _UniFindAppState extends State<UniFindApp> {
   int _tab = 0;
   int _postFormNonce = 0;
+  // Bumped whenever the Offers tab needs a fresh fetch — click Offers tab,
+  // or a poll detected new activity. IndexedStack keeps OffersScreen mounted
+  // after its first build, so initState()/_load() only fires once; plugging
+  // this nonce into the screen's ValueKey forces a dispose+rebuild, which
+  // re-runs _load() and picks up new rows from the server.
+  int _offersNonce = 0;
   bool _loggedIn = false;
   bool _sessionLoaded = false;
   String _email = '';
@@ -464,6 +473,12 @@ class _UniFindAppState extends State<UniFindApp> {
   // ── Messaging / notification state ────────────────────────────────────────
   int _unreadCount = 0;
   int _lastKnownUnread = 0;
+  // Mirror fields for offer notifications. Same 5-second poll, same banner.
+  // We compare new-count > last-known-count to detect incoming events rather
+  // than equality, because a user can clear some offers via their own action
+  // between polls (mark-as-seen) without that counting as "new activity."
+  int _unseenOfferCount = 0;
+  int _lastKnownOfferCount = 0;
   Timer? _notifTimer;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   final GlobalKey<ScaffoldMessengerState> _messengerKey = GlobalKey<ScaffoldMessengerState>();
@@ -824,6 +839,31 @@ class _UniFindAppState extends State<UniFindApp> {
       _lastKnownUnread = count;
       if (_unreadCount != count) setState(() => _unreadCount = count);
     } catch (_) {}
+
+    // Offer notifications — only students buy/sell, so faculty get no badge.
+    // Poll independently of messages; an error here won't affect the message
+    // path above. The helper swallows its own errors and returns 0 on failure,
+    // so we only guard the setState.
+    if (_userRole == UserRole.fac) return;
+    try {
+      final offerCount = await getOfferNotificationCount(userId: _userId!);
+      if (offerCount > _lastKnownOfferCount) {
+        final delta = offerCount - _lastKnownOfferCount;
+        final noun  = delta == 1 ? 'offer update' : 'offer updates';
+        _showTopNotification('You have $delta new $noun.');
+        UniNotifications.showMessage(
+          title: 'UniFind',
+          body:  'You have $delta new $noun.',
+        );
+        // Something changed server-side. Force OffersScreen to rebuild
+        // next frame so it re-fetches rather than showing stale data.
+        _offersNonce++;
+      }
+      _lastKnownOfferCount = offerCount;
+      if (_unseenOfferCount != offerCount) {
+        setState(() => _unseenOfferCount = offerCount);
+      }
+    } catch (_) {}
   }
 
   Future<void> _restoreSession() async {
@@ -1046,6 +1086,8 @@ class _UniFindAppState extends State<UniFindApp> {
       _tab = _userRole == UserRole.fac ? 1 : 0;
       _unreadCount = 0;
       _lastKnownUnread = 0;
+      _unseenOfferCount = 0;
+      _lastKnownOfferCount = 0;
     });
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool('logged_in', true);
@@ -1112,6 +1154,7 @@ class _UniFindAppState extends State<UniFindApp> {
               username: _username,
               userId: _userId,
               unreadCount: _unreadCount,
+              unseenOfferCount: _unseenOfferCount,
               onLogout: () {
                 _logout();
                 _clearSession();
@@ -1120,6 +1163,7 @@ class _UniFindAppState extends State<UniFindApp> {
               lostFound: _lostFound,
               tab: _tab,
               postFormNonce: _postFormNonce,
+              offersNonce: _offersNonce,
               postDefaultType: _postDefaultType,
               submittedClaimItemIds: _submittedClaimItemIds,
               submittedMatchItemIds: _submittedMatchItemIds,
@@ -1135,6 +1179,20 @@ class _UniFindAppState extends State<UniFindApp> {
                 if (index == 3 || index == 0 || index == 1) {
                   _loadListings();
                   _loadLostFound();
+                }
+                // Landing on the Offers tab acts as an implicit "I've seen
+                // these" — clear the badge immediately so the UI feels
+                // responsive rather than waiting for the next poll. Also
+                // bump the nonce so OffersScreen rebuilds with fresh data
+                // rather than showing whatever was cached in IndexedStack
+                // from its last build.
+                if (index == 6 && _userId != null) {
+                  markOffersSeen(userId: _userId!);
+                  setState(() {
+                    _unseenOfferCount    = 0;
+                    _lastKnownOfferCount = 0;
+                    _offersNonce++;
+                  });
                 }
               },
             ),

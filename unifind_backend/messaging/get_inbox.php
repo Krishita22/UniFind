@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../includes/crypto.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -32,6 +33,9 @@ $stmt->bind_param('iii', $userId, $userId, $userId);
 $stmt->execute();
 $rows = [];
 $res  = $stmt->get_result();
-while ($row = $res->fetch_assoc()) $rows[] = $row;
+while ($row = $res->fetch_assoc()) {
+    $row['last_msg'] = decrypt_message_body($row['last_msg'] ?? null);
+    $rows[] = $row;
+}
 $stmt->close();
 api_success($rows);

@@ -2,7 +2,7 @@ part of '../main.dart';
 
 // ─── ADMIN DATA MODELS ────────────────────────────────────────────────────────
 
-enum AdminTab { dashboard, listings, lostFound, users, reports }
+enum AdminTab { dashboard, listings, lostFound, users, reports, profile }
 
 enum UserRole { student, fac, admin, unknown }
 
@@ -182,10 +182,12 @@ class RoleAuthWrapper extends StatelessWidget {
   final String email, username;
   final int? userId;
   final int unreadCount;
+  final int unseenOfferCount;
   final VoidCallback onLogout;
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
   final int tab, postFormNonce;
+  final int offersNonce;
   final ListingType postDefaultType;
   final Set<String> submittedClaimItemIds, submittedMatchItemIds;
   final void Function([ListingType]) goToPostTab;
@@ -199,9 +201,12 @@ class RoleAuthWrapper extends StatelessWidget {
   const RoleAuthWrapper({
     super.key,
     required this.role, required this.email, required this.username,
-    required this.userId, this.unreadCount = 0, required this.onLogout,
+    required this.userId, this.unreadCount = 0, this.unseenOfferCount = 0,
+    required this.onLogout,
     required this.market, required this.lostFound,
-    required this.tab, required this.postFormNonce, required this.postDefaultType,
+    required this.tab, required this.postFormNonce,
+    this.offersNonce = 0,
+    required this.postDefaultType,
     required this.submittedClaimItemIds, required this.submittedMatchItemIds,
     required this.goToPostTab, required this.addListing,
     required this.claimLostItem, required this.postFoundMatch,
@@ -217,8 +222,10 @@ class RoleAuthWrapper extends StatelessWidget {
     return _StandardUserShell(
       email: email, username: username, userId: userId, role: role,
       unreadCount: unreadCount,
+      unseenOfferCount: unseenOfferCount,
       onLogout: onLogout, market: market, lostFound: lostFound,
       tab: tab, postFormNonce: postFormNonce, postDefaultType: postDefaultType,
+      offersNonce: offersNonce,
       submittedClaimItemIds: submittedClaimItemIds, submittedMatchItemIds: submittedMatchItemIds,
       goToPostTab: goToPostTab, addListing: addListing,
       claimLostItem: claimLostItem, postFoundMatch: postFoundMatch,
@@ -233,10 +240,12 @@ class _StandardUserShell extends StatelessWidget {
   final int? userId;
   final UserRole role;
   final int unreadCount;
+  final int unseenOfferCount;
   final VoidCallback onLogout;
   final List<MarketplaceItem> market;
   final List<LostFoundItem> lostFound;
   final int tab, postFormNonce;
+  final int offersNonce;
   final ListingType postDefaultType;
   final Set<String> submittedClaimItemIds, submittedMatchItemIds;
   final void Function([ListingType]) goToPostTab;
@@ -249,9 +258,12 @@ class _StandardUserShell extends StatelessWidget {
 
   const _StandardUserShell({
     required this.email, required this.username, required this.userId,
-    required this.role, this.unreadCount = 0, required this.onLogout,
+    required this.role, this.unreadCount = 0, this.unseenOfferCount = 0,
+    required this.onLogout,
     required this.market, required this.lostFound,
-    required this.tab, required this.postFormNonce, required this.postDefaultType,
+    required this.tab, required this.postFormNonce,
+    this.offersNonce = 0,
+    required this.postDefaultType,
     required this.submittedClaimItemIds, required this.submittedMatchItemIds,
     required this.goToPostTab, required this.addListing,
     required this.claimLostItem, required this.postFoundMatch,
@@ -269,14 +281,12 @@ class _StandardUserShell extends StatelessWidget {
     return item.posterEmail == email.trim().toLowerCase();
   }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// Topnav items and helper functions
-// ═════════════════════════════════════════════════════════════════════════════
   static const List<_TopNavItem> _studentNavItems = [
     _TopNavItem(icon: Icons.storefront_outlined,    activeIcon: Icons.storefront_rounded,      label: 'Market',      tabIndex: 0),
     _TopNavItem(icon: Icons.search_outlined,         activeIcon: Icons.search_rounded,          label: 'Lost & Found',tabIndex: 1),
     _TopNavItem(icon: Icons.list_alt_outlined,       activeIcon: Icons.list_alt_rounded,        label: 'My Listings', tabIndex: 3),
     _TopNavItem(icon: Icons.chat_bubble_outline,     activeIcon: Icons.chat_bubble_rounded,     label: 'Messages',    tabIndex: 4),
+    _TopNavItem(icon: Icons.local_offer_outlined,    activeIcon: Icons.local_offer_rounded,     label: 'Offers',      tabIndex: 6),
     _TopNavItem(icon: Icons.person_outline_rounded,  activeIcon: Icons.person_rounded,          label: 'Profile',     tabIndex: 5),
   ];
 
@@ -300,7 +310,10 @@ class _StandardUserShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeNavIndex = _navIndexForTab(tab);
 
-    // Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile
+// Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile, 6=Offers
+    // IndexedStack is keyed on tab index, so list position must match the
+    // tabIndex values used in _studentNavItems and _facultyNavItems above.
+    final screens = [
     final screens = [
       MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email, currentUserId: userId),
       LostFoundScreen(
@@ -324,6 +337,17 @@ class _StandardUserShell extends StatelessWidget {
       ),
       MessagingScreen(userId: userId ?? 0, userEmail: email),
       ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
+      // Slot 6: Offers. Faculty never reach this (their nav doesn't expose it
+      // and their default tab is 1); we still include a placeholder-safe
+      // widget for IndexedStack to render when userId is null.
+      // Keying on offersNonce forces a fresh initState/_load() whenever the
+      // parent bumps the nonce — i.e. when the user clicks the Offers tab
+      // or the poll detects new server-side activity. Without this, the
+      // screen holds its initial fetch forever because IndexedStack keeps
+      // the widget mounted.
+      userId != null
+          ? OffersScreen(key: ValueKey('offers-$offersNonce'), userId: userId!)
+          : const Center(child: Text('Sign in to view offers.')),
     ];
 
     final isMobile = MediaQuery.of(context).size.width < 600;
@@ -331,7 +355,6 @@ class _StandardUserShell extends StatelessWidget {
     return Scaffold(
       backgroundColor: cBg,
       appBar: isMobile
-          // MOBILE: simple app bar with logo + logout
           ? AppBar(
               backgroundColor: cNavBg, foregroundColor: Colors.white, elevation: 0, centerTitle: true,
               title: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -348,7 +371,6 @@ class _StandardUserShell extends StatelessWidget {
               ]),
               actions: [IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18), onPressed: onLogout)],
             )
-          // DESKTOP: top nav bar with tabs
           : PreferredSize(
               preferredSize: const Size.fromHeight(80),
               child: Container(
@@ -374,7 +396,18 @@ class _StandardUserShell extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(mainAxisSize: MainAxisSize.min, children: [
                           for (int i = 0; i < _navItems.length; i++) ...[
-                            _TopNavTab(item: _navItems[i], isActive: activeNavIndex == i, onTap: () => onTabChanged(_navItems[i].tabIndex), badgeCount: _navItems[i].tabIndex == 4 ? unreadCount : 0),
+                            _TopNavTab(
+                              item: _navItems[i],
+                              isActive: activeNavIndex == i,
+                              onTap: () => onTabChanged(_navItems[i].tabIndex),
+                              // Messages badge comes from unreadCount; Offers
+                              // badge (tab 6) comes from unseenOfferCount.
+                              badgeCount: _navItems[i].tabIndex == 4
+                                  ? unreadCount
+                                  : _navItems[i].tabIndex == 6
+                                      ? unseenOfferCount
+                                      : 0,
+                            ),
                             if (role != UserRole.fac && i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
                           ],
                         ]),
@@ -388,7 +421,6 @@ class _StandardUserShell extends StatelessWidget {
               ),
             ),
       body: IndexedStack(index: tab, children: screens),
-      // MOBILE: bottom navigation bar
       bottomNavigationBar: isMobile
           ? Theme(
               data: Theme.of(context).copyWith(
@@ -411,17 +443,26 @@ class _StandardUserShell extends StatelessWidget {
               ],
             )
               : NavigationBar(
-              selectedIndex: tab,
+              // Student mobile nav destinations map to tabs explicitly:
+              //   dest 0 -> tab 0 (Market)
+              //   dest 1 -> tab 1 (Lost/Found)
+              //   dest 2 -> tab 2 (Post)
+              //   dest 3 -> tab 3 (Listings)
+              //   dest 4 -> tab 4 (Messages)
+              //   dest 5 -> tab 6 (Offers)   ← not 5, because Offers came later
+              //   dest 6 -> tab 5 (Profile)
+              selectedIndex: tab == 6 ? 5 : tab == 5 ? 6 : tab,
               backgroundColor: cNavBg,
               indicatorColor: Colors.white.withValues(alpha: 0.2),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              onDestinationSelected: onTabChanged,
+              onDestinationSelected: (i) => onTabChanged(i == 5 ? 6 : i == 6 ? 5 : i),
               destinations: [
                 const NavigationDestination(icon: Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
                 const NavigationDestination(icon: Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
                 const NavigationDestination(icon: Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),
                 const NavigationDestination(icon: Icon(Icons.inventory_2_outlined, color: Colors.white70), selectedIcon: Icon(Icons.inventory_2_rounded, color: Colors.white), label: 'Listings'),
                 NavigationDestination(icon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_outline, color: Colors.white70)), selectedIcon: Badge(isLabelVisible: unreadCount > 0, label: Text('$unreadCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.chat_bubble_rounded, color: Colors.white)), label: 'Messages'),
+                NavigationDestination(icon: Badge(isLabelVisible: unseenOfferCount > 0, label: Text('$unseenOfferCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.local_offer_outlined, color: Colors.white70)), selectedIcon: Badge(isLabelVisible: unseenOfferCount > 0, label: Text('$unseenOfferCount', style: const TextStyle(fontSize: 9)), child: const Icon(Icons.local_offer_rounded, color: Colors.white)), label: 'Offers'),
                 const NavigationDestination(icon: Icon(Icons.person_outline_rounded, color: Colors.white70), selectedIcon: Icon(Icons.person_rounded, color: Colors.white), label: 'Profile'),
               ],
             ))
@@ -677,6 +718,11 @@ class _AdminAppState extends State<AdminApp> {
               ),
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
               _AdminReportsPanel(reports: _reports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
+              _AdminProfileTab(
+                adminEmail: widget.adminEmail,
+                adminUsername: widget.adminUsername,
+                onLogout: widget.onLogout,
+              ),
             ]),
       bottomNavigationBar: Theme(
         data: Theme.of(context).copyWith(
@@ -697,6 +743,7 @@ class _AdminAppState extends State<AdminApp> {
             _dest(Icons.search_rounded, 'Lost/Found'),
             _dest(Icons.people_outline_rounded, 'Users'),
             _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
+            _dest(Icons.person_outline_rounded, 'Profile'),
           ],
         ),
       ),
@@ -723,12 +770,9 @@ class _AdminDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       final isMobile = constraints.maxWidth < 600;
-
       return SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-          // ── Hero Banner ──
           Container(
             width: double.infinity, padding: EdgeInsets.fromLTRB(16, 14, isMobile ? 16 : 24, 14),
             decoration: BoxDecoration(
@@ -759,11 +803,8 @@ class _AdminDashboard extends StatelessWidget {
             ]),
           ),
           const SizedBox(height: 12),
-
-          // ── Stat Cards ──
           const Text('   OVERVIEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
           const SizedBox(height: 10),
-          // Mobile: 2x2 grid, Desktop: 4 in a row
           if (isMobile) ...[
             Row(children: [
               Expanded(child: _StatCard(label: 'Active', value: '${stats.totalActiveListings}', icon: Icons.storefront_rounded, color: cRed, onTap: () => onNavigate(AdminTab.listings, showActive: true))),
@@ -787,8 +828,6 @@ class _AdminDashboard extends StatelessWidget {
               Expanded(child: _StatCard(label: 'Open Reports', value: '${stats.openReports}', icon: Icons.flag_rounded, color: const Color(0xFF7C3AED), onTap: () => onNavigate(AdminTab.reports, showActive: false))),
             ]),
           const SizedBox(height: 12),
-
-          // ── Quick Actions (always shown) ──
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
@@ -796,15 +835,13 @@ class _AdminDashboard extends StatelessWidget {
               const Text('Quick Actions', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
               const SizedBox(height: 12),
               _QuickAction(icon: Icons.pending_actions_rounded, iconBg: const Color.fromARGB(255, 254, 199, 199), iconColor: cRed, label: 'Pending Listings', sub: '${stats.pendingApprovals} submissions awaiting', onTap: () => onNavigate(AdminTab.listings, showActive: false)),
-              _QuickAction(icon: Icons.storefront_rounded,      iconBg: const Color.fromARGB(255, 254, 236, 226), iconColor: const Color(0xFFD97706), label: 'Active Listings', sub: '${stats.totalActiveListings} live posts', onTap: () => onNavigate(AdminTab.listings, showActive: true)),
-              _QuickAction(icon: Icons.flag_rounded,            iconBg: const Color.fromARGB(255, 254, 247, 226), iconColor: const Color.fromARGB(255, 161, 122, 39), label: 'Reports', sub: '${stats.openReports} reports need action', onTap: () => onNavigate(AdminTab.reports, showActive: false)),
-              _QuickAction(icon: Icons.people_outline_rounded,  iconBg: const Color.fromARGB(255, 219, 254, 221), iconColor: const Color(0xFF16A34A), label: 'Users', sub: 'View, warn, or ban accounts', onTap: () => onNavigate(AdminTab.users, showActive: false)),
-              _QuickAction(icon: Icons.search_rounded,          iconBg: const Color.fromARGB(255, 209, 227, 250), iconColor: const Color.fromARGB(255, 22, 83, 163), label: 'Lost & Found', sub: 'Review claims and matches', onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
+              _QuickAction(icon: Icons.storefront_rounded, iconBg: const Color.fromARGB(255, 254, 236, 226), iconColor: const Color(0xFFD97706), label: 'Active Listings', sub: '${stats.totalActiveListings} live posts', onTap: () => onNavigate(AdminTab.listings, showActive: true)),
+              _QuickAction(icon: Icons.flag_rounded, iconBg: const Color.fromARGB(255, 254, 247, 226), iconColor: const Color.fromARGB(255, 161, 122, 39), label: 'Reports', sub: '${stats.openReports} reports need action', onTap: () => onNavigate(AdminTab.reports, showActive: false)),
+              _QuickAction(icon: Icons.people_outline_rounded, iconBg: const Color.fromARGB(255, 219, 254, 221), iconColor: const Color(0xFF16A34A), label: 'Users', sub: 'View, warn, or ban accounts', onTap: () => onNavigate(AdminTab.users, showActive: false)),
+              _QuickAction(icon: Icons.search_rounded, iconBg: const Color.fromARGB(255, 209, 227, 250), iconColor: const Color.fromARGB(255, 22, 83, 163), label: 'Lost & Found', sub: 'Review claims and matches', onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
             ]),
           ),
           const SizedBox(height: 12),
-
-          // ── Activity Feed ──
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: cBorder)),
@@ -830,7 +867,6 @@ class _AdminDashboard extends StatelessWidget {
     });
   }
 }
-// end _AdminDashboard
 
 class _QuickAction extends StatefulWidget {
   final IconData icon;
@@ -841,6 +877,42 @@ class _QuickAction extends StatefulWidget {
 
   @override
   State<_QuickAction> createState() => _QuickActionState();
+}
+
+class _QuickActionState extends State<_QuickAction> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _hovered ? cBg : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: _hovered ? cBorder.withValues(alpha: 0.6) : cBorder),
+            boxShadow: _hovered ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))] : [],
+          ),
+          child: Row(children: [
+            Container(width: 32, height: 32, decoration: BoxDecoration(color: widget.iconBg, borderRadius: BorderRadius.circular(8)), child: Icon(widget.icon, color: widget.iconColor, size: 16)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(widget.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+              Text(widget.sub, style: const TextStyle(fontSize: 11, color: cMuted)),
+            ])),
+            const Icon(Icons.chevron_right_rounded, color: cMuted, size: 18),
+          ]),
+        ),
+      ),
+    );
+  }
 }
 
 class _ActionButton extends StatelessWidget {
@@ -882,43 +954,6 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _QuickActionState extends State<_QuickAction> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: _hovered ? cBg : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _hovered ? cBorder.withValues(alpha: 0.6) : cBorder),
-            boxShadow: _hovered ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))] : [],
-          ),
-          child: Row(children: [
-            Container(width: 32, height: 32, decoration: BoxDecoration(color: widget.iconBg, borderRadius: BorderRadius.circular(8)), child: Icon(widget.icon, color: widget.iconColor, size: 16)),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(widget.label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
-              Text(widget.sub, style: const TextStyle(fontSize: 11, color: cMuted)),
-            ])),
-            const Icon(Icons.chevron_right_rounded, color: cMuted, size: 18),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-
-// ── _StatCard widget ──
 class _StatCard extends StatefulWidget {
   final String label, value;
   final IconData icon;
@@ -948,7 +983,7 @@ class _StatCardState extends State<_StatCard> {
             color: _hovered ? cBg : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: cBorder),
-            boxShadow: []
+            boxShadow: [],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -986,11 +1021,7 @@ class _ActivityTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cBorder),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
       child: Row(children: [
         Container(width: 34, height: 34, decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 16)),
         const SizedBox(width: 12),
@@ -1278,19 +1309,17 @@ class _AdminLostFoundPanel extends StatefulWidget {
   State<_AdminLostFoundPanel> createState() => _AdminLostFoundPanelState();
 }
 
-// Colors
 const _cLost = Color(0xFFE74C3C);
 const _cFound = Color(0xFF2980B9);
 const _cGreen = Color(0xFF27AE60);
 const _cOrange = Color(0xFFE67E22);
 
 class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
-  bool _showMatched = false; // false = Items view, true = Matched view
+  bool _showMatched = false;
   String? _selectedLostId;
   String? _selectedFoundId;
   bool _creating = false;
 
-  // ── View claims on an item ──
   void _showItemDetail(AdminLostFoundItem item) {
     final isLost = item.type == 'lost';
     final typeColor = isLost ? _cLost : _cFound;
@@ -1311,7 +1340,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
                   child: Material(color: Colors.transparent, child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    // ── Image header ──
                     Stack(children: [
                       Image.network(item.image, width: double.infinity, height: 150, fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(height: 150, color: cPlaceholder, child: const Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 36)))),
@@ -1326,21 +1354,17 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                           child: const Icon(Icons.close_rounded, color: Colors.white, size: 16)),
                       )),
                     ]),
-                    // ── Content ──
                     Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(item.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.3)),
                       const SizedBox(height: 8),
-                      // Info chips
                       Wrap(spacing: 6, runSpacing: 4, children: [
                         _DetailChip(Icons.category_outlined, item.category),
                         _DetailChip(Icons.location_on_outlined, item.location),
                         _DetailChip(Icons.access_time_rounded, formatDate(item.createdAt)),
                       ]),
                       const SizedBox(height: 12),
-                      // Description
                       Text(item.description, style: const TextStyle(fontSize: 13, color: cMuted, height: 1.55)),
                       const SizedBox(height: 16),
-                      // ── Posted by ──
                       Container(
                         width: double.infinity, padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
@@ -1354,7 +1378,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                         ]),
                       ),
                       const SizedBox(height: 16),
-                      // ── Claims section ──
                       Row(children: [
                         Icon(Icons.volunteer_activism_outlined, size: 16, color: item.claims.isNotEmpty ? _cOrange : cMuted),
                         const SizedBox(width: 6),
@@ -1424,10 +1447,8 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                             ]),
                           );
                         }),
-                      // ── Select for matching button ──
                       const SizedBox(height: 16),
                       Row(children: [
-                        // Select for matching
                         Expanded(child: OutlinedButton.icon(
                           onPressed: () {
                             setState(() {
@@ -1454,7 +1475,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                           ),
                         )),
                         const SizedBox(width: 10),
-                        // Resolve directly
                         Expanded(child: ElevatedButton.icon(
                           onPressed: () async {
                             try {
@@ -1486,7 +1506,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     );
   }
 
-  // ── Create match ──
   Future<void> _createMatch() async {
     if (_selectedLostId == null || _selectedFoundId == null) return;
     setState(() => _creating = true);
@@ -1512,7 +1531,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     }
   }
 
-  // ── Unmatch ──
   Future<void> _unmatch(String matchId) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -1535,7 +1553,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     }
   }
 
-  // ── Resolve ──
   Future<void> _resolve(String matchId) async {
     try {
       await adminResolveMatch(matchId: matchId);
@@ -1610,7 +1627,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Column(children: [
-      // ── Header ──
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Row(children: [
@@ -1620,8 +1636,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
           ])),
         ]),
       ),
-
-      // ── Two-tab toggle: Items | Matched ──
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
         child: Row(children: [
@@ -1664,13 +1678,7 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
           ),
         ]),
       ),
-
-      // ═══════════════════════════════════════════════════════════
-      // ITEMS VIEW — side by side (Lost | Found)
-      // Only admin-approved (active) items appear here
-      // ═══════════════════════════════════════════════════════════
       if (!_showMatched) ...[
-        // Selection indicator
         if (_selectedLostId != null || _selectedFoundId != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
@@ -1693,13 +1701,9 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
               ]),
             ),
           ),
-
         const SizedBox(height: 4),
-
-        // ── Side by side: Lost | Found ──
         Expanded(
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Lost column
             Expanded(child: Column(children: [
               Container(
                 width: double.infinity, margin: const EdgeInsets.fromLTRB(12, 0, 4, 6),
@@ -1713,7 +1717,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
               ),
               Expanded(child: _buildItemList(items: widget.lostItems, isLost: true, padding: const EdgeInsets.fromLTRB(12, 0, 4, 12))),
             ])),
-            // Found column
             Expanded(child: Column(children: [
               Container(
                 width: double.infinity, margin: const EdgeInsets.fromLTRB(4, 0, 12, 6),
@@ -1729,8 +1732,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
             ])),
           ]),
         ),
-
-        // Match button (shows when both selected)
         if (_selectedLostId != null && _selectedFoundId != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -1751,10 +1752,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
             ),
           ),
       ],
-
-      // ═══════════════════════════════════════════════════════════
-      // MATCHED VIEW — matched pairs with resolve / unmatch
-      // ═══════════════════════════════════════════════════════════
       if (_showMatched)
         Expanded(
           child: widget.matchedPairs.isEmpty
@@ -1775,11 +1772,9 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
                       ),
                       child: Column(children: [
-                        // Pair images row
                         Padding(
                           padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
                           child: Row(children: [
-                            // Lost side
                             Expanded(child: Column(children: [
                               ClipRRect(borderRadius: BorderRadius.circular(12),
                                 child: Image.network(pair.lostItem.image, width: 80, height: 80, fit: BoxFit.cover,
@@ -1793,7 +1788,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                 child: Text('LOST · ${pair.lostItem.category}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: _cLost)),
                               ),
                             ])),
-                            // Arrow
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 6),
                               child: Column(children: [
@@ -1809,7 +1803,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                 ),
                               ]),
                             ),
-                            // Found side
                             Expanded(child: Column(children: [
                               ClipRRect(borderRadius: BorderRadius.circular(12),
                                 child: Image.network(pair.foundItem.image, width: 80, height: 80, fit: BoxFit.cover,
@@ -1825,7 +1818,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                             ])),
                           ]),
                         ),
-                        // Action buttons
                         if (!isResolved)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
@@ -2095,14 +2087,228 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
     );
   }
 
+  // ── Create Admin Account dialog ─────────────────────────────────────────
+  Future<void> _openCreateAdminDialog() async {
+    final firstCtrl    = TextEditingController();
+    final lastCtrl     = TextEditingController();
+    final usernameCtrl = TextEditingController();
+    final emailCtrl    = TextEditingController();
+    bool loading = false;
+    String? error;
+    bool success = false;
+
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'CreateAdmin',
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      transitionDuration: kMid,
+      pageBuilder: (_, __, ___) => const SizedBox.shrink(),
+      transitionBuilder: (ctx, anim, __, ___) => Opacity(
+        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
+        child: StatefulBuilder(
+          builder: (ctx, setS) => Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: cBorder),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 8))],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: success
+                        // ── Success state ──────────────────────────────────
+                        ? Column(mainAxisSize: MainAxisSize.min, children: [
+                            const SizedBox(height: 12),
+                            Container(
+                              width: 64, height: 64,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [cNavBg, cNavBgDark]),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+                            ),
+                            const SizedBox(height: 20),
+                            const Text('Admin Account Created!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: cText)),
+                            const SizedBox(height: 8),
+                            Text(
+                              'An email with login credentials has been sent to ${emailCtrl.text.trim()}.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 13, color: cMuted, height: 1.5),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () { Navigator.pop(ctx); widget.onRefresh(); },
+                                style: ElevatedButton.styleFrom(backgroundColor: cRed, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                                child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800)),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ])
+                        // ── Form state ─────────────────────────────────────
+                        : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            // Header
+                            Row(children: [
+                              Container(
+                                width: 40, height: 40,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(colors: [cNavBg, cNavBgDark]),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text('Create Admin Account', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: cText)),
+                                Text('Credentials will be emailed to the new admin', style: TextStyle(fontSize: 11, color: cMuted)),
+                              ])),
+                              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                            ]),
+                            const SizedBox(height: 20),
+
+                            // Role badge (read-only)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: cNavBgDark.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: cNavBgDark.withValues(alpha: 0.2)),
+                              ),
+                              child: const Row(children: [
+                                Icon(Icons.admin_panel_settings_rounded, size: 16, color: cNavBgDark),
+                                SizedBox(width: 10),
+                                Text('Role: Administrator', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cNavBgDark)),
+                                Spacer(),
+                                Text('Auto-assigned', style: TextStyle(fontSize: 11, color: cMuted)),
+                              ]),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // First + Last name row
+                            Row(children: [
+                              Expanded(child: _AdminFormField(controller: firstCtrl, label: 'First Name', hint: 'Jane', icon: Icons.person_outline_rounded)),
+                              const SizedBox(width: 12),
+                              Expanded(child: _AdminFormField(controller: lastCtrl, label: 'Last Name', hint: 'Doe', icon: Icons.person_outline_rounded)),
+                            ]),
+                            const SizedBox(height: 12),
+
+                            // Username
+                            _AdminFormField(controller: usernameCtrl, label: 'Username', hint: 'janedoe_admin', icon: Icons.alternate_email_rounded),
+                            const SizedBox(height: 12),
+
+                            // Email
+                            _AdminFormField(controller: emailCtrl, label: 'Email Address', hint: 'jane@montclair.edu', icon: Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress),
+                            const SizedBox(height: 12),
+
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(color: const Color(0xFFFFF8EC), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFFFE082))),
+                              child: const Row(children: [
+                                Icon(Icons.lock_outline_rounded, size: 14, color: Color(0xFFE67E22)),
+                                SizedBox(width: 8),
+                                Expanded(child: Text('A secure temporary password will be auto-generated and emailed to the new admin.', style: TextStyle(fontSize: 11, color: Color(0xFF7B5800), height: 1.4))),
+                              ]),
+                            ),
+
+                            if (error != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8), border: Border.all(color: cRed.withValues(alpha: 0.3))),
+                                child: Row(children: [
+                                  const Icon(Icons.error_outline_rounded, size: 14, color: cRed),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12))),
+                                ]),
+                              ),
+                            ],
+
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: loading
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.admin_panel_settings_rounded, size: 17),
+                                label: const Text('Create Admin Account', style: TextStyle(fontWeight: FontWeight.w800)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: cNavBgDark, foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: loading ? null : () async {
+                                  final first    = firstCtrl.text.trim();
+                                  final last     = lastCtrl.text.trim();
+                                  final uname    = usernameCtrl.text.trim();
+                                  final mail     = emailCtrl.text.trim();
+
+                                  if (first.isEmpty || last.isEmpty || uname.isEmpty || mail.isEmpty) {
+                                    setS(() => error = 'All fields are required.');
+                                    return;
+                                  }
+                                  if (!mail.contains('@')) {
+                                    setS(() => error = 'Please enter a valid email address.');
+                                    return;
+                                  }
+
+                                  setS(() { loading = true; error = null; });
+                                  try {
+                                    await createAdminUser(firstName: first, lastName: last, username: uname, email: mail);
+                                    setS(() { loading = false; success = true; });
+                                  } catch (e) {
+                                    setS(() { loading = false; error = e.toString(); });
+                                  }
+                                },
+                              ),
+                            ),
+                          ]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final users = _filtered;
     final isMobile = MediaQuery.of(context).size.width < 600;
     return Column(children: [
       Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('User Management', style: TextStyle(fontSize: isMobile ? 18 : 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-        if (!isMobile) const Text('View, warn, ban, or delete users', style: TextStyle(fontSize: 12, color: cMuted)),
+        Row(children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('User Management', style: TextStyle(fontSize: isMobile ? 18 : 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+            if (!isMobile) const Text('View, warn, ban, or delete users', style: TextStyle(fontSize: 12, color: cMuted)),
+          ])),
+          GestureDetector(
+            onTap: _openCreateAdminDialog,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [cNavBg, cNavBgDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 3))],
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 15),
+                const SizedBox(width: 6),
+                Text(isMobile ? 'New Admin' : 'Create Admin', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+              ]),
+            ),
+          ),
+        ]),
         const SizedBox(height: 8),
         _SearchField(hint: 'Search users...', onChanged: (v) => setState(() => _q = v)),
       ])),
@@ -2118,7 +2324,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
       ),
       Expanded(
         child: users.isEmpty
-            ? _AdminEmptyState(message: 'No users found', icon: Icons.people_outline_rounded)
+            ? const _AdminEmptyState(message: 'No users found', icon: Icons.people_outline_rounded)
             : ListView.builder(primary: false, padding: const EdgeInsets.all(12), itemCount: users.length, itemBuilder: (_, i) {
                 final u = users[i];
                 return InkWell(
@@ -2173,6 +2379,38 @@ class _UserInfoRow extends StatelessWidget {
   }
 }
 
+// ─── Admin form field helper ──────────────────────────────────────────────────
+class _AdminFormField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label, hint;
+  final IconData icon;
+  final TextInputType? keyboardType;
+  const _AdminFormField({required this.controller, required this.label, required this.hint, required this.icon, this.keyboardType});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+      const SizedBox(height: 6),
+      TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: cMuted, fontSize: 14),
+          prefixIcon: Icon(icon, size: 18, color: cMuted),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cBorder)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: cRed, width: 2)),
+          filled: true,
+          fillColor: cBg,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    ]);
+  }
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // REPORTS PANEL
 // ═════════════════════════════════════════════════════════════════════════════
@@ -2184,11 +2422,8 @@ class _AdminReportsPanel extends StatefulWidget {
   final List<AdminLostFoundItem> allLFItems;
   final VoidCallback onRefresh;
   const _AdminReportsPanel({
-    required this.reports,
-    required this.users,
-    required this.allListings,
-    required this.allLFItems,
-    required this.onRefresh,
+    required this.reports, required this.users,
+    required this.allListings, required this.allLFItems, required this.onRefresh,
   });
 
   @override
@@ -2208,24 +2443,13 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
     if (isLostFound) {
       for (final item in widget.allLFItems) {
         if (item.id == listingId) {
-          return {
-            'title': item.title, 'description': item.description,
-            'category': item.category, 'location': item.location,
-            'image': item.image, 'status': item.status,
-            'seller_username': item.posterUsername, 'price': '',
-          };
+          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.status, 'seller_username': item.posterUsername, 'price': ''};
         }
       }
     } else {
       for (final item in widget.allListings) {
         if (item.id == listingId) {
-          return {
-            'title': item.title, 'description': item.description,
-            'category': item.category, 'location': item.location,
-            'image': item.image, 'status': item.type,
-            'seller_username': item.sellerUsername,
-            'price': item.price > 0 ? item.price.toStringAsFixed(0) : '',
-          };
+          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.type, 'seller_username': item.sellerUsername, 'price': item.price > 0 ? item.price.toStringAsFixed(0) : ''};
         }
       }
     }
@@ -2238,15 +2462,13 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
       orElse: () => null,
     );
     if (user != null) return user;
-
     final isLostFound = report.targetType == 'lostfound';
     if (report.targetType == 'listing' || isLostFound) {
       if (isLostFound) {
         for (final item in widget.allLFItems) {
           if (item.id == report.targetId) {
             return widget.users.cast<AdminUser?>().firstWhere(
-              (u) => u?.email.toLowerCase() == item.posterEmail.toLowerCase()
-                  || u?.username.toLowerCase() == item.posterUsername.toLowerCase(),
+              (u) => u?.email.toLowerCase() == item.posterEmail.toLowerCase() || u?.username.toLowerCase() == item.posterUsername.toLowerCase(),
               orElse: () => null,
             );
           }
@@ -2255,8 +2477,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
         for (final item in widget.allListings) {
           if (item.id == report.targetId) {
             return widget.users.cast<AdminUser?>().firstWhere(
-              (u) => u?.email.toLowerCase() == item.sellerEmail.toLowerCase()
-                  || u?.username.toLowerCase() == item.sellerUsername.toLowerCase(),
+              (u) => u?.email.toLowerCase() == item.sellerEmail.toLowerCase() || u?.username.toLowerCase() == item.sellerUsername.toLowerCase(),
               orElse: () => null,
             );
           }
@@ -2314,11 +2535,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
   }
 
   Widget _reportCard(AdminReport r, {bool isSelected = false}) {
-    final typeColor = {
-      'listing': cRed,
-      'user': const Color(0xFF2980B9),
-      'lostfound': const Color(0xFF27AE60),
-    }[r.targetType] ?? cMuted;
+    final typeColor = {'listing': cRed, 'user': const Color(0xFF2980B9), 'lostfound': const Color(0xFF27AE60)}[r.targetType] ?? cMuted;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 120),
       margin: const EdgeInsets.only(bottom: 8),
@@ -2331,11 +2548,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-              child: Text(r.targetType.toUpperCase(), style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5)),
-            ),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)), child: Text(r.targetType.toUpperCase(), style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: typeColor, letterSpacing: 0.5))),
             const SizedBox(width: 5),
             Expanded(child: Text(r.reason.label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
           ]),
@@ -2356,7 +2569,6 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Column(children: [
-      // ── Header ──
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2372,23 +2584,16 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
           _Chip(label: 'Resolved (${widget.reports.where((r) => r.isResolved).length})', selected: _showResolved, onTap: () => setState(() { _showResolved = true; _selected = null; })),
         ]),
       ),
-
-      // ── Body ──
       Expanded(
         child: isMobile
-            // MOBILE: full-width list, tap opens detail popup
             ? reports.isEmpty
                 ? _AdminEmptyState(message: _showResolved ? 'No resolved reports' : 'No open reports', icon: Icons.flag_outlined)
                 : ListView.builder(
                     primary: false,
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                     itemCount: reports.length,
-                    itemBuilder: (_, i) => GestureDetector(
-                      onTap: () => _openDetailPopup(reports[i]),
-                      child: _reportCard(reports[i]),
-                    ),
+                    itemBuilder: (_, i) => GestureDetector(onTap: () => _openDetailPopup(reports[i]), child: _reportCard(reports[i])),
                   )
-            // DESKTOP: two-column layout
             : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 SizedBox(
                   width: 300,
@@ -2430,7 +2635,6 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
   }
 }
 
-// ── Detail pane (right side) ──
 class _ReportDetailPane extends StatelessWidget {
   final AdminReport report;
   final Map<String, dynamic>? listingDetails;
@@ -2439,126 +2643,65 @@ class _ReportDetailPane extends StatelessWidget {
   final String? error;
   final Future<void> Function(Future<void> Function()) onAction;
 
-  const _ReportDetailPane({
-    super.key,
-    required this.report,
-    required this.listingDetails,
-    required this.targetUser,
-    required this.loading,
-    required this.error,
-    required this.onAction,
-  });
+  const _ReportDetailPane({super.key, required this.report, required this.listingDetails, required this.targetUser, required this.loading, required this.error, required this.onAction});
 
   @override
   Widget build(BuildContext context) {
     final isLostFound = report.targetType == 'lostfound';
-    final typeColor = {
-      'listing': cRed,
-      'user': const Color(0xFF2980B9),
-      'lostfound': const Color(0xFF27AE60),
-    }[report.targetType] ?? cMuted;
+    final typeColor = {'listing': cRed, 'user': const Color(0xFF2980B9), 'lostfound': const Color(0xFF27AE60)}[report.targetType] ?? cMuted;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // ── Report summary card ──
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cBorder),
-          ),
+          width: double.infinity, padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Wrap(spacing: 6, runSpacing: 4, children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                child: Text(report.targetType.toUpperCase(),
-                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor)),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFF8E44AD).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                child: Text(report.reason.label,
-                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF8E44AD))),
-              ),
-              if (report.isResolved)
-                const _AdminBadge(label: 'RESOLVED', color: Color(0xFF27AE60)),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: typeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)), child: Text(report.targetType.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: typeColor))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: const Color(0xFF8E44AD).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)), child: Text(report.reason.label, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF8E44AD)))),
+              if (report.isResolved) const _AdminBadge(label: 'RESOLVED', color: Color(0xFF27AE60)),
             ]),
             const SizedBox(height: 8),
             Text(report.targetTitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: cText)),
             const SizedBox(height: 4),
-            Text('Reported by: ${report.reporterEmail} · ${formatDate(report.reportedAt)}',
-              style: const TextStyle(fontSize: 11, color: cMuted)),
+            Text('Reported by: ${report.reporterEmail} · ${formatDate(report.reportedAt)}', style: const TextStyle(fontSize: 11, color: cMuted)),
             if (report.notes.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(8)),
-                child: Text(report.notes, style: const TextStyle(fontSize: 12, color: cText, height: 1.5)),
-              ),
+              Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(8)), child: Text(report.notes, style: const TextStyle(fontSize: 12, color: cText, height: 1.5))),
             ],
           ]),
         ),
         const SizedBox(height: 12),
-
-        // ── Listing preview ──
         if (report.targetType == 'listing' || report.targetType == 'lostfound') ...[
           const _AdminLabel('Reported Content'),
           const SizedBox(height: 8),
           if (listingDetails == null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
-              child: const Row(children: [
-                Icon(Icons.info_outline_rounded, size: 14, color: cMuted),
-                SizedBox(width: 8),
-                Expanded(child: Text('Listing may have already been removed.', style: TextStyle(fontSize: 12, color: cMuted))),
-              ]),
-            )
+            Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)), child: const Row(children: [Icon(Icons.info_outline_rounded, size: 14, color: cMuted), SizedBox(width: 8), Expanded(child: Text('Listing may have already been removed.', style: TextStyle(fontSize: 12, color: cMuted)))]))
           else
             Container(
               decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
               clipBehavior: Clip.antiAlias,
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 if ((listingDetails!['image']?.toString() ?? '').isNotEmpty)
-                  Image.network(
-                    listingDetails!['image'].toString(),
-                    width: 90, height: 90, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(width: 90, height: 90, color: cPlaceholder,
-                      child: const Icon(Icons.image_not_supported, color: cMuted)),
-                  ),
-                Expanded(child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(listingDetails!['title']?.toString() ?? '',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
-                    const SizedBox(height: 3),
-                    Text(listingDetails!['description']?.toString() ?? '',
-                      maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, color: cMuted, height: 1.4)),
-                    const SizedBox(height: 6),
-                    Wrap(spacing: 6, runSpacing: 4, children: [
-                      if ((listingDetails!['price']?.toString() ?? '') != '' && listingDetails!['price'] != '0')
-                        _AdminBadge(label: '\$${listingDetails!['price']}', color: cRed),
-                      if ((listingDetails!['category']?.toString() ?? '').isNotEmpty)
-                        _AdminBadge(label: listingDetails!['category'].toString(), color: cMuted),
-                      _AdminBadge(label: (listingDetails!['status']?.toString() ?? '').toUpperCase(), color: typeColor),
-                    ]),
-                    const SizedBox(height: 4),
-                    Text('By: ${listingDetails!['seller_username'] ?? 'Unknown'}',
-                      style: const TextStyle(fontSize: 10, color: cMuted)),
+                  Image.network(listingDetails!['image'].toString(), width: 90, height: 90, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 90, height: 90, color: cPlaceholder, child: const Icon(Icons.image_not_supported, color: cMuted))),
+                Expanded(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(listingDetails!['title']?.toString() ?? '', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+                  const SizedBox(height: 3),
+                  Text(listingDetails!['description']?.toString() ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: cMuted, height: 1.4)),
+                  const SizedBox(height: 6),
+                  Wrap(spacing: 6, runSpacing: 4, children: [
+                    if ((listingDetails!['price']?.toString() ?? '') != '' && listingDetails!['price'] != '0') _AdminBadge(label: '\$${listingDetails!['price']}', color: cRed),
+                    if ((listingDetails!['category']?.toString() ?? '').isNotEmpty) _AdminBadge(label: listingDetails!['category'].toString(), color: cMuted),
+                    _AdminBadge(label: (listingDetails!['status']?.toString() ?? '').toUpperCase(), color: typeColor),
                   ]),
-                )),
+                  const SizedBox(height: 4),
+                  Text('By: ${listingDetails!['seller_username'] ?? 'Unknown'}', style: const TextStyle(fontSize: 10, color: cMuted)),
+                ]))),
               ]),
             ),
           const SizedBox(height: 12),
         ],
-
-        // ── Target user info ──
         if (targetUser != null) ...[
           const _AdminLabel('Reported User'),
           const SizedBox(height: 8),
@@ -2566,17 +2709,10 @@ class _ReportDetailPane extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: cBorder)),
             child: Row(children: [
-              CircleAvatar(
-                backgroundColor: cRedLight, radius: 18,
-                child: Text(
-                  targetUser!.username.isNotEmpty ? targetUser!.username[0].toUpperCase() : 'U',
-                  style: const TextStyle(color: cRed, fontWeight: FontWeight.w900),
-                ),
-              ),
+              CircleAvatar(backgroundColor: cRedLight, radius: 18, child: Text(targetUser!.username.isNotEmpty ? targetUser!.username[0].toUpperCase() : 'U', style: const TextStyle(color: cRed, fontWeight: FontWeight.w900))),
               const SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('@${targetUser!.username}',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
+                Text('@${targetUser!.username}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cText)),
                 Text(targetUser!.email, style: const TextStyle(fontSize: 11, color: cMuted)),
               ])),
               if (targetUser!.isBanned) const _AdminBadge(label: 'BANNED', color: cRed)
@@ -2586,137 +2722,42 @@ class _ReportDetailPane extends StatelessWidget {
           ),
           const SizedBox(height: 12),
         ],
-
-        // ── Actions ──
         if (!report.isResolved) ...[
           const _AdminLabel('Actions'),
           const SizedBox(height: 8),
           if (error != null) ...[
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.3))),
-              child: Row(children: [
-                const Icon(Icons.error_outline_rounded, size: 14, color: cRed),
-                const SizedBox(width: 8),
-                Expanded(child: Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12))),
-              ]),
-            ),
+            Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.3))), child: Row(children: [const Icon(Icons.error_outline_rounded, size: 14, color: cRed), const SizedBox(width: 8), Expanded(child: Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)))])),
             const SizedBox(height: 8),
           ],
-
           if (report.targetType == 'listing' || report.targetType == 'lostfound') ...[
-            _ActionButton(
-              icon: Icons.remove_circle_outline_rounded,
-              label: 'Remove Listing & Notify User',
-              bgColor: const Color(0xFFFFF0F0),
-              borderColor: cRed.withValues(alpha: 0.3),
-              iconColor: cRed,
-              textColor: cRedDark,
-              loading: loading,
-              onTap: () => onAction(() async {
-                await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound);
-                await adminResolveReport(reportId: report.id);
-              }),
-            ),
+            _ActionButton(icon: Icons.remove_circle_outline_rounded, label: 'Remove Listing & Notify User', bgColor: const Color(0xFFFFF0F0), borderColor: cRed.withValues(alpha: 0.3), iconColor: cRed, textColor: cRedDark, loading: loading, onTap: () => onAction(() async { await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound); await adminResolveReport(reportId: report.id); })),
             const SizedBox(height: 6),
             if (targetUser != null && !targetUser!.hasWarning) ...[
-              _ActionButton(
-                icon: Icons.warning_amber_rounded,
-                label: 'Remove Listing & Issue Warning',
-                bgColor: const Color(0xFFFFF8EC),
-                borderColor: const Color(0xFFE67E22).withValues(alpha: 0.35),
-                iconColor: const Color(0xFFE67E22),
-                textColor: const Color(0xFF92400E),
-                loading: loading,
-                onTap: () => onAction(() async {
-                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound);
-                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
-                  await adminResolveReport(reportId: report.id);
-                }),
-              ),
+              _ActionButton(icon: Icons.warning_amber_rounded, label: 'Remove Listing & Issue Warning', bgColor: const Color(0xFFFFF8EC), borderColor: const Color(0xFFE67E22).withValues(alpha: 0.35), iconColor: const Color(0xFFE67E22), textColor: const Color(0xFF92400E), loading: loading, onTap: () => onAction(() async { await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound); await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
               const SizedBox(height: 6),
             ],
             if (targetUser != null) ...[
-              _ActionButton(
-                icon: Icons.gavel_rounded,
-                label: 'Remove Listing & Ban User',
-                bgColor: const Color(0xFFFEF2F2),
-                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
-                iconColor: Colors.red.shade900,
-                textColor: Colors.red.shade900,
-                loading: loading,
-                onTap: () => onAction(() async {
-                  await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound);
-                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
-                  await adminResolveReport(reportId: report.id);
-                }),
-              ),
+              _ActionButton(icon: Icons.gavel_rounded, label: 'Remove Listing & Ban User', bgColor: const Color(0xFFFEF2F2), borderColor: Colors.red.shade900.withValues(alpha: 0.3), iconColor: Colors.red.shade900, textColor: Colors.red.shade900, loading: loading, onTap: () => onAction(() async { await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound); await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
               const SizedBox(height: 6),
             ],
           ],
-
           if (report.targetType == 'user') ...[
             if (targetUser != null && !targetUser!.isBanned && !targetUser!.hasWarning) ...[
-              _ActionButton(
-                icon: Icons.warning_amber_rounded,
-                label: 'Issue Warning',
-                bgColor: const Color(0xFFFFF8EC),
-                borderColor: const Color(0xFFE67E22).withValues(alpha: 0.35),
-                iconColor: const Color(0xFFE67E22),
-                textColor: const Color(0xFF92400E),
-                loading: loading,
-                onTap: () => onAction(() async {
-                  await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email);
-                  await adminResolveReport(reportId: report.id);
-                }),
-              ),
+              _ActionButton(icon: Icons.warning_amber_rounded, label: 'Issue Warning', bgColor: const Color(0xFFFFF8EC), borderColor: const Color(0xFFE67E22).withValues(alpha: 0.35), iconColor: const Color(0xFFE67E22), textColor: const Color(0xFF92400E), loading: loading, onTap: () => onAction(() async { await adminIssueWarning(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
               const SizedBox(height: 6),
             ],
             if (targetUser != null) ...[
-              _ActionButton(
-                icon: Icons.block_rounded,
-                label: 'Ban User',
-                bgColor: const Color(0xFFFEF2F2),
-                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
-                iconColor: Colors.red.shade900,
-                textColor: Colors.red.shade900,
-                loading: loading,
-                onTap: () => onAction(() async {
-                  await adminBanUser(userId: targetUser!.id, email: targetUser!.email);
-                  await adminResolveReport(reportId: report.id);
-                }),
-              ),
+              _ActionButton(icon: Icons.block_rounded, label: 'Ban User', bgColor: const Color(0xFFFEF2F2), borderColor: Colors.red.shade900.withValues(alpha: 0.3), iconColor: Colors.red.shade900, textColor: Colors.red.shade900, loading: loading, onTap: () => onAction(() async { await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
               const SizedBox(height: 6),
             ],
           ],
-
-          _ActionButton(
-            icon: Icons.check_circle_outline_rounded,
-            label: 'Dismiss (No Action)',
-            bgColor: const Color(0xFFF0FDF4),
-            borderColor: const Color(0xFF27AE60).withValues(alpha: 0.35),
-            iconColor: const Color(0xFF27AE60),
-            textColor: const Color(0xFF166534),
-            loading: loading,
-            onTap: () => onAction(() => adminResolveReport(reportId: report.id)),
-          ),
+          _ActionButton(icon: Icons.check_circle_outline_rounded, label: 'Dismiss (No Action)', bgColor: const Color(0xFFF0FDF4), borderColor: const Color(0xFF27AE60).withValues(alpha: 0.35), iconColor: const Color(0xFF27AE60), textColor: const Color(0xFF166534), loading: loading, onTap: () => onAction(() => adminResolveReport(reportId: report.id))),
         ],
-
         if (report.isResolved)
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0FDF4),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF27AE60).withValues(alpha: 0.3)),
-            ),
-            child: const Row(children: [
-              Icon(Icons.check_circle_rounded, color: Color(0xFF27AE60), size: 16),
-              SizedBox(width: 8),
-              Text('This report has been resolved.',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF166534))),
-            ]),
+            width: double.infinity, padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF27AE60).withValues(alpha: 0.3))),
+            child: const Row(children: [Icon(Icons.check_circle_rounded, color: Color(0xFF27AE60), size: 16), SizedBox(width: 8), Text('This report has been resolved.', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF166534)))]),
           ),
       ]),
     );
@@ -2878,3 +2919,227 @@ Future<void> showReportDialog({
     ),
   );
 }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ADMIN PROFILE TAB
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _AdminProfileTab extends StatefulWidget {
+  final String adminEmail, adminUsername;
+  final VoidCallback onLogout;
+  const _AdminProfileTab({required this.adminEmail, required this.adminUsername, required this.onLogout});
+
+  @override
+  State<_AdminProfileTab> createState() => _AdminProfileTabState();
+}
+
+class _AdminProfileTabState extends State<_AdminProfileTab> {
+  Uint8List? _avatarBytes;
+  late String _localUsername;
+
+  @override
+  void initState() {
+    super.initState();
+    _localUsername = widget.adminUsername;
+  }
+
+  String get _initials {
+    if (_localUsername.isNotEmpty) return _localUsername[0].toUpperCase();
+    if (widget.adminEmail.isNotEmpty) return widget.adminEmail[0].toUpperCase();
+    return 'A';
+  }
+
+  Future<void> _showAvatarOptions() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: cSurface,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: cBorder, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('Profile Picture', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: cText)),
+            const SizedBox(height: 4),
+            const Text('Choose how to set your avatar', style: TextStyle(fontSize: 12, color: cMuted)),
+            const SizedBox(height: 16),
+            _BottomSheetOption(
+              icon: Icons.photo_library_outlined,
+              label: 'Choose from Gallery',
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picker = ImagePicker();
+                final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 400);
+                if (picked == null) return;
+                final bytes = await picked.readAsBytes();
+                if (mounted) setState(() => _avatarBytes = bytes);
+              },
+            ),
+            const SizedBox(height: 8),
+            _BottomSheetOption(
+              icon: Icons.camera_alt_outlined,
+              label: 'Take a Photo',
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picker = ImagePicker();
+                final picked = await picker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 400);
+                if (picked == null) return;
+                final bytes = await picked.readAsBytes();
+                if (mounted) setState(() => _avatarBytes = bytes);
+              },
+            ),
+            if (_avatarBytes != null) ...[
+              const SizedBox(height: 8),
+              _BottomSheetOption(
+                icon: Icons.delete_outline_rounded,
+                label: 'Remove Photo',
+                isDestructive: true,
+                onTap: () { Navigator.pop(ctx); setState(() => _avatarBytes = null); },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // ── Hero card ──
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [cNavBgDark, Color(0xFF3A0808)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 8))],
+          ),
+          child: Row(children: [
+            GestureDetector(
+              onTap: _showAvatarOptions,
+              child: Stack(children: [
+                Container(
+                  width: 72, height: 72,
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle, border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 2.5)),
+                  child: ClipOval(
+                    child: _avatarBytes != null
+                        ? Image.memory(_avatarBytes!, fit: BoxFit.cover, width: 72, height: 72)
+                        : Center(child: Text(_initials, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white))),
+                  ),
+                ),
+                Positioned(bottom: 0, right: 0, child: Container(
+                  width: 22, height: 22,
+                  decoration: BoxDecoration(color: cRed, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 1.5)),
+                  child: const Icon(Icons.camera_alt_rounded, size: 11, color: Colors.white),
+                )),
+              ]),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(_localUsername, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3)),
+              const SizedBox(height: 4),
+              Text(widget.adminEmail, style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.75))),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: 0.3))),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.admin_panel_settings_rounded, size: 11, color: Colors.white),
+                  SizedBox(width: 5),
+                  Text('Administrator', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
+                ]),
+              ),
+            ])),
+          ]),
+        ),
+
+        Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 4),
+          child: GestureDetector(
+            onTap: _showAvatarOptions,
+            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.edit_outlined, size: 12, color: cMuted),
+              const SizedBox(width: 4),
+              Text(_avatarBytes != null ? 'Change profile picture' : 'Add a profile picture', style: const TextStyle(fontSize: 13, color: cMuted, fontWeight: FontWeight.w600)),
+            ]),
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // ── Account ──
+        _ProfileSectionHeader(label: 'Account'),
+        const SizedBox(height: 8),
+        _ProfileInfoTile(icon: Icons.person_outline_rounded, label: 'Username', value: _localUsername),
+        _ProfileInfoTile(icon: Icons.mail_outline_rounded, label: 'Email', value: widget.adminEmail),
+        _ProfileInfoTile(icon: Icons.admin_panel_settings_rounded, label: 'Role', value: 'Administrator'),
+
+        const SizedBox(height: 20),
+
+        // ── Security ──
+        _ProfileSectionHeader(label: 'Security'),
+        const SizedBox(height: 8),
+        _ProfileActionTile(
+          icon: Icons.lock_reset_rounded,
+          label: 'Change Password',
+          subtitle: 'Update your admin account password',
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChangePasswordScreen())),
+        ),
+        _ProfileActionTile(
+          icon: Icons.drive_file_rename_outline_rounded,
+          label: 'Change Username',
+          subtitle: 'Update your display name',
+          onTap: () async {
+            final newUsername = await Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => ChangeUsernameScreen(email: widget.adminEmail)));
+            if (newUsername != null) setState(() => _localUsername = newUsername);
+          },
+        ),
+
+        const SizedBox(height: 20),
+
+        // ── Help ──
+        _ProfileSectionHeader(label: 'Help & Docs'),
+        const SizedBox(height: 8),
+        _ProfileActionTile(icon: Icons.menu_book_outlined, label: 'Documentation', subtitle: 'How to use UniFind', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const DocumentationScreen()))),
+        _ProfileActionTile(icon: Icons.gavel_rounded, label: 'Terms & Conditions', subtitle: 'Usage policy and community rules', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen()))),
+        _ProfileActionTile(icon: Icons.privacy_tip_outlined, label: 'Privacy Policy', subtitle: 'How we handle your data', onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen(initialTab: 1)))),
+
+        const SizedBox(height: 20),
+
+        // ── Session ──
+        _ProfileSectionHeader(label: 'Session'),
+        const SizedBox(height: 8),
+        _ProfileActionTile(
+          icon: Icons.logout_rounded,
+          label: 'Log Out',
+          subtitle: 'Sign out of your admin account',
+          isDestructive: true,
+          onTap: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.w800)),
+                content: const Text('Are you sure you want to sign out of the admin panel?', style: TextStyle(color: cMuted)),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                  TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Log Out', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700))),
+                ],
+              ),
+            );
+            if (confirm == true) widget.onLogout();
+          },
+        ),
+
+        const SizedBox(height: 32),
+        const Center(child: Text('© 2026 UniFind · Montclair State University', style: TextStyle(fontSize: 11, color: cMuted))),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+}
+
