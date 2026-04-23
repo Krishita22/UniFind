@@ -22,37 +22,86 @@ jobs:
         run: |
           flutter clean
           flutter pub get
-          flutter build web --web-renderer html --base-href /~ivanovs1/UniFind/
+          flutter build web --base-href /~ivanovs1/UniFind/
 
       - name: Deploy to cPanel via File Manager API
         run: |
+          AUTH_HEADER="Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)"
+          CPANEL="https://cyan.csam.montclair.edu:2083/execute/Fileman"
+          PUBHTML="%2Fhome%2Fivanovs1%2Fpublic_html"
+          UNIFIND="%2Fhome%2Fivanovs1%2Fpublic_html%2FUniFind"
+
+          # Upload a PHP assembler script to public_html root
+          cat > /tmp/assemble.php << 'PHPEOF'
+          <?php
+          $secret = $_POST['secret'] ?? '';
+          if ($secret !== 'unifind_deploy_2026') { http_response_code(403); die('forbidden'); }
+          $action = $_POST['action'] ?? '';
+          if ($action === 'chunk') {
+            $path = $_POST['path'];
+            $chunk = $_POST['chunk'];
+            $data = base64_decode($_POST['data']);
+            @mkdir(dirname($path), 0755, true);
+            if ($chunk === '0') file_put_contents($path, $data);
+            else file_put_contents($path, $data, FILE_APPEND);
+            echo 'ok';
+          } elseif ($action === 'mkdir') {
+            @mkdir($_POST['path'], 0755, true);
+            echo 'ok';
+          } elseif ($action === 'delete') {
+            $path = $_POST['path'];
+            if (is_dir($path)) { system('rm -rf ' . escapeshellarg($path)); }
+            echo 'ok';
+          }
+          PHPEOF
+
+          curl -sk -k -H "$AUTH_HEADER" \
+            "$CPANEL/upload_files?dir=$PUBHTML" \
+            -F "file-1=@/tmp/assemble.php" || true
+
+          # Give it a second
+          sleep 2
+
+          # Delete old UniFind directory via the PHP script
+          curl -sk "https://cyan.csam.montclair.edu/~ivanovs1/assemble.php" \
+            -d "secret=unifind_deploy_2026&action=delete&path=/home/ivanovs1/public_html/UniFind"
+
           cd unifind_flutter/build/web
 
-          AUTH="-H 'Authorization: Basic $(echo -n ${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }} | base64)'"
-
-          # Delete old files first
-          curl -sk -k \
-            -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
-            "https://cyan.csam.montclair.edu:2083/execute/Fileman/delete?dir=%2Fhome%2Fivanovs1%2Fpublic_html&names=UniFind" || true
-
-          # Create fresh UniFind directory
-          curl -sk -k \
-            -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
-            "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir?path=%2Fhome%2Fivanovs1%2Fpublic_html&name=UniFind"
-
-          # Upload each file
+          # Upload each file, chunking files > 900KB
           find . -type f | while read file; do
             filepath="${file#./}"
             dir=$(dirname "$filepath")
+            dest="/home/ivanovs1/public_html/UniFind/$filepath"
+            destdir="/home/ivanovs1/public_html/UniFind/$dir"
 
-            if [ "$dir" != "." ]; then
-              curl -sk -k \
-                -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
-                "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir?path=%2Fhome%2Fivanovs1%2Fpublic_html%2FUniFind&name=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$dir"'"))')" || true
+            # Create directory via PHP script
+            curl -sk "https://cyan.csam.montclair.edu/~ivanovs1/assemble.php" \
+              -d "secret=unifind_deploy_2026&action=mkdir&path=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$destdir"'"))')" || true
+
+            filesize=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file")
+            if [ "$filesize" -gt 900000 ]; then
+              # Split into 800KB chunks and upload via PHP assembler
+              split -b 800000 "$file" /tmp/chunk_
+              chunk_num=0
+              for chunk in $(ls /tmp/chunk_* | sort); do
+                encoded=$(base64 "$chunk")
+                curl -sk "https://cyan.csam.montclair.edu/~ivanovs1/assemble.php" \
+                  --data-urlencode "secret=unifind_deploy_2026" \
+                  --data-urlencode "action=chunk" \
+                  --data-urlencode "path=$dest" \
+                  --data-urlencode "chunk=$chunk_num" \
+                  --data-urlencode "data=$encoded"
+                chunk_num=$((chunk_num + 1))
+                rm "$chunk"
+              done
+            else
+              curl -sk -k -H "$AUTH_HEADER" \
+                "$CPANEL/upload_files?dir=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$destdir"'"))')" \
+                -F "file-1=@$file" || true
             fi
-
-            curl -sk -k \
-              -H "Authorization: Basic $(echo -n '${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}' | base64)" \
-              "https://cyan.csam.montclair.edu:2083/execute/Fileman/upload_files?dir=%2Fhome%2Fivanovs1%2Fpublic_html%2FUniFind%2F$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$dir"'"))')" \
-              -F "file-1=@$file"
           done
+
+          # Clean up the assembler script
+          curl -sk "https://cyan.csam.montclair.edu/~ivanovs1/assemble.php" \
+            -d "secret=unifind_deploy_2026&action=delete&path=/home/ivanovs1/public_html/assemble.php"
