@@ -9,27 +9,44 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.4'
-          channel: 'stable'
 
       - name: Build Flutter web
         working-directory: unifind_flutter
         run: flutter build web --base-href /~ivanovs1/UniFind/
 
-      - name: Push built files to gh-deploy branch
+      - name: Deploy to cPanel via File Manager API
         run: |
-          cp .cpanel.yml unifind_flutter/build/web/.cpanel.yml
           cd unifind_flutter/build/web
-          git init
-          git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
-          git add .
-          git commit -m "Deploy built Flutter web"
-          git push --force https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Krishita22/UniFind.git HEAD:gh-deploy
+
+          # Delete old files first
+          curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
+            "https://cyan.csam.montclair.edu:2083/execute/Fileman/delete" \
+            --data "dir=/home/ivanovs1/public_html&names=UniFind" || true
+
+          # Create fresh UniFind directory
+          curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
+            "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir" \
+            --data "path=/home/ivanovs1/public_html&name=UniFind"
+
+          # Upload each file
+          find . -type f | while read file; do
+            filepath="${file#./}"
+            dir=$(dirname "$filepath")
+
+            # Create subdirectory if needed
+            if [ "$dir" != "." ]; then
+              curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
+                "https://cyan.csam.montclair.edu:2083/execute/Fileman/mkdir" \
+                --data "path=/home/ivanovs1/public_html/UniFind&name=$dir" || true
+            fi
+
+            # Upload file
+            curl -sk -u "${{ secrets.CPANEL_USER }}:${{ secrets.CPANEL_PASS }}" \
+              "https://cyan.csam.montclair.edu:2083/execute/Fileman/upload_files" \
+              -F "dir=/home/ivanovs1/public_html/UniFind/$dir" \
+              -F "file-1=@$file"
+          done
