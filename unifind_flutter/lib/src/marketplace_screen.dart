@@ -684,10 +684,8 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                   // MakeOfferSheet returns an _OfferFormResult.
                                   // Both files are parts of the same library so
                                   // the private type is visible here.
-                                  final result = await showModalBottomSheet<_OfferFormResult>(
+                                  final result = await showDialog<_OfferFormResult>(
                                     context: ctx,
-                                    isScrollControlled: true,
-                                    backgroundColor: Colors.transparent,
                                     builder: (_) => MakeOfferSheet(
                                       listingTitle: item.title,
                                       listingPrice: item.price,

@@ -88,10 +88,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       return;
     }
 
-    final result = await showModalBottomSheet<_OfferFormResult>(
+    final result = await showDialog<_OfferFormResult>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => MakeOfferSheet(
         listingTitle: widget.item.title,
         listingPrice: widget.item.price,
@@ -625,28 +623,16 @@ class _MakeOfferSheetState extends State<MakeOfferSheet> {
     final title  = _isCounter ? 'Counter Offer' : 'Make an Offer';
     final listed = widget.listingPrice.toStringAsFixed(2);
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: insets),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: cSurface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: cSurface,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 24, 20, 24 + insets),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  color: cBorder,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
             Text(title,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cText)),
             const SizedBox(height: 4),
