@@ -159,7 +159,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 try {
                   String? imageUrl;
                   if (selectedImage != null && selectedImageBytes != null) {
-                    imageUrl = await uploadImage(selectedImage!.path, selectedImageBytes!);
+                    imageUrl = await uploadImage(selectedImage!.path, selectedImageBytes!, type: 'marketplace');
                   }
                   await widget.onEditMarketplace(
                     item,
@@ -307,7 +307,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 try {
                   String? imageUrl;
                   if (selectedImage != null && selectedImageBytes != null) {
-                    imageUrl = await uploadImage(selectedImage!.path, selectedImageBytes!);
+                    imageUrl = await uploadImage(selectedImage!.path, selectedImageBytes!, type: 'lostfound');
                   }
                   await widget.onEditLostFound(
                     item,

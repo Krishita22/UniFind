@@ -441,14 +441,10 @@ class _ResponseActionsState extends State<_ResponseActions> {
 
   Future<void> _counter() async {
     if (_busy) return;
-    final result = await showModalBottomSheet<_OfferFormResult>(
+    final result = await showDialog<_OfferFormResult>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => MakeOfferSheet(
         listingTitle:     'Listing #${widget.offer.listingId}',
-        // We don't have the original listing price here; pass the offer
-        // amount as a proxy so the sheet still has meaningful context.
         listingPrice:     widget.offer.amount,
         counteringAmount: widget.offer.amount,
       ),

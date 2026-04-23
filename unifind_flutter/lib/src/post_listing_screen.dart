@@ -39,7 +39,39 @@ class _PostListingScreenState extends State<PostListingScreen> {
     _type = widget.initialType;
   }
 
+  Future<void> _pickFromSource(ImageSource source) async {
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 40,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _selectedImage = picked;
+        _selectedImageBytes = bytes;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Could not pick image: ${e.toString().replaceFirst('Exception: ', '')}'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: cRedDark,
+      ));
+    }
+  }
+
   Future<void> _pickImage() async {
+    // On web/desktop, camera is not supported — skip the sheet and go straight to gallery.
+    if (kIsWeb) {
+      await _pickFromSource(ImageSource.gallery);
+      return;
+    }
+
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
@@ -51,19 +83,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
               title: const Text('Take a Photo'),
               onTap: () async {
                 Navigator.pop(context);
-                final picked = await _picker.pickImage(
-                  source: ImageSource.camera,
-                  imageQuality: 40,
-                  maxWidth: 800,
-                  maxHeight: 800,
-                );
-                if (picked != null) {
-                  final bytes = await picked.readAsBytes();
-                  setState(() {
-                    _selectedImage = picked;
-                    _selectedImageBytes = bytes;
-                  });
-                }
+                await _pickFromSource(ImageSource.camera);
               },
             ),
             ListTile(
@@ -71,19 +91,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
               title: const Text('Choose from Gallery'),
               onTap: () async {
                 Navigator.pop(context);
-                final picked = await _picker.pickImage(
-                  source: ImageSource.gallery,
-                  imageQuality: 40,
-                  maxWidth: 800,
-                  maxHeight: 800,
-                );
-                if (picked != null) {
-                  final bytes = await picked.readAsBytes();
-                  setState(() {
-                    _selectedImage = picked;
-                    _selectedImageBytes = bytes;
-                  });
-                }
+                await _pickFromSource(ImageSource.gallery);
               },
             ),
           ],
@@ -334,6 +342,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         imageUrl = await uploadImage(
           _selectedImage!.path,
           _selectedImageBytes!,
+          type: _type == ListingType.marketplace ? 'marketplace' : 'lostfound',
         );
       }
 
