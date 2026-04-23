@@ -22,7 +22,7 @@ jobs:
         run: |
           flutter clean
           flutter pub get
-          flutter build web --base-href /~ivanovs1/UniFind/
+          flutter build web --web-renderer html --base-href /~ivanovs1/UniFind/
 
       - name: Deploy to cPanel via File Manager API
         run: |
