@@ -4,27 +4,24 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: write
-
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.4'
-          channel: 'stable'
-
       - name: Build Flutter web
         working-directory: unifind_flutter
-        run: flutter build web --base-href /UniFind/
+        run: flutter build web --base-href /~ivanovs1/UniFind/
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: unifind_flutter/build/web
+      - name: Deploy via SFTP
+        run: |
+          sshpass -P passphrase -p "${{ secrets.SSH_PASSPHRASE }}" sftp \
+            -i ~/.ssh/id_rsa \
+            -o StrictHostKeyChecking=no \
+            ivanovs1@cyan.csam.montclair.edu <<EOF
+          lcd unifind_flutter/build/web
+          cd /home/ivanovs1/public_html/UniFind
+          put -r .
+          EOF
