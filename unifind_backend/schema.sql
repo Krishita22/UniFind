@@ -68,3 +68,24 @@ CREATE TABLE IF NOT EXISTS lost_found_matches (
     KEY idx_matches_lost (lost_item_id),
     KEY idx_matches_found (found_item_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payment_offers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    offer_id VARCHAR(32) NOT NULL,
+    listing_id INT UNSIGNED NOT NULL,
+    buyer_id INT UNSIGNED NOT NULL,
+    seller_id INT UNSIGNED NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    buyer_name VARCHAR(120) NOT NULL DEFAULT '',
+    buyer_email VARCHAR(190) NOT NULL DEFAULT '',
+    billing_address VARCHAR(255) NOT NULL DEFAULT '',
+    item_title VARCHAR(255) NOT NULL DEFAULT '',
+    status ENUM('pending','completed','refunded','cancelled') NOT NULL DEFAULT 'pending',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_offer_id (offer_id),
+    KEY idx_offers_buyer (buyer_id),
+    KEY idx_offers_seller (seller_id),
+    KEY idx_offers_listing (listing_id),
+    KEY idx_offers_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
