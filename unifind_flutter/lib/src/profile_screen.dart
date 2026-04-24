@@ -351,7 +351,10 @@ String get _displayHandle {
           label: 'Report a Bug',
           subtitle: 'Help us improve UniFind',
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => ReportBugScreen(userEmail: widget.email)),
+            MaterialPageRoute(builder: (_) => ReportBugScreen(
+              userEmail: widget.email,
+              userId: widget.userId ?? 0,
+            )),
           ),
         ),
         const SizedBox(height: 20),
