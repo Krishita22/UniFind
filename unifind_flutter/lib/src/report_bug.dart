@@ -6,7 +6,6 @@ enum BugCategory {
   ui,
   crash,
   wrongInfo,
-  performance,
   other,
 }
 
@@ -16,7 +15,6 @@ extension BugCategoryLabel on BugCategory {
       case BugCategory.ui:          return 'UI / Visual Issue';
       case BugCategory.crash:       return 'App Crash / Freeze';
       case BugCategory.wrongInfo:   return 'Wrong Information';
-      case BugCategory.performance: return 'Slow / Performance';
       case BugCategory.other:       return 'Other';
     }
   }
@@ -26,7 +24,6 @@ extension BugCategoryLabel on BugCategory {
       case BugCategory.ui:          return Icons.broken_image_outlined;
       case BugCategory.crash:       return Icons.error_outline_rounded;
       case BugCategory.wrongInfo:   return Icons.info_outline_rounded;
-      case BugCategory.performance: return Icons.speed_outlined;
       case BugCategory.other:       return Icons.help_outline_rounded;
     }
   }
@@ -36,7 +33,9 @@ extension BugCategoryLabel on BugCategory {
 
 class ReportBugScreen extends StatefulWidget {
   final String userEmail;
-  const ReportBugScreen({super.key, required this.userEmail});
+  final int userId;
+
+  const ReportBugScreen({super.key, required this.userEmail, required this.userId});
 
   @override
   State<ReportBugScreen> createState() => _ReportBugScreenState();
@@ -82,10 +81,20 @@ class _ReportBugScreenState extends State<ReportBugScreen>
 
     setState(() { _loading = true; _error = null; });
 
-    // ← TEMPORARY: simulate a short delay then show success
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    setState(() { _loading = false; _success = true; });
+    try {
+      await submitBugReport(
+        userId: widget.userId,
+        email: widget.userEmail,
+        category: _category!.name,
+        description: _descCtrl.text.trim(),
+        steps: _stepsCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() { _loading = false; _success = true; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = e.toString(); });
+    }
   }
 
   @override
@@ -280,7 +289,7 @@ class _ReportBugScreenState extends State<ReportBugScreen>
           const SizedBox(height: 16),
 
           // ── Steps to reproduce ───────────────────────────────────────
-          const Text('Steps to reproduce (optional)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
+          const Text('Steps to Reproduce (optional)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText, letterSpacing: 0.3)),
           const SizedBox(height: 6),
           TextFormField(
             controller: _stepsCtrl,
@@ -296,26 +305,6 @@ class _ReportBugScreenState extends State<ReportBugScreen>
               fillColor: cBg,
               contentPadding: const EdgeInsets.all(16),
             ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ── Info note ────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF0F4FF),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFBFD0FF).withValues(alpha: 0.6)),
-            ),
-            child: Row(children: [
-              const Icon(Icons.mail_outline_rounded, size: 14, color: Color(0xFF3B5BDB)),
-              const SizedBox(width: 8),
-              Expanded(child: Text(
-                'Report will be sent from ${widget.userEmail}',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF3B5BDB), height: 1.4),
-              )),
-            ]),
           ),
 
           // ── Error ────────────────────────────────────────────────────

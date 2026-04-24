@@ -1642,3 +1642,27 @@ Future<void> adminCompleteMeetup({required int meetupId}) async {
   if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to complete meetup');
 }
 
+Future<Map<String, dynamic>> submitBugReport({
+  required int userId,
+  required String email,
+  required String category,
+  required String description,
+  required String steps,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/reports/submit_bug.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'user_id':     userId,
+      'email':       email,
+      'category':    category,
+      'description': description,
+      'steps':       steps,
+    }),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to submit bug report.');
+}
