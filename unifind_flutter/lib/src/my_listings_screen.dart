@@ -236,7 +236,42 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       imageUrl: imageUrl,
                     ),
                   );
-                  if (mounted) Navigator.pop(ctx);
+                  if (!mounted) return;
+                  Navigator.pop(ctx);
+                  await showDialog<void>(
+                    context: context,
+                    builder: (ctx2) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      content: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Container(
+                          width: 52, height: 52,
+                          decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(14)),
+                          child: const Icon(Icons.admin_panel_settings_rounded, color: cRed, size: 28),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text('Sent for Reapproval', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: cText)),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Your listing has been updated and sent to admin for reapproval. It will be visible again once approved.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: cMuted, height: 1.5),
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx2),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: cRed, foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text('Got it', style: TextStyle(fontWeight: FontWeight.w800)),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  );
                 } catch (e) {
                   setDialogState(() {
                     error = 'Failed to save changes. ${e.toString().replaceFirst('Exception: ', '')}';
@@ -382,7 +417,42 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       imageUrl: imageUrl,
                     ),
                   );
-                  if (mounted) Navigator.pop(ctx);
+                  if (!mounted) return;
+                  Navigator.pop(ctx);
+                  await showDialog<void>(
+                    context: context,
+                    builder: (ctx2) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      content: Column(mainAxisSize: MainAxisSize.min, children: [
+                        Container(
+                          width: 52, height: 52,
+                          decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(14)),
+                          child: const Icon(Icons.admin_panel_settings_rounded, color: cRed, size: 28),
+                        ),
+                        const SizedBox(height: 14),
+                        const Text('Sent for Reapproval', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: cText)),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Your post has been updated and sent to admin for reapproval. It will be visible again once approved.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: cMuted, height: 1.5),
+                        ),
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx2),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: cRed, foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            child: const Text('Got it', style: TextStyle(fontWeight: FontWeight.w800)),
+                          ),
+                        ),
+                      ]),
+                    ),
+                  );
                 } catch (e) {
                   setDialogState(() {
                     error = 'Failed to save changes. ${e.toString().replaceFirst('Exception: ', '')}';
