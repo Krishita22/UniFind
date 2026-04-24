@@ -2,7 +2,7 @@ part of '../main.dart';
 
 // ─── ADMIN DATA MODELS ────────────────────────────────────────────────────────
 
-enum AdminTab { dashboard, listings, lostFound, users, reports, profile }
+enum AdminTab { dashboard, listings, lostFound, meetups, users, reports, profile }
 
 enum UserRole { student, fac, admin, unknown }
 
@@ -170,6 +170,21 @@ class MatchedPair {
   const MatchedPair({
     required this.matchId, required this.status, required this.createdAt,
     required this.lostItem, required this.foundItem,
+  });
+}
+
+class AdminMeetup {
+  final int meetupId, buyerId, sellerId;
+  final String buyerUsername, buyerEmail, sellerUsername, sellerEmail;
+  final String location, status, itemTitle, meetupTime;
+  final DateTime meetupDate, createdAt;
+
+  const AdminMeetup({
+    required this.meetupId, required this.buyerId, required this.sellerId,
+    required this.buyerUsername, required this.buyerEmail,
+    required this.sellerUsername, required this.sellerEmail,
+    required this.location, required this.status, required this.itemTitle,
+    required this.meetupTime, required this.meetupDate, required this.createdAt,
   });
 }
 
@@ -483,6 +498,7 @@ class _AdminAppState extends State<AdminApp> {
   final List<AdminReport>        _reports  = [];
   final List<AdminLostFoundItem> _lf       = [];
   final List<MatchedPair>        _matches  = [];
+  final List<AdminMeetup>         _meetups  = [];
 
   @override
   void initState() { super.initState(); _loadAll(); }
@@ -634,6 +650,27 @@ class _AdminAppState extends State<AdminApp> {
         _matches..clear()..addAll(_parseMatches(rawMatches));
         _loading = false;
       });
+      // Load meetups (admin_pending)
+      try {
+        final rawMeetups = await getAdminMeetups(status: 'admin_pending');
+        if (!mounted) return;
+        final meetups = rawMeetups.map((m) => AdminMeetup(
+          meetupId: int.tryParse(_s(m['meetup_id'])) ?? 0,
+          buyerId: int.tryParse(_s(m['buyer_id'])) ?? 0,
+          sellerId: int.tryParse(_s(m['seller_id'])) ?? 0,
+          buyerUsername: _s(m['buyer_username']).isEmpty ? 'Unknown' : _s(m['buyer_username']),
+          buyerEmail: _s(m['buyer_email']),
+          sellerUsername: _s(m['seller_username']).isEmpty ? 'Unknown' : _s(m['seller_username']),
+          sellerEmail: _s(m['seller_email']),
+          location: _s(m['location']),
+          status: _s(m['status']),
+          itemTitle: _s(m['item_title']).isEmpty ? 'Unknown Item' : _s(m['item_title']),
+          meetupTime: _s(m['meetup_time']),
+          meetupDate: _d(m['meetup_date']),
+          createdAt: _d(m['created_at']),
+        )).toList();
+        if (mounted) setState(() => _meetups..clear()..addAll(meetups));
+      } catch (_) {}
     } catch (_) { if (mounted) setState(() => _loading = false); }
   }
 
@@ -703,6 +740,7 @@ class _AdminAppState extends State<AdminApp> {
                 matchedPairs: _matches,
                 onRefresh: _loadAll,
               ),
+              _AdminMeetupsPanel(meetups: _meetups, onRefresh: _loadAll),
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
               _AdminReportsPanel(reports: _reports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
               _AdminProfileTab(
@@ -728,6 +766,7 @@ class _AdminAppState extends State<AdminApp> {
             _dest(Icons.dashboard_rounded, 'Dashboard'),
             _dest(Icons.storefront_outlined, 'Listings', badge: _stats.pendingApprovals > 0 ? '${_stats.pendingApprovals}' : null),
             _dest(Icons.search_rounded, 'Lost/Found'),
+            _dest(Icons.handshake_outlined, 'Meetups', badge: _meetups.isNotEmpty ? '${_meetups.length}' : null),
             _dest(Icons.people_outline_rounded, 'Users'),
             _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
             _dest(Icons.person_outline_rounded, 'Profile'),
@@ -826,6 +865,7 @@ class _AdminDashboard extends StatelessWidget {
               _QuickAction(icon: Icons.flag_rounded, iconBg: const Color.fromARGB(255, 254, 247, 226), iconColor: const Color.fromARGB(255, 161, 122, 39), label: 'Reports', sub: '${stats.openReports} reports need action', onTap: () => onNavigate(AdminTab.reports, showActive: false)),
               _QuickAction(icon: Icons.people_outline_rounded, iconBg: const Color.fromARGB(255, 219, 254, 221), iconColor: const Color(0xFF16A34A), label: 'Users', sub: 'View, warn, or ban accounts', onTap: () => onNavigate(AdminTab.users, showActive: false)),
               _QuickAction(icon: Icons.search_rounded, iconBg: const Color.fromARGB(255, 209, 227, 250), iconColor: const Color.fromARGB(255, 22, 83, 163), label: 'Lost & Found', sub: 'Review claims and matches', onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
+              _QuickAction(icon: Icons.handshake_outlined, iconBg: const Color.fromARGB(255, 254, 243, 199), iconColor: const Color(0xFF7B5800), label: 'Meetups', sub: 'Approve or deny meetup proposals', onTap: () => onNavigate(AdminTab.meetups, showActive: false)),
             ]),
           ),
           const SizedBox(height: 12),
@@ -1864,6 +1904,282 @@ class _DetailChip extends StatelessWidget {
         Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cMuted)),
       ]),
     );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MEETUPS PANEL
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _AdminMeetupsPanel extends StatefulWidget {
+  final List<AdminMeetup> meetups;
+  final VoidCallback onRefresh;
+  const _AdminMeetupsPanel({required this.meetups, required this.onRefresh});
+
+  @override
+  State<_AdminMeetupsPanel> createState() => _AdminMeetupsPanelState();
+}
+
+class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
+  bool _loading = false;
+  String? _error;
+  final TextEditingController _reasonCtrl = TextEditingController();
+
+  @override
+  void dispose() { _reasonCtrl.dispose(); super.dispose(); }
+
+  String _formatMeetupDate(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const days   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    return '${days[(d.weekday - 1) % 7]}, ${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  String _formatMeetupTime(String t) {
+    // t is HH:MM:SS
+    try {
+      final parts = t.split(':');
+      int h = int.parse(parts[0]);
+      final m = parts[1];
+      final ampm = h >= 12 ? 'PM' : 'AM';
+      if (h > 12) h -= 12;
+      if (h == 0) h = 12;
+      return '$h:$m $ampm';
+    } catch (_) { return t; }
+  }
+
+  Future<void> _approve(AdminMeetup meetup) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Approve Meetup?', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Text('Both @${meetup.buyerUsername} and @${meetup.sellerUsername} will be notified by email.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Approve', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w700))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      await adminApproveMeetup(meetupId: meetup.meetupId);
+      widget.onRefresh();
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _deny(AdminMeetup meetup) async {
+    _reasonCtrl.clear();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Deny Meetup', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Both @${meetup.buyerUsername} and @${meetup.sellerUsername} will be notified.', style: const TextStyle(color: cMuted, fontSize: 13)),
+          const SizedBox(height: 12),
+          const Text('Reason (required)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _reasonCtrl,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'Explain why this meetup is being denied...',
+              hintStyle: const TextStyle(color: cMuted, fontSize: 13),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cRed, width: 2)),
+              filled: true, fillColor: cBg,
+              contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              if (_reasonCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Deny', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || _reasonCtrl.text.trim().isEmpty) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      await adminDenyMeetup(meetupId: meetup.meetupId, reason: _reasonCtrl.text.trim());
+      widget.onRefresh();
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Meetup Proposals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+          const Text('Review and approve or deny pending meetup proposals', style: TextStyle(fontSize: 12, color: cMuted)),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8), border: Border.all(color: cRed.withValues(alpha: 0.3))),
+              child: Row(children: [const Icon(Icons.error_outline_rounded, size: 14, color: cRed), const SizedBox(width: 8), Expanded(child: Text(_error!, style: const TextStyle(color: cRedDark, fontSize: 12)))]),
+            ),
+          ],
+        ]),
+      ),
+      const SizedBox(height: 12),
+      Expanded(
+        child: widget.meetups.isEmpty
+            ? const _AdminEmptyState(message: 'No pending meetup proposals', icon: Icons.handshake_outlined)
+            : ListView.builder(
+                primary: false,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                itemCount: widget.meetups.length,
+                itemBuilder: (_, i) {
+                  final m = widget.meetups[i];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: cBorder),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      // Header
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF8EC),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                          border: Border(bottom: BorderSide(color: cBorder)),
+                        ),
+                        child: Row(children: [
+                          Container(width: 32, height: 32, decoration: BoxDecoration(color: const Color(0xFFFFE082), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.handshake_outlined, size: 16, color: Color(0xFF7B5800))),
+                          const SizedBox(width: 10),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text(m.itemTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text('Proposed ${formatDate(m.createdAt)}', style: const TextStyle(fontSize: 11, color: cMuted)),
+                          ])),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: const Color(0xFFFFE082), borderRadius: BorderRadius.circular(6)),
+                            child: const Text('PENDING', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF7B5800), letterSpacing: 0.5)),
+                          ),
+                        ]),
+                      ),
+                      // Details
+                      Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          // Users
+                          Row(children: [
+                            Expanded(child: _MeetupUserChip(label: 'Buyer', username: m.buyerUsername, email: m.buyerEmail, color: const Color(0xFF2980B9))),
+                            const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.sync_alt_rounded, size: 16, color: cMuted)),
+                            Expanded(child: _MeetupUserChip(label: 'Seller', username: m.sellerUsername, email: m.sellerEmail, color: const Color(0xFF16A34A))),
+                          ]),
+                          const SizedBox(height: 12),
+                          // Meetup info
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
+                            child: Column(children: [
+                              _MeetupDetailRow(icon: Icons.location_on_outlined, label: m.location),
+                              const SizedBox(height: 6),
+                              _MeetupDetailRow(icon: Icons.calendar_today_outlined, label: _formatMeetupDate(m.meetupDate)),
+                              const SizedBox(height: 6),
+                              _MeetupDetailRow(icon: Icons.access_time_rounded, label: _formatMeetupTime(m.meetupTime)),
+                            ]),
+                          ),
+                          const SizedBox(height: 12),
+                          // Action buttons
+                          Row(children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _loading ? null : () => _deny(m),
+                                icon: const Icon(Icons.close_rounded, size: 16),
+                                label: const Text('Deny'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _loading ? null : () => _approve(m),
+                                icon: _loading
+                                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.check_rounded, size: 16),
+                                label: const Text('Approve'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                          ]),
+                        ]),
+                      ),
+                    ]),
+                  );
+                },
+              ),
+      ),
+    ]);
+  }
+}
+
+class _MeetupUserChip extends StatelessWidget {
+  final String label, username, email;
+  final Color color;
+  const _MeetupUserChip({required this.label, required this.username, required this.email, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: 0.2))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.5)),
+        const SizedBox(height: 3),
+        Text('@$username', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(email, style: const TextStyle(fontSize: 10, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+      ]),
+    );
+  }
+}
+
+class _MeetupDetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _MeetupDetailRow({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Icon(icon, size: 14, color: cRed),
+      const SizedBox(width: 8),
+      Expanded(child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cText))),
+    ]);
   }
 }
 

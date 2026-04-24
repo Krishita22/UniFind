@@ -224,36 +224,17 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
       final timeStr = '${tod.hour.toString().padLeft(2,'0')}:${tod.minute.toString().padLeft(2,'0')}:00';
       final dateStr = _date!.toIso8601String().split('T')[0];
 
-      // ── Step 1: create meetup row ──────────────────────────────────────
-      final meetupResp = await http.post(
-        Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/create_meetup.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'item_id':     widget.conv.listingId,
-          'buyer_id':    widget.myId,
-          'seller_id':   widget.conv.otherId,
-          'meetup_date': dateStr,
-          'meetup_time': timeStr,
-          'location':    _selectedSpot,
-        }),
+      // ── Create meetup using api_service ───────────────────────────────
+      final meetupId = await createMeetup(
+        itemId:   widget.conv.listingId ?? 0,
+        buyerId:  widget.myId,
+        sellerId: widget.conv.otherId,
+        date:     dateStr,
+        time:     timeStr,
+        location: _selectedSpot,
       );
 
-      debugPrint('createMeetup status: ${meetupResp.statusCode}');
-      debugPrint('createMeetup body:   ${meetupResp.body}');
-
-      if (meetupResp.statusCode != 200) {
-        throw Exception('Server returned ${meetupResp.statusCode}: ${meetupResp.body}');
-      }
-
-      final meetupJson = jsonDecode(meetupResp.body) as Map<String, dynamic>;
-      if (meetupJson['success'] != true) {
-        throw Exception('createMeetup failed: ${meetupJson['error']}');
-      }
-
-      final meetupId = (meetupJson['data']['meetup_id'] as num).toInt();
-      debugPrint('meetupId: $meetupId');
-
-      // ── Step 2: post system message so both users see the card ─────────
+      // ── Post system message so both users see the card ────────────────
       final payload = jsonEncode({
         'type':          'meetup_proposal',
         'meetup_id':     meetupId,
@@ -275,12 +256,12 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
 
       Navigator.of(context).pop();
       widget.onProposed(meetupId, dateStr, timeStr, _selectedSpot);
-      } catch (e) {
-        debugPrint('Submit meetup error: $e');
-        if (mounted) setState(() => _submitError = 'Failed to send proposal: $e');
-      } finally {
-        if (mounted) setState(() => _submitting = false);
-      }
+    } catch (e) {
+      debugPrint('Submit meetup error: $e');
+      if (mounted) setState(() => _submitError = 'Failed to send proposal: $e');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1005,3 +986,4 @@ class _SummaryRow extends StatelessWidget {
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cText))),
   ]);
 }
+
