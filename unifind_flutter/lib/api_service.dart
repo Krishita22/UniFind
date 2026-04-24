@@ -1597,3 +1597,25 @@ Future<Map<String, dynamic>> createAdminUser({
     code: data['error_code']?.toString(),
   );
 }
+
+Future<List<Map<String, dynamic>>> getAdminMeetups({required String status}) async {
+  final res = await http.get(Uri.parse('$_baseUrl/admin/meetup/get_admin_meetups.php?status=$status'));
+  final data = jsonDecode(res.body);
+  return List<Map<String, dynamic>>.from(data['data'] ?? []);
+}
+
+Future<void> adminApproveMeetup({required int meetupId}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/approve_meetup.php'),
+    headers: {'Content-Type': 'application/json'}, body: jsonEncode({'meetup_id': meetupId}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to approve meetup');
+}
+
+Future<void> adminDenyMeetup({required int meetupId, required String reason}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/deny_meetup.php'),
+    headers: {'Content-Type': 'application/json'}, body: jsonEncode({'meetup_id': meetupId, 'reason': reason}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to deny meetup');
+}
+
+
