@@ -540,18 +540,19 @@ Future<String> uploadImage(
     throw Exception('Image data is empty. Please select a valid image file.');
   }
 
-  const int maxBytes = 5 * 1024 * 1024; // 5 MB
+  const int maxBytes = 5 * 1024 * 1024;
   if (fileBytes.length > maxBytes) {
     final sizeMb = (fileBytes.length / 1048576).toStringAsFixed(1);
-    throw Exception(
-      'Image is too large ($sizeMb MB). Please use an image under 5 MB.',
-    );
+    throw Exception('Image is too large ($sizeMb MB). Please use an image under 5 MB.');
   }
 
-  final uri = Uri.parse('$_baseUrl/../uploads/upload_image.php');
-  final request = http.MultipartRequest('POST', uri);
+  const cloudName   = 'dj4lyjpnv';
+  const uploadPreset = 'UniFind';
+  final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
 
-  request.fields['type'] = type;
+  final request = http.MultipartRequest('POST', uri);
+  request.fields['upload_preset'] = uploadPreset;
+  request.fields['folder'] = type;
 
   final name = filePath.isNotEmpty
       ? filePath.split('/').last.split('\\').last
@@ -567,32 +568,27 @@ Future<String> uploadImage(
   } on TimeoutException {
     throw Exception('Image upload timed out. Please check your connection and try again.');
   } catch (e) {
-    throw Exception('Failed to connect to server for image upload. Please try again.');
+    throw Exception('Failed to connect to Cloudinary for image upload. Please try again.');
   }
 
   final response = await http.Response.fromStream(streamedResponse);
 
   if (response.statusCode == 200) {
     final data = jsonDecode(response.body);
-    if (data['success'] == true && data['url'] != null) {
-      return data['url'] as String;
+    if (data['secure_url'] != null) {
+      return data['secure_url'] as String;
     }
-    final serverMsg = data['error']?.toString() ?? 'Upload failed.';
-    throw Exception(serverMsg);
+    throw Exception(data['error']?['message']?.toString() ?? 'Upload failed.');
   }
 
   try {
     final data = jsonDecode(response.body);
-    final serverMsg = data['error']?.toString();
-    if (serverMsg != null && serverMsg.isNotEmpty) throw Exception(serverMsg);
+    final msg = data['error']?['message']?.toString();
+    if (msg != null && msg.isNotEmpty) throw Exception(msg);
   } catch (_) {}
 
-  if (response.statusCode == 413) {
-    throw Exception('Image is too large for the server. Please use an image under 5 MB.');
-  }
   throw Exception('Image upload failed (HTTP ${response.statusCode}). Please try again.');
 }
-
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ADMIN API CALLS
