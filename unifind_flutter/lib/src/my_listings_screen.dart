@@ -6,6 +6,8 @@ class MyListingsScreen extends StatefulWidget {
   final VoidCallback onListItem;
   final Future<void> Function(MarketplaceItem item, MarketplaceUpdateInput update) onEditMarketplace;
   final Future<void> Function(LostFoundItem item, LostFoundUpdateInput update) onEditLostFound;
+  final Future<void> Function(MarketplaceItem item) onDeleteMarketplace;
+  final Future<void> Function(LostFoundItem item) onDeleteLostFound;
   const MyListingsScreen({
     super.key,
     required this.marketplaceItems,
@@ -13,6 +15,8 @@ class MyListingsScreen extends StatefulWidget {
     required this.onListItem,
     required this.onEditMarketplace,
     required this.onEditLostFound,
+    required this.onDeleteMarketplace,
+    required this.onDeleteLostFound,
   });
 
   @override
@@ -22,10 +26,69 @@ class MyListingsScreen extends StatefulWidget {
 class _MyListingsScreenState extends State<MyListingsScreen> {
   bool _showMarket = true;
 
-  Future<void> _editMarketplace(MarketplaceItem item) async {
-    final titleCtrl = TextEditingController(text: item.title);
+  Future<void> _deleteMarketplace(MarketplaceItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Listing'),
+        content: Text('Are you sure you want to delete "${item.title}"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: cRed, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await widget.onDeleteMarketplace(item);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Listing deleted.'), behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)),
+      );
+    }
+  }
+
+  Future<void> _deleteLostFound(LostFoundItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Post'),
+        content: Text('Are you sure you want to delete "${item.title}"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: cRed, foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await widget.onDeleteLostFound(item);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Post deleted.'), behavior: SnackBarBehavior.floating),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to delete: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)),
+      );
+    }
+  }
+
+  Future<void> _editMarketplace(MarketplaceItem item) async {    final titleCtrl = TextEditingController(text: item.title);
     final descCtrl = TextEditingController(text: item.description);
-    final priceCtrl = TextEditingController(text: item.price.toStringAsFixed(0));
+    final priceCtrl = TextEditingController(text: item.price.toStringAsFixed(2));
     final locCtrl = TextEditingController(text: item.location);
     final picker = ImagePicker();
     String category = item.category;
@@ -378,11 +441,12 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                         ? widget.marketplaceItems.map((i) => _MyListingTile(
                               title: i.title,
                               subtitle: '${i.category} · ${i.condition}',
-                              trailing: '\$${i.price.toStringAsFixed(0)}',
+                              trailing: '\$${i.price.toStringAsFixed(2)}',
                               icon: Icons.storefront_rounded,
                               status: i.status,
                               imageUrl: i.image,
                               onTap: () => _editMarketplace(i),
+                              onDelete: () => _deleteMarketplace(i),
                             )).toList()
                         : widget.lostFoundItems.map((i) => _MyListingTile(
                               title: i.title,
@@ -394,6 +458,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                               status: i.status,
                               imageUrl: i.image,
                               onTap: () => _editLostFound(i),
+                              onDelete: () => _deleteLostFound(i),
                             )).toList(),
                   ),
           ),
@@ -410,6 +475,7 @@ class _MyListingTile extends StatelessWidget {
   final Color trailingColor;
   final Color trailingBgColor;
   final VoidCallback? onTap;
+  final VoidCallback? onDelete;
   final String status;
   const _MyListingTile({
     required this.title,
@@ -420,6 +486,7 @@ class _MyListingTile extends StatelessWidget {
     this.trailingColor = cRed,
     this.trailingBgColor = cRedLight,
     this.onTap,
+    this.onDelete,
     this.status = 'active',
   });
 
@@ -515,6 +582,11 @@ class _MyListingTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             const Icon(Icons.edit_outlined, size: 15, color: cMuted),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: onDelete,
+              child: const Icon(Icons.delete_outline_rounded, size: 15, color: cRed),
+            ),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
