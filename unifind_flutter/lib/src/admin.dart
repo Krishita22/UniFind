@@ -317,9 +317,6 @@ class _StandardUserShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeNavIndex = _navIndexForTab(tab);
 
-// Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile, 6=Offers
-    // IndexedStack is keyed on tab index, so list position must match the
-    // tabIndex values used in _studentNavItems and _facultyNavItems above.
     final screens = [
       MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email, currentUserId: userId),
       LostFoundScreen(
@@ -345,14 +342,6 @@ class _StandardUserShell extends StatelessWidget {
       ),
       MessagingScreen(userId: userId ?? 0, userEmail: email),
       ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
-      // Slot 6: Offers. Faculty never reach this (their nav doesn't expose it
-      // and their default tab is 1); we still include a placeholder-safe
-      // widget for IndexedStack to render when userId is null.
-      // Keying on offersNonce forces a fresh initState/_load() whenever the
-      // parent bumps the nonce — i.e. when the user clicks the Offers tab
-      // or the poll detects new server-side activity. Without this, the
-      // screen holds its initial fetch forever because IndexedStack keeps
-      // the widget mounted.
       userId != null
           ? OffersScreen(key: ValueKey('offers-$offersNonce'), userId: userId!)
           : const Center(child: Text('Sign in to view offers.')),
@@ -408,8 +397,6 @@ class _StandardUserShell extends StatelessWidget {
                               item: _navItems[i],
                               isActive: activeNavIndex == i,
                               onTap: () => onTabChanged(_navItems[i].tabIndex),
-                              // Messages badge comes from unreadCount; Offers
-                              // badge (tab 6) comes from unseenOfferCount.
                               badgeCount: _navItems[i].tabIndex == 4
                                   ? unreadCount
                                   : _navItems[i].tabIndex == 6
@@ -451,14 +438,6 @@ class _StandardUserShell extends StatelessWidget {
               ],
             )
               : NavigationBar(
-              // Student mobile nav destinations map to tabs explicitly:
-              //   dest 0 -> tab 0 (Market)
-              //   dest 1 -> tab 1 (Lost/Found)
-              //   dest 2 -> tab 2 (Post)
-              //   dest 3 -> tab 3 (Listings)
-              //   dest 4 -> tab 4 (Messages)
-              //   dest 5 -> tab 6 (Offers)   ← not 5, because Offers came later
-              //   dest 6 -> tab 5 (Profile)
               selectedIndex: tab == 6 ? 5 : tab == 5 ? 6 : tab,
               backgroundColor: cNavBg,
               indicatorColor: Colors.white.withValues(alpha: 0.2),
@@ -1956,7 +1935,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                           ]),
                           const SizedBox(height: 4),
                           Text('Registered: ${formatDate(user.registeredAt)}', style: const TextStyle(fontSize: 12, color: cMuted)),
-                          Text('Last Active: ${user.lastActive != null ? formatDate(user.lastActive!) : 'Never'}', style: const TextStyle(fontSize: 12, color: cMuted)),
+                          Text('Last Active: ${user.lastActive != null ? _lastActiveLabel(user.lastActive!) : 'Never'}', style: const TextStyle(fontSize: 12, color: cMuted)),
                           const SizedBox(height: 16),
                           const _AdminLabel('Marketplace Listings'),
                           const SizedBox(height: 8),
@@ -1979,119 +1958,163 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
 
   Future<void> _openDetail(AdminUser user) async {
     bool loading = false; String? error;
+    // Fetch online status before opening dialog
+    bool? isOnline;
+    try { isOnline = await getUserOnlineStatus(userId: user.id); } catch (_) { isOnline = false; }
+    int marketCount = 0;
+    int lfCount = 0;
+    try {
+      final market = await getUserMarketListings(user.id);
+      final lf     = await getUserLostFoundListings(user.id);
+      marketCount  = market.where((m) => m['status']?.toString() == 'active').length;
+      lfCount      = lf.where((l) => l['status']?.toString() == 'active').length;
+    } catch (_) {}
     await showGeneralDialog(
       context: context, barrierDismissible: true, barrierLabel: 'User',
       barrierColor: Colors.black.withValues(alpha: 0.4), transitionDuration: kMid,
       pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-      transitionBuilder: (ctx, anim, __, ___) => Opacity(
-        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
-        child: StatefulBuilder(builder: (ctx, setS) => Center(
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
-              child: Material(color: Colors.transparent, child: SingleChildScrollView(padding: const EdgeInsets.all(20),
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    CircleAvatar(backgroundColor: user.isBanned ? cRedDark : cRedLight, radius: 24, child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U', style: TextStyle(color: user.isBanned ? Colors.white : cRed, fontWeight: FontWeight.w900, fontSize: 20))),
-                    const SizedBox(width: 12),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(user.displayName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: cText)),
-                      Text('@${user.username}', style: const TextStyle(fontSize: 12, color: cMuted)),
-                      Text(user.email, style: const TextStyle(fontSize: 12, color: cMuted)),
-                    ])),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                  ]),
-                  const SizedBox(height: 16),
-                  _UserInfoRow(label: 'Role',           value: user.role.label),
-                  _UserInfoRow(label: 'Registered',     value: formatDate(user.registeredAt)),
-                  _UserInfoRow(label: 'Last Active',    value: user.lastActive != null ? formatDate(user.lastActive!) : 'Never'),
-                  _UserInfoRow(label: 'Total Listings', value: '${user.listingCount}'),
-                  _UserInfoRow(label: 'Email Verified', value: user.isVerified ? 'Yes' : 'No'),
-                  _UserInfoRow(label: 'Warning Issued', value: user.hasWarning ? (user.warnedAt != null ? 'Yes · ${formatDate(user.warnedAt!)}' : 'Yes') : 'No', highlight: user.hasWarning),
-                  _UserInfoRow(label: 'Status',         value: user.isBanned ? 'BANNED' : 'Active', highlight: user.isBanned),
-                  const SizedBox(height: 12),
-                  if (!user.isBanned && !user.hasWarning)
-                    Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE082))),
-                      child: const Row(children: [Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFE67E22)), SizedBox(width: 8), Expanded(child: Text('A warning must be issued before a user can be permanently banned.', style: TextStyle(fontSize: 12, color: Color(0xFF7B5800), height: 1.4)))])),
-                  if (!user.isBanned && user.hasWarning)
-                    Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFDECEC), borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.4))),
-                      child: const Row(children: [Icon(Icons.warning_amber_rounded, size: 15, color: cRedDark), SizedBox(width: 8), Expanded(child: Text('This user has already received their one-time warning. They can now be permanently banned if a further violation occurs.', style: TextStyle(fontSize: 12, color: cRedDark, height: 1.4)))])),
-                  const SizedBox(height: 16),
-                  if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    OutlinedButton.icon(icon: const Icon(Icons.history_rounded, size: 16), label: const Text('View Listing History'), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9))), onPressed: () => _openListingHistory(ctx, user)),
-                    if (!user.isBanned && !user.hasWarning)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
-                        label: const Text('Issue Warning'),
-                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Issue a Warning?'), content: Text('This will send a one-time warning to @${user.username}.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Issue Warning', style: TextStyle(color: Color(0xFFE67E22))))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminIssueWarning(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
+      transitionBuilder: (ctx, anim, __, ___) {
+        return Opacity(
+          opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
+          child: StatefulBuilder(builder: (ctx, setS) {
+            return Center(
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                  child: Material(color: Colors.transparent, child: SingleChildScrollView(padding: const EdgeInsets.all(20),
+                    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        CircleAvatar(backgroundColor: user.isBanned ? cRedDark : cRedLight, radius: 24, child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U', style: TextStyle(color: user.isBanned ? Colors.white : cRed, fontWeight: FontWeight.w900, fontSize: 20))),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(user.displayName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: cText)),
+                          Text('@${user.username}', style: const TextStyle(fontSize: 12, color: cMuted)),
+                          Text(user.email, style: const TextStyle(fontSize: 12, color: cMuted)),
+                        ])),
+                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                      ]),
+                      const SizedBox(height: 16),
+                      _UserInfoRow(label: 'Role',           value: user.role.label),
+                      _UserInfoRow(label: 'Registered',     value: formatDate(user.registeredAt)),
+                      _UserInfoRow(label: 'Last Active',    value: user.lastActive != null ? _lastActiveLabel(user.lastActive!) : 'Never'),
+                      _UserInfoRow(label: 'Active Marketplace', value: '$marketCount'),
+                      _UserInfoRow(label: 'Active Lost & Found', value: '$lfCount'),
+                      _UserInfoRow(label: 'Warning Issued', value: user.hasWarning ? (user.warnedAt != null ? 'Yes · ${formatDate(user.warnedAt!)}' : 'Yes') : 'No', highlight: user.hasWarning),
+                      // ── Status row with online indicator ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(children: [
+                          const Text('Status', style: TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          if (user.isBanned)
+                            const Text('BANNED', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cRedDark))
+                          else
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                              Container(
+                                width: 8, height: 8,
+                                decoration: BoxDecoration(
+                                  color: isOnline == true ? const Color(0xFF4ADE80) : const Color(0xFF9CA3AF),
+                                  shape: BoxShape.circle,
+                                  boxShadow: isOnline == true ? [BoxShadow(color: const Color(0xFF4ADE80).withValues(alpha: 0.5), blurRadius: 4)] : [],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isOnline == true ? 'Online' : 'Offline',
+                                style: TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w700,
+                                  color: isOnline == true ? const Color(0xFF16A34A) : const Color(0xFF6B7280),
+                                ),
+                              ),
+
+                            ]),
+                        ]),
                       ),
-                    if (!user.isBanned && user.hasWarning)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.undo_rounded, size: 16),
-                        label: const Text('Revoke Warning'),
-                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Revoke Warning?'), content: Text('This will remove the warning from @${user.username}\'s account.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Color(0xFFE67E22))))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminRevokeWarning(userId: user.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
-                      ),
-                    if (!user.isBanned && user.hasWarning)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.block_rounded, size: 16),
-                        label: const Text('Ban User'),
-                        style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Permanently Ban This User?'), content: Text('@${user.username} has already been warned. This will permanently ban them and blacklist their email.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ban Permanently', style: TextStyle(color: cRedDark)))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminBanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
-                      ),
-                    if (user.isBanned)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_open_rounded, size: 16),
-                        label: const Text('Unban User'),
-                        style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Unban This User?'), content: Text('This will allow @${user.username} back onto UniFind.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Unban', style: TextStyle(color: cRedDark)))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminUnbanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
-                      ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.delete_forever_rounded, size: 16),
-                      label: const Text('Delete Account'),
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade900, side: BorderSide(color: Colors.red.shade900)),
-                      onPressed: loading ? null : () async {
-                        final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Delete Account?'), content: Text('Permanently deletes @${user.username} and all their data. Their email can be used to create a new account afterwards.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red)))]));
-                        if (confirm != true) return;
-                        setS(() { loading = true; error = null; });
-                        try { await adminDeleteUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                        catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                      },
-                    ),
-                  ]),
-                ]),
-              )),
-            ),
-          ),
-        )),
-      ),
+                      const SizedBox(height: 12),
+                      if (!user.isBanned && !user.hasWarning)
+                        Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE082))),
+                          child: const Row(children: [Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFE67E22)), SizedBox(width: 8), Expanded(child: Text('A warning must be issued before a user can be permanently banned.', style: TextStyle(fontSize: 12, color: Color(0xFF7B5800), height: 1.4)))])),
+                      if (!user.isBanned && user.hasWarning)
+                        Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFDECEC), borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.4))),
+                          child: const Row(children: [Icon(Icons.warning_amber_rounded, size: 15, color: cRedDark), SizedBox(width: 8), Expanded(child: Text('This user has already received their one-time warning. They can now be permanently banned if a further violation occurs.', style: TextStyle(fontSize: 12, color: cRedDark, height: 1.4)))])),
+                      const SizedBox(height: 16),
+                      if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        OutlinedButton.icon(icon: const Icon(Icons.history_rounded, size: 16), label: const Text('View Listing History'), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9))), onPressed: () => _openListingHistory(ctx, user)),
+                        if (!user.isBanned && !user.hasWarning)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
+                            label: const Text('Issue Warning'),
+                            style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Issue a Warning?'), content: Text('This will send a one-time warning to @${user.username}.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Issue Warning', style: TextStyle(color: Color(0xFFE67E22))))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminIssueWarning(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        if (!user.isBanned && user.hasWarning)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.undo_rounded, size: 16),
+                            label: const Text('Revoke Warning'),
+                            style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Revoke Warning?'), content: Text('This will remove the warning from @' + user.username + "'s account."), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Color(0xFFE67E22))))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminRevokeWarning(userId: user.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        if (!user.isBanned && user.hasWarning)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.block_rounded, size: 16),
+                            label: const Text('Ban User'),
+                            style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Permanently Ban This User?'), content: Text('@${user.username} has already been warned. This will permanently ban them and blacklist their email.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ban Permanently', style: TextStyle(color: cRedDark)))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminBanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        if (user.isBanned)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_open_rounded, size: 16),
+                            label: const Text('Unban User'),
+                            style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Unban This User?'), content: Text('This will allow @${user.username} back onto UniFind.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Unban', style: TextStyle(color: cRedDark)))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminUnbanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                          label: const Text('Delete Account'),
+                          style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade900, side: BorderSide(color: Colors.red.shade900)),
+                          onPressed: loading ? null : () async {
+                            final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Delete Account?'), content: Text('Permanently deletes @${user.username} and all their data. Their email can be used to create a new account afterwards.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red)))]));
+                            if (confirm != true) return;
+                            setS(() { loading = true; error = null; });
+                            try { await adminDeleteUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                            catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                          },
+                        ),
+                      ]),
+                    ]),
+                  )),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 
@@ -2367,6 +2390,18 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
       ),
     ]);
   }
+}
+
+String _lastActiveLabel(DateTime dt) {
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  final dateStr = formatDate(dt);
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago · $dateStr';
+  if (diff.inHours < 24)   return '${diff.inHours}h ago · $dateStr';
+  if (diff.inDays == 1)    return 'Yesterday · $dateStr';
+  if (diff.inDays < 30)    return '${diff.inDays} days ago · $dateStr';
+  if (diff.inDays < 365)   return '${(diff.inDays / 30).floor()} months ago · $dateStr';
+  return '${(diff.inDays / 365).floor()} year(s) ago · $dateStr';
 }
 
 class _UserInfoRow extends StatelessWidget {
@@ -2745,7 +2780,30 @@ class _ReportDetailPane extends StatelessWidget {
               const SizedBox(height: 6),
             ],
             if (targetUser != null) ...[
-              _ActionButton(icon: Icons.gavel_rounded, label: 'Remove Listing & Ban User', bgColor: const Color(0xFFFEF2F2), borderColor: Colors.red.shade900.withValues(alpha: 0.3), iconColor: Colors.red.shade900, textColor: Colors.red.shade900, loading: loading, onTap: () => onAction(() async { await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound); await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
+              _ActionButton(
+                icon: Icons.gavel_rounded,
+                label: 'Remove Listing & Ban User',
+                bgColor: const Color(0xFFFEF2F2),
+                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
+                iconColor: Colors.red.shade900,
+                textColor: Colors.red.shade900,
+                loading: loading,
+                onTap: () {
+                  if (!targetUser!.hasWarning) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Text('Cannot Ban User', style: TextStyle(fontWeight: FontWeight.w800)),
+                        content: const Text('A warning must be issued to this user before they can be permanently banned.', style: TextStyle(color: cMuted)),
+                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: cRed, fontWeight: FontWeight.w700)))],
+                      ),
+                    );
+                    return;
+                  }
+                  onAction(() async { await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound); await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); });
+                },
+              ),
               const SizedBox(height: 6),
             ],
           ],
@@ -2755,7 +2813,30 @@ class _ReportDetailPane extends StatelessWidget {
               const SizedBox(height: 6),
             ],
             if (targetUser != null) ...[
-              _ActionButton(icon: Icons.block_rounded, label: 'Ban User', bgColor: const Color(0xFFFEF2F2), borderColor: Colors.red.shade900.withValues(alpha: 0.3), iconColor: Colors.red.shade900, textColor: Colors.red.shade900, loading: loading, onTap: () => onAction(() async { await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
+              _ActionButton(
+                icon: Icons.block_rounded,
+                label: 'Ban User',
+                bgColor: const Color(0xFFFEF2F2),
+                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
+                iconColor: Colors.red.shade900,
+                textColor: Colors.red.shade900,
+                loading: loading,
+                onTap: () {
+                  if (!targetUser!.hasWarning) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Text('Cannot Ban User', style: TextStyle(fontWeight: FontWeight.w800)),
+                        content: const Text('A warning must be issued to this user before they can be permanently banned.', style: TextStyle(color: cMuted)),
+                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: cRed, fontWeight: FontWeight.w700)))],
+                      ),
+                    );
+                    return;
+                  }
+                  onAction(() async { await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); });
+                },
+              ),
               const SizedBox(height: 6),
             ],
           ],
@@ -3150,3 +3231,4 @@ class _AdminProfileTabState extends State<_AdminProfileTab> {
     );
   }
 }
+
