@@ -226,12 +226,13 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
 
       // ── Create meetup using api_service ───────────────────────────────
       final meetupId = await createMeetup(
-        itemId:   widget.conv.listingId ?? 0,
-        buyerId:  widget.myId,
-        sellerId: widget.conv.otherId,
-        date:     dateStr,
-        time:     timeStr,
-        location: _selectedSpot,
+        itemId:         widget.conv.listingId ?? 0,
+        conversationId: widget.conv.id,
+        buyerId:        widget.myId,
+        sellerId:       widget.conv.otherId,
+        date:           dateStr,
+        time:           timeStr,
+        location:       _selectedSpot,
       );
 
       // ── Post system message so both users see the card ────────────────

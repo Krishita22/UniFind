@@ -178,6 +178,10 @@ class AdminMeetup {
   final String buyerUsername, buyerEmail, sellerUsername, sellerEmail;
   final String location, status, itemTitle, meetupTime;
   final DateTime meetupDate, createdAt;
+  final String? buyerPhotoUrl, sellerPhotoUrl;
+  final String? itemImage, itemCategory;
+  final double? itemPrice;
+  final bool isMarketplace;
 
   const AdminMeetup({
     required this.meetupId, required this.buyerId, required this.sellerId,
@@ -185,6 +189,9 @@ class AdminMeetup {
     required this.sellerUsername, required this.sellerEmail,
     required this.location, required this.status, required this.itemTitle,
     required this.meetupTime, required this.meetupDate, required this.createdAt,
+    this.buyerPhotoUrl, this.sellerPhotoUrl,
+    this.itemImage, this.itemCategory, this.itemPrice,
+    this.isMarketplace = false,
   });
 }
 
@@ -650,24 +657,32 @@ class _AdminAppState extends State<AdminApp> {
         _matches..clear()..addAll(_parseMatches(rawMatches));
         _loading = false;
       });
-      // Load meetups (admin_pending)
+      // Load meetups (admin_pending + completion_pending)
       try {
-        final rawMeetups = await getAdminMeetups(status: 'admin_pending');
+        final pending    = await getAdminMeetups(status: 'admin_pending');
+        final completing = await getAdminMeetups(status: 'completion_pending');
+        final rawMeetups = [...pending, ...completing];
         if (!mounted) return;
         final meetups = rawMeetups.map((m) => AdminMeetup(
-          meetupId: int.tryParse(_s(m['meetup_id'])) ?? 0,
-          buyerId: int.tryParse(_s(m['buyer_id'])) ?? 0,
-          sellerId: int.tryParse(_s(m['seller_id'])) ?? 0,
-          buyerUsername: _s(m['buyer_username']).isEmpty ? 'Unknown' : _s(m['buyer_username']),
-          buyerEmail: _s(m['buyer_email']),
+          meetupId:       int.tryParse(_s(m['meetup_id'])) ?? 0,
+          buyerId:        int.tryParse(_s(m['buyer_id'])) ?? 0,
+          sellerId:       int.tryParse(_s(m['seller_id'])) ?? 0,
+          buyerUsername:  _s(m['buyer_username']).isEmpty ? 'Unknown' : _s(m['buyer_username']),
+          buyerEmail:     _s(m['buyer_email']),
           sellerUsername: _s(m['seller_username']).isEmpty ? 'Unknown' : _s(m['seller_username']),
-          sellerEmail: _s(m['seller_email']),
-          location: _s(m['location']),
-          status: _s(m['status']),
-          itemTitle: _s(m['item_title']).isEmpty ? 'Unknown Item' : _s(m['item_title']),
-          meetupTime: _s(m['meetup_time']),
-          meetupDate: _d(m['meetup_date']),
-          createdAt: _d(m['created_at']),
+          sellerEmail:    _s(m['seller_email']),
+          location:       _s(m['location']),
+          status:         _s(m['status']),
+          itemTitle:      _s(m['item_title']).isEmpty ? 'Meetup' : _s(m['item_title']),
+          meetupTime:     _s(m['meetup_time']),
+          meetupDate:     _d(m['meetup_date']),
+          createdAt:      _d(m['created_at']),
+          buyerPhotoUrl:  m['buyer_photo_url']?.toString(),
+          sellerPhotoUrl: m['seller_photo_url']?.toString(),
+          itemImage:      m['item_image']?.toString(),
+          itemCategory:   m['item_category']?.toString(),
+          itemPrice:      m['item_price'] != null ? double.tryParse(m['item_price'].toString()) : null,
+          isMarketplace:  (m['is_marketplace']?.toString() == '1') || (m['item_id'] != null && m['item_id'].toString().isNotEmpty && m['item_id'].toString() != 'null'),
         )).toList();
         if (mounted) setState(() => _meetups..clear()..addAll(meetups));
       } catch (_) {}
@@ -1084,7 +1099,7 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
   Future<void> _openReview(PendingListing listing) async {
     final titleCtrl   = TextEditingController(text: listing.title);
     final descCtrl    = TextEditingController(text: listing.description);
-    final priceCtrl   = TextEditingController(text: listing.price > 0 ? listing.price.toStringAsFixed(2) : '');
+    final priceCtrl   = TextEditingController(text: listing.price > 0 ? listing.price.toStringAsFixed(0) : '');
     final locCtrl     = TextEditingController(text: listing.location);
     final explainCtrl = TextEditingController();
     String category   = listing.category;
@@ -1308,7 +1323,7 @@ class _PendingListingTile extends StatelessWidget {
             Row(children: [
               const Icon(Icons.person_outline, size: 11, color: cMuted), const SizedBox(width: 3),
               Text(listing.sellerUsername, style: const TextStyle(fontSize: 11, color: cMuted)),
-              if (listing.price > 0) ...[const SizedBox(width: 8), Text('\$${listing.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cRed))],
+              if (listing.price > 0) ...[const SizedBox(width: 8), Text('\$${listing.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cRed))],
               const SizedBox(width: 8), Text(formatDate(listing.submittedAt), style: const TextStyle(fontSize: 11, color: cMuted)),
             ]),
           ])),
@@ -1923,113 +1938,274 @@ class _AdminMeetupsPanel extends StatefulWidget {
 class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
   bool _loading = false;
   String? _error;
+  bool _showCompletion = false;
   final TextEditingController _reasonCtrl = TextEditingController();
 
   @override
   void dispose() { _reasonCtrl.dispose(); super.dispose(); }
 
-  String _formatMeetupDate(DateTime d) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const days   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    return '${days[(d.weekday - 1) % 7]}, ${months[d.month - 1]} ${d.day}, ${d.year}';
+  List<AdminMeetup> get _pendingList =>
+      widget.meetups.where((m) => m.status == 'admin_pending').toList();
+  List<AdminMeetup> get _completionList =>
+      widget.meetups.where((m) => m.status == 'completion_pending').toList();
+
+  String _fmtDate(DateTime d) {
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dy = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    return '${dy[(d.weekday-1)%7]}, ${mo[d.month-1]} ${d.day}, ${d.year}';
   }
 
-  String _formatMeetupTime(String t) {
-    // t is HH:MM:SS
+  String _fmtTime(String t) {
     try {
-      final parts = t.split(':');
-      int h = int.parse(parts[0]);
-      final m = parts[1];
-      final ampm = h >= 12 ? 'PM' : 'AM';
+      final p = t.split(':');
+      int h = int.parse(p[0]);
+      final m = p[1];
+      final ap = h >= 12 ? 'PM' : 'AM';
       if (h > 12) h -= 12;
       if (h == 0) h = 12;
-      return '$h:$m $ampm';
+      return '$h:$m $ap';
     } catch (_) { return t; }
   }
 
-  Future<void> _approve(AdminMeetup meetup) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Approve Meetup?', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Text('Both @${meetup.buyerUsername} and @${meetup.sellerUsername} will be notified by email.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Approve', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w700))),
-        ],
-      ),
-    );
-    if (confirm != true) return;
+  Future<void> _approve(AdminMeetup m) async {
+    final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Approve Meetup?', style: TextStyle(fontWeight: FontWeight.w800)),
+      content: Text('Both @${m.buyerUsername} and @${m.sellerUsername} will be notified.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Approve', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w700))),
+      ],
+    ));
+    if (ok != true) return;
     setState(() { _loading = true; _error = null; });
-    try {
-      await adminApproveMeetup(meetupId: meetup.meetupId);
-      widget.onRefresh();
-    } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+    try { await adminApproveMeetup(meetupId: m.meetupId); widget.onRefresh(); }
+    catch (e) { setState(() => _error = e.toString()); }
+    finally { if (mounted) setState(() => _loading = false); }
   }
 
-  Future<void> _deny(AdminMeetup meetup) async {
+  Future<void> _deny(AdminMeetup m) async {
     _reasonCtrl.clear();
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Deny Meetup', style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Both @${meetup.buyerUsername} and @${meetup.sellerUsername} will be notified.', style: const TextStyle(color: cMuted, fontSize: 13)),
-          const SizedBox(height: 12),
-          const Text('Reason (required)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText)),
-          const SizedBox(height: 6),
-          TextField(
-            controller: _reasonCtrl,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Explain why this meetup is being denied...',
-              hintStyle: const TextStyle(color: cMuted, fontSize: 13),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cRed, width: 2)),
-              filled: true, fillColor: cBg,
-              contentPadding: const EdgeInsets.all(12),
-            ),
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Deny Meetup', style: TextStyle(fontWeight: FontWeight.w800)),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Both @${m.buyerUsername} and @${m.sellerUsername} will be notified.', style: const TextStyle(color: cMuted, fontSize: 13)),
+        const SizedBox(height: 12),
+        const Text('Reason (required)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _reasonCtrl, maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Explain why this meetup is being denied...',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 13),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true, fillColor: cBg, contentPadding: const EdgeInsets.all(12),
           ),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              if (_reasonCtrl.text.trim().isEmpty) return;
-              Navigator.pop(ctx, true);
-            },
-            child: const Text('Deny', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true || _reasonCtrl.text.trim().isEmpty) return;
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () { if (_reasonCtrl.text.trim().isEmpty) return; Navigator.pop(ctx, true); },
+          child: const Text('Deny', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700)),
+        ),
+      ],
+    ));
+    if (ok != true || _reasonCtrl.text.trim().isEmpty) return;
     setState(() { _loading = true; _error = null; });
-    try {
-      await adminDenyMeetup(meetupId: meetup.meetupId, reason: _reasonCtrl.text.trim());
-      widget.onRefresh();
-    } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+    try { await adminDenyMeetup(meetupId: m.meetupId, reason: _reasonCtrl.text.trim()); widget.onRefresh(); }
+    catch (e) { setState(() => _error = e.toString()); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
+
+  Future<void> _completeMeetup(AdminMeetup m) async {
+    final label = m.isMarketplace ? 'Complete & Process Payment' : 'Complete Meetup';
+    final body  = m.isMarketplace
+        ? 'Both photos have been verified. This will mark the meetup as completed, process the payment, and mark the listing as sold. Both users will be notified.'
+        : 'Both photos have been verified. This will mark the meetup as completed. Both users will be notified.';
+    final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+      content: Text(body),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: Text(label, style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w700))),
+      ],
+    ));
+    if (ok != true) return;
+    setState(() { _loading = true; _error = null; });
+    try { await adminCompleteMeetup(meetupId: m.meetupId); widget.onRefresh(); }
+    catch (e) { setState(() => _error = e.toString()); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
+
+  Widget _card(AdminMeetup m, {required bool isCompletion}) {
+    final accentColor = isCompletion ? const Color(0xFF16A34A) : const Color(0xFF7B5800);
+    final accentBg    = isCompletion ? const Color(0xFFECFDF5) : const Color(0xFFFFF8EC);
+    final badgeColor  = isCompletion ? const Color(0xFF16A34A).withValues(alpha: 0.12) : const Color(0xFFFFE082);
+    final badgeText   = isCompletion ? 'VERIFY' : 'PENDING';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isCompletion ? const Color(0xFF16A34A).withValues(alpha: 0.3) : cBorder),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Header ──
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+          decoration: BoxDecoration(
+            color: accentBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+            border: Border(bottom: BorderSide(color: cBorder)),
+          ),
+          child: Row(children: [
+            // Item image or icon
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: m.itemImage != null && m.itemImage!.isNotEmpty
+                  ? Image.network(m.itemImage!, width: 44, height: 44, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(width: 44, height: 44,
+                          decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(8)),
+                          child: Icon(isCompletion ? Icons.camera_alt_rounded : Icons.handshake_outlined, size: 20, color: accentColor)))
+                  : Container(width: 44, height: 44,
+                      decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(8)),
+                      child: Icon(isCompletion ? Icons.camera_alt_rounded : Icons.handshake_outlined, size: 20, color: accentColor)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(m.itemTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Row(children: [
+                if (m.itemPrice != null) ...[
+                  Text('\$${m.itemPrice!.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cRed)),
+                  const Text(' · ', style: TextStyle(fontSize: 11, color: cMuted)),
+                ],
+                if (m.itemCategory != null)
+                  Text(m.itemCategory!, style: const TextStyle(fontSize: 11, color: cMuted)),
+              ]),
+              Text('Submitted ${formatDate(m.createdAt)}', style: const TextStyle(fontSize: 10, color: cMuted)),
+            ])),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(6)),
+              child: Text(badgeText, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: accentColor, letterSpacing: 0.5)),
+            ),
+          ]),
+        ),
+        // ── Body ──
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Users
+            Row(children: [
+              Expanded(child: _MeetupUserChip(label: 'Buyer', username: m.buyerUsername, email: m.buyerEmail, color: const Color(0xFF2980B9))),
+              const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.sync_alt_rounded, size: 16, color: cMuted)),
+              Expanded(child: _MeetupUserChip(label: 'Seller', username: m.sellerUsername, email: m.sellerEmail, color: const Color(0xFF16A34A))),
+            ]),
+            const SizedBox(height: 12),
+            // Location / Date / Time
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
+              child: Column(children: [
+                _MeetupDetailRow(icon: Icons.location_on_outlined, label: m.location),
+                const SizedBox(height: 6),
+                _MeetupDetailRow(icon: Icons.calendar_today_outlined, label: _fmtDate(m.meetupDate)),
+                const SizedBox(height: 6),
+                _MeetupDetailRow(icon: Icons.access_time_rounded, label: _fmtTime(m.meetupTime)),
+              ]),
+            ),
+            // Completion photos
+            if (isCompletion) ...[
+              const SizedBox(height: 12),
+              const Text('Completion Photos', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: cText)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _PhotoPreview(label: 'Buyer Photo', url: m.buyerPhotoUrl)),
+                const SizedBox(width: 8),
+                Expanded(child: _PhotoPreview(label: 'Seller Photo', url: m.sellerPhotoUrl)),
+              ]),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _loading ? null : () => _completeMeetup(m),
+                  icon: _loading
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_circle_rounded, size: 16),
+                  label: Text(m.isMarketplace ? 'Complete & Process Payment' : 'Complete Meetup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _loading ? null : () => _deny(m),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: const Text('Deny'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : () => _approve(m),
+                    icon: _loading
+                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_rounded, size: 16),
+                    label: const Text('Approve'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ]),
+            ],
+          ]),
+        ),
+      ]),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final pending    = _pendingList;
+    final completing = _completionList;
+    final shown      = _showCompletion ? completing : pending;
+
     return Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('Meetup Proposals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
           const Text('Review and approve or deny pending meetup proposals', style: TextStyle(fontSize: 12, color: cMuted)),
+          const SizedBox(height: 10),
+          Row(children: [
+            _Chip(label: 'Pending (${pending.length})', selected: !_showCompletion, onTap: () => setState(() => _showCompletion = false)),
+            const SizedBox(width: 8),
+            _Chip(label: 'Verify (${completing.length})', selected: _showCompletion, onTap: () => setState(() => _showCompletion = true)),
+          ]),
           if (_error != null) ...[
             const SizedBox(height: 8),
             Container(
@@ -2042,107 +2218,51 @@ class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
       ),
       const SizedBox(height: 12),
       Expanded(
-        child: widget.meetups.isEmpty
-            ? const _AdminEmptyState(message: 'No pending meetup proposals', icon: Icons.handshake_outlined)
+        child: shown.isEmpty
+            ? _AdminEmptyState(
+                message: _showCompletion ? 'No meetups awaiting verification' : 'No pending meetup proposals',
+                icon: _showCompletion ? Icons.camera_alt_outlined : Icons.handshake_outlined,
+              )
             : ListView.builder(
                 primary: false,
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                itemCount: widget.meetups.length,
-                itemBuilder: (_, i) {
-                  final m = widget.meetups[i];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: cBorder),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
-                    ),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF8EC),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                          border: Border(bottom: BorderSide(color: cBorder)),
-                        ),
-                        child: Row(children: [
-                          Container(width: 32, height: 32, decoration: BoxDecoration(color: const Color(0xFFFFE082), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.handshake_outlined, size: 16, color: Color(0xFF7B5800))),
-                          const SizedBox(width: 10),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(m.itemTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
-                            Text('Proposed ${formatDate(m.createdAt)}', style: const TextStyle(fontSize: 11, color: cMuted)),
-                          ])),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(color: const Color(0xFFFFE082), borderRadius: BorderRadius.circular(6)),
-                            child: const Text('PENDING', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF7B5800), letterSpacing: 0.5)),
-                          ),
-                        ]),
-                      ),
-                      // Details
-                      Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          // Users
-                          Row(children: [
-                            Expanded(child: _MeetupUserChip(label: 'Buyer', username: m.buyerUsername, email: m.buyerEmail, color: const Color(0xFF2980B9))),
-                            const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.sync_alt_rounded, size: 16, color: cMuted)),
-                            Expanded(child: _MeetupUserChip(label: 'Seller', username: m.sellerUsername, email: m.sellerEmail, color: const Color(0xFF16A34A))),
-                          ]),
-                          const SizedBox(height: 12),
-                          // Meetup info
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
-                            child: Column(children: [
-                              _MeetupDetailRow(icon: Icons.location_on_outlined, label: m.location),
-                              const SizedBox(height: 6),
-                              _MeetupDetailRow(icon: Icons.calendar_today_outlined, label: _formatMeetupDate(m.meetupDate)),
-                              const SizedBox(height: 6),
-                              _MeetupDetailRow(icon: Icons.access_time_rounded, label: _formatMeetupTime(m.meetupTime)),
-                            ]),
-                          ),
-                          const SizedBox(height: 12),
-                          // Action buttons
-                          Row(children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _loading ? null : () => _deny(m),
-                                icon: const Icon(Icons.close_rounded, size: 16),
-                                label: const Text('Deny'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _loading ? null : () => _approve(m),
-                                icon: _loading
-                                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                    : const Icon(Icons.check_rounded, size: 16),
-                                label: const Text('Approve'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                                ),
-                              ),
-                            ),
-                          ]),
-                        ]),
-                      ),
-                    ]),
-                  );
-                },
+                itemCount: shown.length,
+                itemBuilder: (_, i) => _card(shown[i], isCompletion: _showCompletion),
               ),
+      ),
+    ]);
+  }
+}
+
+class _PhotoPreview extends StatelessWidget {
+  final String label;
+  final String? url;
+  const _PhotoPreview({required this.label, this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = url != null && url!.isNotEmpty;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cMuted)),
+      const SizedBox(height: 4),
+      Container(
+        height: 110,
+        decoration: BoxDecoration(
+          color: cBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: hasPhoto ? const Color(0xFF16A34A).withValues(alpha: 0.4) : cBorder),
+        ),
+        child: hasPhoto
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Image.network(url!, fit: BoxFit.cover, width: double.infinity,
+                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, color: cMuted))),
+              )
+            : const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.camera_alt_outlined, color: cMuted, size: 20),
+                SizedBox(height: 4),
+                Text('Not submitted', style: TextStyle(fontSize: 10, color: cMuted)),
+              ])),
       ),
     ]);
   }
@@ -2808,7 +2928,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
     } else {
       for (final item in widget.allListings) {
         if (item.id == listingId) {
-          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.type, 'seller_username': item.sellerUsername, 'price': item.price > 0 ? item.price.toStringAsFixed(2) : ''};
+          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.type, 'seller_username': item.sellerUsername, 'price': item.price > 0 ? item.price.toStringAsFixed(0) : ''};
         }
       }
     }
