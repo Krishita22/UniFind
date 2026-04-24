@@ -498,9 +498,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (!mounted) return;
       final msgs = raw.map(ChatMessage.fromMap).toList();
       await _syncMeetupStatuses(msgs);
+      final isComplete = await getConversationIsComplete(conversationId: widget.conv.id);
       if (!mounted) return;
       setState(() {
         _msgs..clear()..addAll(msgs);
+        _isComplete = isComplete;
         _loading = false;
       });
       _scrollToBottom();
@@ -521,6 +523,25 @@ class _ConversationScreenState extends State<ConversationScreen> {
         if (!mounted) return;
         setState(() { _msgs..clear()..addAll(incoming); });
         _scrollToBottom();
+      }
+      // Check if conversation was marked complete by the other user
+      if (!_isComplete) {
+        final nowComplete = await getConversationIsComplete(conversationId: widget.conv.id);
+        if (nowComplete && mounted) {
+          setState(() => _isComplete = true);
+          // Show rating dialog for the other person (the one who didn't click Mark Complete)
+          await RatingDialog.show(context,
+            targetName:     widget.conv.otherName,
+            targetUserId:   widget.conv.otherId,
+            conversationId: widget.conv.id,
+            raterUserId:    widget.myId,
+          );
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('This conversation has been marked as complete by the other party.'),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+          ));
+        }
       }
     } catch (_) {}
   }
@@ -657,7 +678,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (!mounted) return;
       _ctrl.text = body;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send: $e'), behavior: SnackBarBehavior.floating));
+          SnackBar(content: Text('Failed to send: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -699,7 +720,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+          SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
     } finally {
       if (mounted) setState(() => _completing = false);
     }
@@ -756,7 +777,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+        SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
     }
   }
 
@@ -776,7 +797,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+        SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
     }
   }
 
@@ -816,7 +837,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+        SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
     }
   }
 
@@ -925,6 +946,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
               const SizedBox(width: 8),
               const Expanded(child: Text('This conversation has been marked as complete.',
                   style: TextStyle(fontSize: 12, color: Color(0xFF27AE60), fontWeight: FontWeight.w600))),
+              GestureDetector(
+                onTap: () => RatingDialog.show(context,
+                  targetName:     widget.conv.otherName,
+                  targetUserId:   widget.conv.otherId,
+                  conversationId: widget.conv.id,
+                  raterUserId:    widget.myId,
+                ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF27AE60),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.star_rounded, color: Colors.white, size: 13),
+                    SizedBox(width: 4),
+                    Text('Rate', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                  ]),
+                ),
+              ),
             ])),
           )
         else

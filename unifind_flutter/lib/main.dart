@@ -963,6 +963,7 @@ class _UniFindAppState extends State<UniFindApp> {
         SnackBar(
           content: Text('Error: $e'),
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
         ),
       );
       return;
@@ -999,6 +1000,7 @@ class _UniFindAppState extends State<UniFindApp> {
         const SnackBar(
           content: Text('Claim failed to sync with database.'),
           behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 5),
         ),
       );
     }
@@ -1030,6 +1032,7 @@ class _UniFindAppState extends State<UniFindApp> {
         const SnackBar(
           content: Text('Unable to post found match right now.'),
           behavior: SnackBarBehavior.floating,
+          duration: Duration(seconds: 5),
         ),
       );
     }
@@ -1054,6 +1057,14 @@ class _UniFindAppState extends State<UniFindApp> {
       _market.removeWhere((m) => m.id == item.id);
     });
     await _loadListings();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your listing has been sent to admin for reapproval.'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 5),
+      ),
+    );
   }
 
   Future<void> _editLostFoundItem(
@@ -1073,6 +1084,24 @@ class _UniFindAppState extends State<UniFindApp> {
       _lostFound.removeWhere((m) => m.id == item.id);
     });
     await _loadLostFound();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your post has been sent to admin for reapproval.'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 5),
+      ),
+    );
+  }
+
+  Future<void> _deleteMarketplaceItem(MarketplaceItem item) async {
+    await deleteListing(id: item.id, email: _email);
+    setState(() => _market.removeWhere((m) => m.id == item.id));
+  }
+
+  Future<void> _deleteLostFoundItem(LostFoundItem item) async {
+    await deleteLostFoundItem(id: item.id, email: _email);
+    setState(() => _lostFound.removeWhere((m) => m.id == item.id));
   }
 
   void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
@@ -1173,6 +1202,8 @@ class _UniFindAppState extends State<UniFindApp> {
               postFoundMatch: _postFoundMatch,
               editMarketplace: _editMarketplaceItem,
               editLostFound: _editLostFoundItem,
+              deleteMarketplace: _deleteMarketplaceItem,
+              deleteLostFound: _deleteLostFoundItem,
               onTabChanged: (index) {
                 setState(() => _tab = index);
                 SharedPreferences.getInstance().then((p) => p.setInt('current_tab', index));
