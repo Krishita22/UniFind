@@ -1101,6 +1101,7 @@ Future<List<String>> getBookedSlots({
 
 Future<int> createMeetup({
   required int itemId,
+  required int conversationId,
   required int buyerId,
   required int sellerId,
   required String date,  
@@ -1112,6 +1113,7 @@ Future<int> createMeetup({
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'item_id': itemId,
+      'conversation_id': conversationId,
       'buyer_id': buyerId,
       'seller_id': sellerId,
       'meetup_date': date,
@@ -1614,4 +1616,29 @@ Future<void> adminDenyMeetup({required int meetupId, required String reason}) as
   if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to deny meetup');
 }
 
+Future<Map<String, dynamic>> submitCompletionPhoto({
+  required int meetupId, required int userId, required String photoUrl,
+}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/submit_completion_photo.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'meetup_id': meetupId, 'user_id': userId, 'photo_url': photoUrl}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to submit photo');
+  return Map<String, dynamic>.from(data['data']);
+}
+
+Future<Map<String, dynamic>> getMeetupDetails({required int meetupId}) async {
+  final res = await http.get(Uri.parse('$_baseUrl/admin/meetup/get_meetup_details.php?meetup_id=$meetupId'));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to get meetup details');
+  return Map<String, dynamic>.from(data['data']);
+}
+
+Future<void> adminCompleteMeetup({required int meetupId}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/admin_complete_meetup.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'meetup_id': meetupId}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to complete meetup');
+}
 
