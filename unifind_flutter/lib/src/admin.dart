@@ -1065,7 +1065,7 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
   Future<void> _openReview(PendingListing listing) async {
     final titleCtrl   = TextEditingController(text: listing.title);
     final descCtrl    = TextEditingController(text: listing.description);
-    final priceCtrl   = TextEditingController(text: listing.price > 0 ? listing.price.toStringAsFixed(0) : '');
+    final priceCtrl   = TextEditingController(text: listing.price > 0 ? listing.price.toStringAsFixed(2) : '');
     final locCtrl     = TextEditingController(text: listing.location);
     final explainCtrl = TextEditingController();
     String category   = listing.category;
@@ -1289,7 +1289,7 @@ class _PendingListingTile extends StatelessWidget {
             Row(children: [
               const Icon(Icons.person_outline, size: 11, color: cMuted), const SizedBox(width: 3),
               Text(listing.sellerUsername, style: const TextStyle(fontSize: 11, color: cMuted)),
-              if (listing.price > 0) ...[const SizedBox(width: 8), Text('\$${listing.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cRed))],
+              if (listing.price > 0) ...[const SizedBox(width: 8), Text('\$${listing.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cRed))],
               const SizedBox(width: 8), Text(formatDate(listing.submittedAt), style: const TextStyle(fontSize: 11, color: cMuted)),
             ]),
           ])),
@@ -2457,7 +2457,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
     } else {
       for (final item in widget.allListings) {
         if (item.id == listingId) {
-          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.type, 'seller_username': item.sellerUsername, 'price': item.price > 0 ? item.price.toStringAsFixed(0) : ''};
+          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.type, 'seller_username': item.sellerUsername, 'price': item.price > 0 ? item.price.toStringAsFixed(2) : ''};
         }
       }
     }

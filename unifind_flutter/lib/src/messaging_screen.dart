@@ -9,6 +9,7 @@ class Conversation {
   final DateTime? lastAt;
   final int unread;
   final int? listingId;
+  final bool isComplete;
   const Conversation({
     required this.id, required this.subject,
     required this.otherName, required this.otherEmail,
@@ -16,6 +17,7 @@ class Conversation {
     required this.otherId,
     this.lastMessage, this.lastAt,
     required this.unread, this.listingId,
+    this.isComplete = false,
   });
   factory Conversation.fromMap(Map<String, dynamic> m, int myId) {
     final u1 = int.tryParse(m['user1_id'].toString()) ?? 0;
@@ -41,6 +43,7 @@ class Conversation {
       lastAt:        m['last_at'] != null ? DateTime.tryParse(m['last_at'].toString()) : null,
       unread:        int.tryParse(m['unread']?.toString() ?? '0') ?? 0,
       listingId:     m['listing_id'] != null ? int.tryParse(m['listing_id'].toString()) : null,
+      isComplete:    m['is_complete'] == 1 || m['is_complete'] == true || m['is_complete'] == '1',
     );
   }
 }
@@ -498,7 +501,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (!mounted) return;
       final msgs = raw.map(ChatMessage.fromMap).toList();
       await _syncMeetupStatuses(msgs);
-      final isComplete = await getConversationIsComplete(conversationId: widget.conv.id);
+      // Read is_complete from the raw messages response or fall back to conv flag
+      bool isComplete = widget.conv.isComplete;
+      try {
+        isComplete = await getConversationIsComplete(conversationId: widget.conv.id);
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _msgs..clear()..addAll(msgs);
@@ -668,7 +675,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Future<void> _send() async {
     final body = _ctrl.text.trim();
-    if (body.isEmpty || _sending) return;
+    if (body.isEmpty || _sending || _isComplete) return;
     _ctrl.clear();
     setState(() => _sending = true);
     try {
@@ -877,16 +884,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
               maxLines: 1, overflow: TextOverflow.ellipsis),
         ]),
         actions: [
-          if (_completing)
-            const Padding(padding: EdgeInsets.all(14),
-                child: SizedBox(width: 20, height: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
-          else
-            TextButton.icon(
-              onPressed: _markComplete,
-              icon: const Icon(Icons.check_circle_outline, color: Colors.white70, size: 18),
-              label: const Text('Complete', style: TextStyle(color: Colors.white70, fontSize: 12)),
-            ),
+          if (!_isComplete) ...[
+            if (_completing)
+              const Padding(padding: EdgeInsets.all(14),
+                  child: SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)))
+            else
+              TextButton.icon(
+                onPressed: _markComplete,
+                icon: const Icon(Icons.check_circle_outline, color: Colors.white70, size: 18),
+                label: const Text('Complete', style: TextStyle(color: Colors.white70, fontSize: 12)),
+              ),
+          ],
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
         ],
       ),
