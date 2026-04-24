@@ -38,6 +38,7 @@ part 'src/ratings_screen.dart';
 part 'src/payment_screen.dart';
 part 'src/offers_screen.dart';
 part 'src/propose_meeting.dart';
+part 'src/report_bug.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
@@ -600,7 +601,7 @@ class _UniFindAppState extends State<UniFindApp> {
       _normalizeText(_short(in_.description)),
       _normalizeText(in_.category),
       _normalizeText(in_.location),
-      in_.price.toStringAsFixed(0),
+      in_.price.toStringAsFixed(2),
     ].join('|');
   }
 
@@ -620,7 +621,7 @@ class _UniFindAppState extends State<UniFindApp> {
       _normalizeText(_short(item.description)),
       _normalizeText(item.category),
       _normalizeText(item.location),
-      item.price.toStringAsFixed(0),
+      item.price.toStringAsFixed(2),
     ].join('|');
   }
 
@@ -1057,14 +1058,6 @@ class _UniFindAppState extends State<UniFindApp> {
       _market.removeWhere((m) => m.id == item.id);
     });
     await _loadListings();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Your listing has been sent to admin for reapproval.'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 5),
-      ),
-    );
   }
 
   Future<void> _editLostFoundItem(
@@ -1084,14 +1077,6 @@ class _UniFindAppState extends State<UniFindApp> {
       _lostFound.removeWhere((m) => m.id == item.id);
     });
     await _loadLostFound();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Your post has been sent to admin for reapproval.'),
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 5),
-      ),
-    );
   }
 
   Future<void> _deleteMarketplaceItem(MarketplaceItem item) async {

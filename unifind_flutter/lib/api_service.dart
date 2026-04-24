@@ -540,18 +540,19 @@ Future<String> uploadImage(
     throw Exception('Image data is empty. Please select a valid image file.');
   }
 
-  const int maxBytes = 5 * 1024 * 1024; // 5 MB
+  const int maxBytes = 5 * 1024 * 1024;
   if (fileBytes.length > maxBytes) {
     final sizeMb = (fileBytes.length / 1048576).toStringAsFixed(1);
-    throw Exception(
-      'Image is too large ($sizeMb MB). Please use an image under 5 MB.',
-    );
+    throw Exception('Image is too large ($sizeMb MB). Please use an image under 5 MB.');
   }
 
-  final uri = Uri.parse('$_baseUrl/../uploads/upload_image.php');
-  final request = http.MultipartRequest('POST', uri);
+  const cloudName   = 'dj4lyjpnv';
+  const uploadPreset = 'UniFind';
+  final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
 
-  request.fields['type'] = type;
+  final request = http.MultipartRequest('POST', uri);
+  request.fields['upload_preset'] = uploadPreset;
+  request.fields['folder'] = type;
 
   final name = filePath.isNotEmpty
       ? filePath.split('/').last.split('\\').last
@@ -567,32 +568,27 @@ Future<String> uploadImage(
   } on TimeoutException {
     throw Exception('Image upload timed out. Please check your connection and try again.');
   } catch (e) {
-    throw Exception('Failed to connect to server for image upload. Please try again.');
+    throw Exception('Failed to connect to Cloudinary for image upload. Please try again.');
   }
 
   final response = await http.Response.fromStream(streamedResponse);
 
   if (response.statusCode == 200) {
     final data = jsonDecode(response.body);
-    if (data['success'] == true && data['url'] != null) {
-      return data['url'] as String;
+    if (data['secure_url'] != null) {
+      return data['secure_url'] as String;
     }
-    final serverMsg = data['error']?.toString() ?? 'Upload failed.';
-    throw Exception(serverMsg);
+    throw Exception(data['error']?['message']?.toString() ?? 'Upload failed.');
   }
 
   try {
     final data = jsonDecode(response.body);
-    final serverMsg = data['error']?.toString();
-    if (serverMsg != null && serverMsg.isNotEmpty) throw Exception(serverMsg);
+    final msg = data['error']?['message']?.toString();
+    if (msg != null && msg.isNotEmpty) throw Exception(msg);
   } catch (_) {}
 
-  if (response.statusCode == 413) {
-    throw Exception('Image is too large for the server. Please use an image under 5 MB.');
-  }
   throw Exception('Image upload failed (HTTP ${response.statusCode}). Please try again.');
 }
-
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ADMIN API CALLS
@@ -1105,6 +1101,7 @@ Future<List<String>> getBookedSlots({
 
 Future<int> createMeetup({
   required int itemId,
+  required int conversationId,
   required int buyerId,
   required int sellerId,
   required String date,  
@@ -1116,6 +1113,7 @@ Future<int> createMeetup({
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'item_id': itemId,
+      'conversation_id': conversationId,
       'buyer_id': buyerId,
       'seller_id': sellerId,
       'meetup_date': date,
@@ -1597,3 +1595,50 @@ Future<Map<String, dynamic>> createAdminUser({
     code: data['error_code']?.toString(),
   );
 }
+
+Future<List<Map<String, dynamic>>> getAdminMeetups({required String status}) async {
+  final res = await http.get(Uri.parse('$_baseUrl/admin/meetup/get_admin_meetups.php?status=$status'));
+  final data = jsonDecode(res.body);
+  return List<Map<String, dynamic>>.from(data['data'] ?? []);
+}
+
+Future<void> adminApproveMeetup({required int meetupId}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/approve_meetup.php'),
+    headers: {'Content-Type': 'application/json'}, body: jsonEncode({'meetup_id': meetupId}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to approve meetup');
+}
+
+Future<void> adminDenyMeetup({required int meetupId, required String reason}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/deny_meetup.php'),
+    headers: {'Content-Type': 'application/json'}, body: jsonEncode({'meetup_id': meetupId, 'reason': reason}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to deny meetup');
+}
+
+Future<Map<String, dynamic>> submitCompletionPhoto({
+  required int meetupId, required int userId, required String photoUrl,
+}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/submit_completion_photo.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'meetup_id': meetupId, 'user_id': userId, 'photo_url': photoUrl}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to submit photo');
+  return Map<String, dynamic>.from(data['data']);
+}
+
+Future<Map<String, dynamic>> getMeetupDetails({required int meetupId}) async {
+  final res = await http.get(Uri.parse('$_baseUrl/admin/meetup/get_meetup_details.php?meetup_id=$meetupId'));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to get meetup details');
+  return Map<String, dynamic>.from(data['data']);
+}
+
+Future<void> adminCompleteMeetup({required int meetupId}) async {
+  final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/admin_complete_meetup.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'meetup_id': meetupId}));
+  final data = jsonDecode(res.body);
+  if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to complete meetup');
+}
+
