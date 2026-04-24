@@ -469,7 +469,7 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
-                                    '\$${item.price.toStringAsFixed(0)}',
+                                    '\$${item.price.toStringAsFixed(2)}',
                                     style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: cRed, letterSpacing: -1),
                                   ),
                                   const Spacer(),
@@ -817,59 +817,25 @@ class _BrowserLayout extends StatefulWidget {
   State<_BrowserLayout> createState() => _BrowserLayoutState();
 }
 
-class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProviderStateMixin {
-  bool _panelOpen = true;
-  late AnimationController _animCtrl;
-  late Animation<double> _widthAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _animCtrl = AnimationController(vsync: this, duration: kMid, value: 1.0);
-    _widthAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _animCtrl.dispose();
-    super.dispose();
-  }
-
-  void _togglePanel() {
-    setState(() => _panelOpen = !_panelOpen);
-    if (_panelOpen) _animCtrl.forward();
-    else _animCtrl.reverse();
-  }
-
+class _BrowserLayoutState extends State<_BrowserLayout> {
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AnimatedBuilder(
-          animation: _widthAnim,
-          builder: (context, child) => SizedBox(
-            width: _widthAnim.value * 240,
-            child: OverflowBox(maxWidth: 240, alignment: Alignment.topLeft, child: child),
-          ),
-          child: Container(
-            width: 240,
-            decoration: BoxDecoration(color: cSurface, border: Border(right: BorderSide(color: cBorder))),
-            child: AnimatedOpacity(
-              opacity: _panelOpen ? 1.0 : 0.0,
-              duration: kFast,
-              child: _SidePanel(
-                cat: widget.cat,
-                cond: widget.cond,
-                minCtrl: widget.minCtrl,
-                maxCtrl: widget.maxCtrl,
-                hasActiveFilters: widget.hasActiveFilters,
-                onCatChanged: widget.onCatChanged,
-                onCondChanged: widget.onCondChanged,
-                onApplyPrice: widget.onApplyPrice,
-                onClearFilters: widget.onClearFilters,
-              ),
-            ),
+        Container(
+          width: 240,
+          decoration: BoxDecoration(color: cSurface, border: Border(right: BorderSide(color: cBorder))),
+          child: _SidePanel(
+            cat: widget.cat,
+            cond: widget.cond,
+            minCtrl: widget.minCtrl,
+            maxCtrl: widget.maxCtrl,
+            hasActiveFilters: widget.hasActiveFilters,
+            onCatChanged: widget.onCatChanged,
+            onCondChanged: widget.onCondChanged,
+            onApplyPrice: widget.onApplyPrice,
+            onClearFilters: widget.onClearFilters,
           ),
         ),
         Expanded(
@@ -880,27 +846,6 @@ class _BrowserLayoutState extends State<_BrowserLayout> with SingleTickerProvide
                 decoration: BoxDecoration(border: Border(bottom: BorderSide(color: cBorder))),
                 child: Row(
                   children: [
-                    Tooltip(
-                      message: _panelOpen ? 'Hide filters' : 'Show filters',
-                      child: GestureDetector(
-                        onTap: _togglePanel,
-                        child: AnimatedContainer(
-                          duration: kFast,
-                          width: 36, height: 36,
-                          decoration: BoxDecoration(
-                            color: widget.hasActiveFilters ? cRedLight : cBg,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: widget.hasActiveFilters ? cRed.withValues(alpha: 0.4) : cBorder),
-                          ),
-                          child: Icon(
-                            _panelOpen ? Icons.chevron_left_rounded : Icons.tune_rounded,
-                            size: 18,
-                            color: widget.hasActiveFilters ? cRed : cMuted,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(child: _SearchField(hint: 'Search marketplace...', onChanged: widget.onSearch)),
                     const SizedBox(width: 12),
                     _HoverButton(child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem)),
@@ -993,9 +938,6 @@ class _SidePanel extends StatefulWidget {
 
 class _SidePanelState extends State<_SidePanel> {
   static const _conditions = ['All', 'New', 'Like New', 'Good', 'Fair'];
-  bool _categoryExpanded = true;
-  bool _conditionExpanded = true;
-  bool _priceExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -1020,8 +962,6 @@ class _SidePanelState extends State<_SidePanel> {
           Divider(height: 1, color: cBorder),
           _CollapsibleSection(
             label: 'CATEGORY',
-            expanded: _categoryExpanded,
-            onToggle: () => setState(() => _categoryExpanded = !_categoryExpanded),
             child: Wrap(
               spacing: 5, runSpacing: 5,
               children: ['All', ...categories].map((c) {
@@ -1044,8 +984,6 @@ class _SidePanelState extends State<_SidePanel> {
           ),
           _CollapsibleSection(
             label: 'CONDITION',
-            expanded: _conditionExpanded,
-            onToggle: () => setState(() => _conditionExpanded = !_conditionExpanded),
             child: Column(
               children: _conditions.map((c) {
                 final selected = widget.cond == c;
@@ -1083,8 +1021,6 @@ class _SidePanelState extends State<_SidePanel> {
           ),
           _CollapsibleSection(
             label: 'PRICE RANGE',
-            expanded: _priceExpanded,
-            onToggle: () => setState(() => _priceExpanded = !_priceExpanded),
             child: Column(
               children: [
                 Row(
@@ -1154,14 +1090,10 @@ class _SidePanelState extends State<_SidePanel> {
 // --- COLLAPSIBLE SECTION ---
 class _CollapsibleSection extends StatelessWidget {
   final String label;
-  final bool expanded;
-  final VoidCallback onToggle;
   final Widget child;
 
   const _CollapsibleSection({
     required this.label,
-    required this.expanded,
-    required this.onToggle,
     required this.child,
   });
 
@@ -1170,29 +1102,11 @@ class _CollapsibleSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GestureDetector(
-          onTap: onToggle,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Row(
-              children: [
-                Expanded(child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2))),
-                AnimatedRotation(
-                  turns: expanded ? 0 : -0.25,
-                  duration: kFast,
-                  child: const Icon(Icons.expand_more_rounded, size: 16, color: cMuted),
-                ),
-              ],
-            ),
-          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 1.2)),
         ),
-        AnimatedCrossFade(
-          firstChild: Padding(padding: const EdgeInsets.only(bottom: 10), child: child),
-          secondChild: const SizedBox.shrink(),
-          crossFadeState: expanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-          duration: kFast,
-        ),
+        Padding(padding: const EdgeInsets.only(bottom: 10), child: child),
         Divider(height: 1, color: cBorder),
       ],
     );
@@ -1362,7 +1276,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('\$${widget.item.price.toStringAsFixed(0)}',
+                            Text('\$${widget.item.price.toStringAsFixed(2)}',
                                 style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),

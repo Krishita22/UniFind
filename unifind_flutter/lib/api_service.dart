@@ -8,7 +8,7 @@ import 'dart:typed_data';
 // On web: use relative URL (same origin) to avoid CORS/mixed-content issues
 // On mobile: use full URL
 
-const String _baseUrl = 'https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API';
+const String _baseUrl = 'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API';
 
 class ApiException implements Exception {
   final String message;
@@ -341,6 +341,38 @@ Future<Map<String, dynamic>> updateListing({
     data['error']?.toString() ?? 'Failed to update listing.',
     code: data['error_code']?.toString(),
   );
+}
+
+Future<Map<String, dynamic>> deleteListing({
+  required String id,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/listings/marketplace/delete_listing.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'id': id, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to delete listing.');
+}
+
+Future<Map<String, dynamic>> deleteLostFoundItem({
+  required String id,
+  required String email,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/listings/lostfound/delete_lostfound.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'id': id, 'email': email}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to delete item.');
 }
 
 // POST LOST & FOUND ITEM
@@ -1164,6 +1196,19 @@ Future<Map<String, dynamic>> markConversationComplete({
     return Map<String, dynamic>.from(data);
   }
   throw ApiException(data['error']?.toString() ?? 'Failed to mark complete.');
+}
+
+Future<bool> getConversationIsComplete({required int conversationId}) async {
+  try {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/messaging/conversation/get_conversation_status.php?conversation_id=$conversationId'),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true) {
+      return data['data']?['is_complete'] == 1 || data['data']?['is_complete'] == true;
+    }
+  } catch (_) {}
+  return false;
 }
 
 // ── APPROVED CLAIMS ──────────────────────────────────────────────────────────
