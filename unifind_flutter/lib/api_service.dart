@@ -1132,45 +1132,6 @@ Future<int> createMeetup({
 }
 
 // CREATE MEETUP FOR LOST & FOUND
-Future<int> createLostFoundMeetup({
-  required int matchId,
-  required String date,
-  required String time,
-  required String location,
-}) async {
-  final response = await http.post(
-    Uri.parse('$_baseUrl/messaging/meetup/create_meetup.php'),
-    headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({
-      'match_id': matchId,
-      'meetup_date': date,
-      'meetup_time': time,
-      'meetup_location': location,
-    }),
-  );
-
-  final data = jsonDecode(response.body);
-  if (response.statusCode == 200 && data['success'] == true) {
-    return data['data']['meetup_id'] as int;
-  }
-  throw Exception(data['error'] ?? 'Failed to create meetup.');
-}
-
-Future<Map<String, dynamic>?> getLostFoundMeetup({int? matchId, int? itemId}) async {
-  if (matchId == null && itemId == null) return null;
-  try {
-    final url = matchId != null
-        ? '$_baseUrl/messaging/meetup/get_lost_found_meetup.php?match_id=$matchId'
-        : '$_baseUrl/messaging/meetup/get_lost_found_meetup.php?item_id=$itemId';
-    final response = await http.get(Uri.parse(url));
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200 && data['success'] == true && data['data'] != null) {
-      return Map<String, dynamic>.from(data['data']);
-    }
-  } catch (_) {}
-  return null;
-}
-
 // ── RATINGS ───────────────────────────────────────────────────────────────────
 
 Future<Map<String, dynamic>> getUserRating({required int userId}) async {

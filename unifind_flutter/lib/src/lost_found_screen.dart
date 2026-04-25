@@ -415,60 +415,6 @@ void _showLostFoundPopup(
                                 ),
                                 const SizedBox(height: 8),
                               ],
-                              // Meetup details (if scheduled)
-                              FutureBuilder<Map<String, dynamic>?>(
-                                future: getLostFoundMeetup(itemId: int.tryParse(item.id) ?? 0),
-                                builder: (_, snap) {
-                                  if (snap.connectionState == ConnectionState.waiting) return const SizedBox.shrink();
-                                  final meetup = snap.data;
-                                  if (meetup == null) return const SizedBox.shrink();
-                                  return Column(children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
-                                      ),
-                                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Row(children: [
-                                          const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF3B82F6)),
-                                          const SizedBox(width: 6),
-                                          const Text('Scheduled Meetup', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF3B82F6))),
-                                          const Spacer(),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF3B82F6).withValues(alpha: 0.12),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: Text((meetup['status'] ?? 'pending').toUpperCase(), style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF3B82F6))),
-                                          ),
-                                        ]),
-                                        const SizedBox(height: 8),
-                                        Row(children: [
-                                          const Icon(Icons.date_range_rounded, size: 12, color: cMuted),
-                                          const SizedBox(width: 6),
-                                          Text(meetup['meetup_date'] ?? '—', style: const TextStyle(fontSize: 11, color: cText)),
-                                        ]),
-                                        const SizedBox(height: 4),
-                                        Row(children: [
-                                          const Icon(Icons.schedule_rounded, size: 12, color: cMuted),
-                                          const SizedBox(width: 6),
-                                          Text(meetup['meetup_time'] ?? '—', style: const TextStyle(fontSize: 11, color: cText)),
-                                        ]),
-                                        const SizedBox(height: 4),
-                                        Row(children: [
-                                          const Icon(Icons.location_on_rounded, size: 12, color: cMuted),
-                                          const SizedBox(width: 6),
-                                          Expanded(child: Text(meetup['meetup_location'] ?? '—', style: const TextStyle(fontSize: 11, color: cText))),
-                                        ]),
-                                      ]),
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ]);
-                                },
-                              ),
                               // Hint
                               if (approvedChatConvId != null)
                                 const Text('Your claim was approved! Use the chat to coordinate.', style: TextStyle(fontSize: 11, color: Color(0xFF27AE60), fontStyle: FontStyle.italic))
