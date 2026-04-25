@@ -327,7 +327,8 @@ class _BadgedNavTab extends StatelessWidget {
 
 class _NavPostButton extends StatefulWidget {
   final VoidCallback onTap;
-  const _NavPostButton({required this.onTap});
+  final bool isActive;
+  const _NavPostButton({required this.onTap, this.isActive = false});
 
   @override
   State<_NavPostButton> createState() => _NavPostButtonState();
@@ -346,25 +347,41 @@ class _NavPostButtonState extends State<_NavPostButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: kFast,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
           decoration: BoxDecoration(
-            color: _hovered
-                ? Colors.white.withValues(alpha: 0.25)
-                : Colors.white.withValues(alpha: 0.15),
+            color: widget.isActive
+                ? Colors.white.withValues(alpha: 0.18)
+                : _hovered
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            border: widget.isActive
+                ? Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1)
+                : null,
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add_rounded, size: 16, color: Colors.white),
-              SizedBox(width: 4),
+              Icon(
+                widget.isActive
+                    ? Icons.add_circle_rounded
+                    : Icons.add_circle_outline_rounded,
+                size: 16,
+                color: widget.isActive
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.65),
+              ),
+              const SizedBox(width: 6),
               Text(
                 'Post',
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+                  fontWeight:
+                      widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: widget.isActive
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.65),
                 ),
               ),
             ],

@@ -532,12 +532,10 @@ void _showItemPopup(BuildContext context, MarketplaceItem item, String currentUs
                               const SizedBox(height: 16),
 
 
-                              // Condition + location chips
+                              // Condition chip
                               Row(
                                 children: [
                                   _InfoChip(icon: Icons.stars_rounded, label: item.condition),
-                                  const SizedBox(width: 8),
-                                  _InfoChip(icon: Icons.location_on_outlined, label: item.location),
                                 ],
                               ),
                               const SizedBox(height: 18),
@@ -1287,9 +1285,6 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                         ),
                         Row(
                           children: [
-                            const Icon(Icons.location_on_outlined, size: 9, color: cMuted),
-                            const SizedBox(width: 2),
-                            Expanded(child: Text(widget.item.location, style: const TextStyle(fontSize: 9, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis)),
                             if (widget.item.ratingCount > 0) GestureDetector(
                               onTap: () {
                                 if (widget.item.sellerId != null) {
