@@ -2239,30 +2239,92 @@ class _PhotoPreview extends StatelessWidget {
   final String? url;
   const _PhotoPreview({required this.label, this.url});
 
+  void _showFullScreen(BuildContext context) {
+    if (url == null || url!.isEmpty) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(children: [
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Image.network(url!,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48))),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 0, right: 0,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 36, height: 36,
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 8, left: 0, right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                child: Text(label,
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasPhoto = url != null && url!.isNotEmpty;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cMuted)),
       const SizedBox(height: 4),
-      Container(
-        height: 110,
-        decoration: BoxDecoration(
-          color: cBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: hasPhoto ? const Color(0xFF16A34A).withValues(alpha: 0.4) : cBorder),
+      GestureDetector(
+        onTap: hasPhoto ? () => _showFullScreen(context) : null,
+        child: Container(
+          height: 110,
+          decoration: BoxDecoration(
+            color: cBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: hasPhoto ? const Color(0xFF16A34A).withValues(alpha: 0.4) : cBorder),
+          ),
+          child: hasPhoto
+              ? Stack(children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: Image.network(url!, fit: BoxFit.cover, width: double.infinity, height: 110,
+                      errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, color: cMuted))),
+                  ),
+                  Positioned(
+                    bottom: 5, right: 5,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                      child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 14),
+                    ),
+                  ),
+                ])
+              : const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.camera_alt_outlined, color: cMuted, size: 20),
+                  SizedBox(height: 4),
+                  Text('Not submitted', style: TextStyle(fontSize: 10, color: cMuted)),
+                ])),
         ),
-        child: hasPhoto
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(9),
-                child: Image.network(url!, fit: BoxFit.cover, width: double.infinity,
-                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, color: cMuted))),
-              )
-            : const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.camera_alt_outlined, color: cMuted, size: 20),
-                SizedBox(height: 4),
-                Text('Not submitted', style: TextStyle(fontSize: 10, color: cMuted)),
-              ])),
       ),
     ]);
   }

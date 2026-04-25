@@ -473,6 +473,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Timer? _statusTimer;
 
   final Map<int, MeetupStatus> _meetupStatusOverrides = {};
+  final Map<int, String> _meetupDenialReasons = {}; // meetup ID -> denial reason from server
+  final Set<int> _myPhotoSubmitted = {}; // meetup IDs where this user already submitted a photo
+  final Map<int, bool> _meetupPaymentStatus = {}; // meetup ID -> has buyer paid
 
   @override
   void initState() {
@@ -576,7 +579,33 @@ class _ConversationScreenState extends State<ConversationScreen> {
       setState(() {
         data.forEach((key, value) {
           final id = int.tryParse(key);
-          if (id != null) _meetupStatusOverrides[id] = _parseStatus(value.toString());
+          if (id == null) return;
+
+          // value is now a map with status + photo URLs
+          String statusStr;
+          if (value is Map) {
+            statusStr = value['status']?.toString() ?? '';
+            // Check if this user has already submitted their photo
+            final buyerId  = int.tryParse(value['buyer_id']?.toString() ?? '');
+            final sellerId = int.tryParse(value['seller_id']?.toString() ?? '');
+            final buyerPhoto  = value['buyer_photo_url']?.toString() ?? '';
+            final sellerPhoto = value['seller_photo_url']?.toString() ?? '';
+            final isBuyer  = buyerId  == widget.myId;
+            final isSeller = sellerId == widget.myId;
+            if ((isBuyer  && buyerPhoto.isNotEmpty) ||
+                (isSeller && sellerPhoto.isNotEmpty)) {
+              _myPhotoSubmitted.add(id);
+            }
+            // Store denial reason if present
+            final denialReason = value['denial_reason']?.toString() ?? '';
+            if (denialReason.isNotEmpty) {
+              _meetupDenialReasons[id] = denialReason;
+            }
+          } else {
+            // legacy: plain string
+            statusStr = value.toString();
+          }
+          _meetupStatusOverrides[id] = _parseStatus(statusStr);
         });
       });
     } catch (e) {
@@ -613,6 +642,61 @@ class _ConversationScreenState extends State<ConversationScreen> {
   // ── Photo submission ──────────────────────────────────────────────────────
 
   Future<void> _submitCompletionPhoto(int meetupId) async {
+    // Check if buyer has paid before allowing photo submission
+    final hasPaid = await _checkMeetupPayment(meetupId);
+    if (!hasPaid && mounted) {
+      // Find the listing item for this meetup from the conversation
+      final listingId = widget.conv.listingId;
+      if (listingId != null) {
+        // Find the marketplace item
+        final items = await getListings();
+        final rawItem = items.firstWhere(
+          (i) => i['id']?.toString() == listingId.toString(),
+          orElse: () => <String, dynamic>{},
+        );
+        if (!mounted) return;
+        if (rawItem.isNotEmpty) {
+          final item = MarketplaceItem(
+            id: rawItem['id']?.toString() ?? '',
+            title: rawItem['title']?.toString() ?? '',
+            price: double.tryParse(rawItem['price']?.toString() ?? '0') ?? 0,
+            description: rawItem['description']?.toString() ?? '',
+            category: rawItem['category']?.toString() ?? '',
+            condition: rawItem['condition']?.toString() ?? '',
+            image: rawItem['image']?.toString().isNotEmpty == true
+                ? rawItem['image'].toString()
+                : rawItem['image_url']?.toString() ?? '',
+            seller: rawItem['username']?.toString() ?? rawItem['seller_username']?.toString() ?? '',
+            sellerEmail: rawItem['seller_email']?.toString() ?? '',
+            location: rawItem['location']?.toString() ?? '',
+            createdAt: DateTime.tryParse(rawItem['created_at']?.toString() ?? '') ?? DateTime.now(),
+          );
+          await Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => PaymentScreen(
+              item: item,
+              buyerId: widget.myId,
+              sellerId: widget.conv.otherId,
+              buyerEmail: widget.conv.otherEmail,
+            ),
+          ));
+          // Refresh payment status after returning
+          if (mounted) {
+            setState(() => _meetupPaymentStatus.remove(meetupId));
+            await _checkMeetupPayment(meetupId);
+          }
+          return;
+        }
+      }
+      // Fallback if listing not found
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please complete payment before submitting a photo.'),
+        backgroundColor: Color(0xFFD97706),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
     final picker = ImagePicker();
     XFile? picked;
 
@@ -686,8 +770,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       final bothSubmitted = result['both_submitted'] == true;
+      setState(() {
+        _myPhotoSubmitted.add(meetupId); // always mark this user as submitted
+        if (bothSubmitted) {
+          _meetupStatusOverrides[meetupId] = MeetupStatus.completionPending;
+        }
+      });
       if (bothSubmitted) {
-        setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.completionPending);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Both photos submitted! Waiting for admin to process.'),
           backgroundColor: Color(0xFF16A34A),
@@ -710,6 +799,30 @@ class _ConversationScreenState extends State<ConversationScreen> {
         duration: const Duration(seconds: 5),
       ));
     }
+  }
+
+  // ── Payment check ────────────────────────────────────────────────────────
+
+  Future<bool> _checkMeetupPayment(int meetupId) async {
+    // Return cached result if available
+    if (_meetupPaymentStatus.containsKey(meetupId)) {
+      return _meetupPaymentStatus[meetupId]!;
+    }
+    try {
+      final resp = await http.get(Uri.parse(
+        'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/check_meetup_payment.php'
+        '?meetup_id=$meetupId&user_id=${widget.myId}',
+      ));
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      if (json['success'] == true) {
+        final hasPaid = json['data']['has_paid'] == true;
+        if (mounted) setState(() => _meetupPaymentStatus[meetupId] = hasPaid);
+        return hasPaid;
+      }
+    } catch (e) {
+      debugPrint('checkMeetupPayment error: $e');
+    }
+    return true; // default to allowing if check fails
   }
 
   // ── Email helpers ─────────────────────────────────────────────────────────
@@ -892,14 +1005,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  Future<void> _declineOrCancelMeetup(int meetupId, bool isProposer) async {
+  Future<void> _declineOrCancelMeetup(int meetupId, bool isProposer, {bool isConfirmed = false}) async {
     final label = isProposer ? 'Cancel' : 'Decline';
+    // Different warning if confirmed meetup (buyer may have paid)
+    final content = isConfirmed
+        ? 'Are you sure you want to cancel this confirmed meetup? If you have completed payment, it will be cancelled.'
+        : 'Are you sure you want to $label this meetup?';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('$label Meetup'),
-        content: Text('Are you sure you want to $label this meetup?'),
+        content: Text(content),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
           ElevatedButton(
@@ -914,7 +1031,23 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       await _updateMeetupStatusInDb(meetupId, 'user_cancelled');
       if (!mounted) return;
-      setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.userCancelled);
+      setState(() {
+        _meetupStatusOverrides[meetupId] = MeetupStatus.userCancelled;
+        _meetupPaymentStatus.remove(meetupId);
+      });
+      // Cancel any pending payment offer if this was a confirmed meetup
+      if (isConfirmed && widget.conv.listingId != null) {
+        try {
+          await http.post(
+            Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/payments/cancel_offer_by_listing.php'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'listing_id': widget.conv.listingId,
+              'user_id': widget.myId,
+            }),
+          );
+        } catch (_) {} // non-fatal
+      }
       if (!isProposer) await _notifyProposalDeclined(meetupId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -998,14 +1131,31 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               final effectiveStatus = proposal.id != null
                                   ? (_meetupStatusOverrides[proposal.id!] ?? proposal.status)
                                   : proposal.status;
-                              final effective  = proposal.copyWith(status: effectiveStatus);
+                              final effectiveDenialReason = proposal.id != null
+                                  ? (_meetupDenialReasons[proposal.id!] ?? proposal.denialReason)
+                                  : proposal.denialReason;
+                              final effective  = proposal.copyWith(status: effectiveStatus, denialReason: effectiveDenialReason);
                               final isProposer = effective.proposerId == widget.myId;
+                              // Check payment status for confirmed meetups
+                              bool? buyerHasPaid;
+                              if (effectiveStatus == MeetupStatus.confirmed && effective.id != null) {
+                                buyerHasPaid = _meetupPaymentStatus[effective.id!];
+                                if (buyerHasPaid == null) {
+                                  // Trigger async check without awaiting
+                                  _checkMeetupPayment(effective.id!);
+                                }
+                              }
                               return _MeetupCard(
                                 proposal:          effective,
                                 myId:              widget.myId,
+                                myPhotoSubmitted:  effective.id != null && _myPhotoSubmitted.contains(effective.id),
+                                buyerHasPaid:      buyerHasPaid,
                                 onWithdraw:        () => _withdrawMeetup(effective.id ?? 0),
                                 onConfirm:         () => _confirmMeetup(effective.id ?? 0),
-                                onDeclineOrCancel: () => _declineOrCancelMeetup(effective.id ?? 0, isProposer),
+                                onDeclineOrCancel: () => _declineOrCancelMeetup(
+                                  effective.id ?? 0, isProposer,
+                                  isConfirmed: effectiveStatus == MeetupStatus.confirmed,
+                                ),
                                 onProposeNew:      _openProposeMeetupSheet,
                                 onSubmitPhoto:     () => _submitCompletionPhoto(effective.id ?? 0),
                               );
@@ -1185,13 +1335,17 @@ class _MeetupCard extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onDeclineOrCancel;
   final VoidCallback onProposeNew;
-  final VoidCallback onSubmitPhoto; // NEW
+  final VoidCallback onSubmitPhoto;
+  final bool myPhotoSubmitted; // true if this user already submitted their photo
+  final bool? buyerHasPaid;   // null = unknown/not buyer, true = paid, false = not paid
 
   const _MeetupCard({
     required this.proposal, required this.myId,
     required this.onWithdraw, required this.onConfirm,
     required this.onDeclineOrCancel, required this.onProposeNew,
     required this.onSubmitPhoto,
+    this.myPhotoSubmitted = false,
+    this.buyerHasPaid,
   });
 
   bool get _isProposer => proposal.proposerId == myId;
@@ -1281,43 +1435,117 @@ class _MeetupCard extends StatelessWidget {
                 ]),
               ),
             ],
-            // ── confirmed: show photo upload ──────────────────────────────
+            // ── confirmed: payment gate for buyer, then photo upload ────
             if (proposal.status == MeetupStatus.confirmed) ...[
               const SizedBox(height: 10),
-              Container(
-                width: double.infinity, padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.35)),
-                ),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    Icon(Icons.camera_alt_rounded, size: 14, color: Color(0xFF16A34A)),
-                    SizedBox(width: 6),
-                    Expanded(child: Text(
-                      'Both users must submit a photo at the meetup location to confirm the transaction.',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF166534), height: 1.4),
-                    )),
-                  ]),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: onSubmitPhoto,
-                      icon: const Icon(Icons.add_a_photo_rounded, size: 16),
-                      label: const Text('Submit Completion Photo'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF16A34A),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-                        elevation: 0,
+              // Buyer hasn't paid yet — show payment prompt
+              if (buyerHasPaid == false) ...[
+                Container(
+                  width: double.infinity, padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFFBEB),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.4)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Row(children: [
+                      Icon(Icons.payment_rounded, size: 14, color: Color(0xFFD97706)),
+                      SizedBox(width: 6),
+                      Expanded(child: Text(
+                        'Complete your payment before the meetup to confirm your order. Your payment is held securely until admin verifies the exchange.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.4),
+                      )),
+                    ]),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: onSubmitPhoto,
+                        icon: const Icon(Icons.lock_rounded, size: 16),
+                        label: const Text('Complete Payment First'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD97706),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          elevation: 0,
+                        ),
                       ),
                     ),
+                  ]),
+                ),
+              ] else ...[
+                // Paid (or seller) — show photo upload
+                myPhotoSubmitted
+                    ? Container(
+                        width: double.infinity, padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
+                        ),
+                        child: const Row(children: [
+                          Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 14),
+                          SizedBox(width: 6),
+                          Expanded(child: Text(
+                            'Your photo has been submitted. Waiting for the other party to submit theirs.',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF166534)),
+                          )),
+                        ]),
+                      )
+                    : Container(
+                        width: double.infinity, padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.35)),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          const Row(children: [
+                            Icon(Icons.camera_alt_rounded, size: 14, color: Color(0xFF16A34A)),
+                            SizedBox(width: 6),
+                            Expanded(child: Text(
+                              'Both users must submit a photo at the meetup location to confirm the transaction.',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF166534), height: 1.4),
+                            )),
+                          ]),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: onSubmitPhoto,
+                              icon: const Icon(Icons.add_a_photo_rounded, size: 16),
+                              label: const Text('Submit Completion Photo'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF16A34A),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ]),
+                      ),
+              ],
+              // Cancel button — always shown in confirmed state (payment cancelled if applicable)
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onDeclineOrCancel,
+                  icon: const Icon(Icons.cancel_outlined, size: 16),
+                  label: const Text('Cancel Meetup'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: cRed,
+                    side: BorderSide(color: cRed.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
-                ]),
+                ),
               ),
             ],
             // ── completion_pending: waiting for admin ─────────────────────
