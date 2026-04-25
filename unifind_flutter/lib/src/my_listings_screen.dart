@@ -86,10 +86,10 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
     }
   }
 
-  Future<void> _editMarketplace(MarketplaceItem item) async {    final titleCtrl = TextEditingController(text: item.title);
+  Future<void> _editMarketplace(MarketplaceItem item) async {
+    final titleCtrl = TextEditingController(text: item.title);
     final descCtrl = TextEditingController(text: item.description);
     final priceCtrl = TextEditingController(text: item.price.toStringAsFixed(2));
-    final locCtrl = TextEditingController(text: item.location);
     final picker = ImagePicker();
     String category = item.category;
     String condition = item.condition;
@@ -133,8 +133,6 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       .toList(),
                   onChanged: (v) => setDialogState(() => condition = v ?? condition),
                 ),
-                const SizedBox(height: 8),
-                TextField(controller: locCtrl, decoration: const InputDecoration(labelText: 'Location')),
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -213,8 +211,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                 final title = titleCtrl.text.trim();
                 final desc = descCtrl.text.trim();
                 final price = double.tryParse(priceCtrl.text.trim()) ?? 0;
-                final loc = locCtrl.text.trim();
-                if (title.isEmpty || desc.isEmpty || loc.isEmpty || price <= 0) {
+                if (title.isEmpty || desc.isEmpty || price <= 0) {
                   setDialogState(() => error = 'Please complete all fields with a valid price.');
                   return;
                 }
@@ -231,7 +228,7 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
                       description: desc,
                       category: category,
                       condition: condition,
-                      location: loc,
+                      location: '',
                       price: price,
                       imageUrl: imageUrl,
                     ),
