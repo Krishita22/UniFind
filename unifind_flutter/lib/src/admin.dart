@@ -397,7 +397,10 @@ class _StandardUserShell extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                     decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
-                    child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+                    child: Text(
+                      role == UserRole.fac ? 'FACULTY' : 'STUDENT',
+                      style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8),
+                    ),
                   ),
                 ],
               ]),
@@ -413,19 +416,20 @@ class _StandardUserShell extends StatelessWidget {
                     height: 90,
                     child:Stack(children: [
                     // Logo pinned to the left
-                    Positioned(left: 12, top: 0, bottom: 0, child: Center(
+                   Positioned(left: 12, top: 0, bottom: 0, child: Center(
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
                         Image.asset('assets/images/whitelogo.png', height: 42, fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Text('UniFind',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white))),
-                        if (role == UserRole.fac) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
-                            child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+                          child: Text(
+                            role == UserRole.fac ? 'FACULTY' : 'STUDENT',
+                            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8),
                           ),
-                        ],
+                        ),
                       ]),
                     )),
                     // Nav tabs stay centered
