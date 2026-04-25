@@ -828,8 +828,7 @@ class _ContactSectionState extends State<_ContactSection> {
 
   try {
     final response = await http.post(
-      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/contact/contact.php'),      headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': _name,
         'email': _email,
