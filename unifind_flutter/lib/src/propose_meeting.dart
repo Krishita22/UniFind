@@ -798,19 +798,6 @@ class _StepTime extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: cRedLight, borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cRed.withValues(alpha: 0.2)),
-        ),
-        child: Row(children: [
-          const Icon(Icons.info_outline, size: 13, color: cRed),
-          const SizedBox(width: 8),
-          Expanded(child: Text(spotHours, style: const TextStyle(fontSize: 11, color: cRed))),
-        ]),
-      ),
-      const SizedBox(height: 12),
       isLoading
           ? const Center(child: CircularProgressIndicator(color: cRed))
           : GridView.builder(
