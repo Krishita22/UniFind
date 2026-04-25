@@ -173,6 +173,19 @@ class MatchedPair {
   });
 }
 
+class BugReport {
+  final int id, userId;
+  final String email, category, description, steps;
+  final DateTime createdAt;
+
+  const BugReport({
+    required this.id, required this.userId,
+    required this.email, required this.category,
+    required this.description, required this.steps,
+    required this.createdAt,
+  });
+}
+
 class AdminMeetup {
   final int meetupId, buyerId, sellerId;
   final String buyerUsername, buyerEmail, sellerUsername, sellerEmail;
@@ -512,6 +525,7 @@ class _AdminAppState extends State<AdminApp> {
   final List<AdminLostFoundItem> _lf       = [];
   final List<MatchedPair>        _matches  = [];
   final List<AdminMeetup>         _meetups  = [];
+  final List<BugReport>           _bugReports = [];
 
   @override
   void initState() { super.initState(); _loadAll(); }
@@ -540,6 +554,21 @@ class _AdminAppState extends State<AdminApp> {
       foundItem: _parseLFSide(f),
     );
   }).toList();
+
+  Future<List<BugReport>> _fetchBugReports() async {
+    final res = await http.get(Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/admin/reports/get_bug_reports.php'));
+    final data = jsonDecode(res.body);
+    if (data['success'] != true) return [];
+    return (data['data'] as List).map((b) => BugReport(
+      id:          int.tryParse(b['id']?.toString() ?? '') ?? 0,
+      userId:      int.tryParse(b['user_id']?.toString() ?? '') ?? 0,
+      email:       b['email']?.toString() ?? '',
+      category:    b['category']?.toString() ?? '',
+      description: b['description']?.toString() ?? '',
+      steps:       b['steps']?.toString() ?? '',
+      createdAt:   DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime.now(),
+    )).toList();
+  }
 
   Future<void> _loadAll() async {
     if (!mounted) return;
@@ -663,6 +692,12 @@ class _AdminAppState extends State<AdminApp> {
         _matches..clear()..addAll(_parseMatches(rawMatches));
         _loading = false;
       });
+      // Load bug reports
+      try {
+        final rawBugs = await _fetchBugReports();
+        if (mounted) setState(() => _bugReports..clear()..addAll(rawBugs));
+      } catch (_) {}
+
       // Load meetups (admin_pending + completion_pending)
       try {
         final pending    = await getAdminMeetups(status: 'admin_pending');
@@ -763,7 +798,7 @@ class _AdminAppState extends State<AdminApp> {
               ),
               _AdminMeetupsPanel(meetups: _meetups, onRefresh: _loadAll),
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
-              _AdminReportsPanel(reports: _reports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
+              _AdminReportsPanel(reports: _reports, bugReports: _bugReports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
               _AdminProfileTab(
                 adminEmail: widget.adminEmail,
                 adminUsername: widget.adminUsername,
@@ -2245,30 +2280,92 @@ class _PhotoPreview extends StatelessWidget {
   final String? url;
   const _PhotoPreview({required this.label, this.url});
 
+  void _showFullScreen(BuildContext context) {
+    if (url == null || url!.isEmpty) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(children: [
+          Center(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Image.network(url!,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48))),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 0, right: 0,
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 36, height: 36,
+                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 8, left: 0, right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                child: Text(label,
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasPhoto = url != null && url!.isNotEmpty;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cMuted)),
       const SizedBox(height: 4),
-      Container(
-        height: 110,
-        decoration: BoxDecoration(
-          color: cBg,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: hasPhoto ? const Color(0xFF16A34A).withValues(alpha: 0.4) : cBorder),
+      GestureDetector(
+        onTap: hasPhoto ? () => _showFullScreen(context) : null,
+        child: Container(
+          height: 110,
+          decoration: BoxDecoration(
+            color: cBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: hasPhoto ? const Color(0xFF16A34A).withValues(alpha: 0.4) : cBorder),
+          ),
+          child: hasPhoto
+              ? Stack(children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: Image.network(url!, fit: BoxFit.cover, width: double.infinity, height: 110,
+                      errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, color: cMuted))),
+                  ),
+                  Positioned(
+                    bottom: 5, right: 5,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(color: Colors.black45, shape: BoxShape.circle),
+                      child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 14),
+                    ),
+                  ),
+                ])
+              : const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.camera_alt_outlined, color: cMuted, size: 20),
+                  SizedBox(height: 4),
+                  Text('Not submitted', style: TextStyle(fontSize: 10, color: cMuted)),
+                ])),
         ),
-        child: hasPhoto
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(9),
-                child: Image.network(url!, fit: BoxFit.cover, width: double.infinity,
-                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, color: cMuted))),
-              )
-            : const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.camera_alt_outlined, color: cMuted, size: 20),
-                SizedBox(height: 4),
-                Text('Not submitted', style: TextStyle(fontSize: 10, color: cMuted)),
-              ])),
       ),
     ]);
   }
@@ -2902,12 +2999,13 @@ class _AdminFormField extends StatelessWidget {
 
 class _AdminReportsPanel extends StatefulWidget {
   final List<AdminReport> reports;
+  final List<BugReport> bugReports;
   final List<AdminUser> users;
   final List<PendingListing> allListings;
   final List<AdminLostFoundItem> allLFItems;
   final VoidCallback onRefresh;
   const _AdminReportsPanel({
-    required this.reports, required this.users,
+    required this.reports, required this.bugReports, required this.users,
     required this.allListings, required this.allLFItems, required this.onRefresh,
   });
 
@@ -2917,6 +3015,7 @@ class _AdminReportsPanel extends StatefulWidget {
 
 class _AdminReportsPanelState extends State<_AdminReportsPanel> {
   bool _showResolved = false;
+  bool _showBugs = false;
   AdminReport? _selected;
   bool _loading = false;
   String? _error;
@@ -3058,10 +3157,18 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Reports & Flags', style: TextStyle(fontSize: isMobile ? 18 : 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-          if (!isMobile) const Text('User-submitted reports for review', style: TextStyle(fontSize: 12, color: cMuted)),
+          if (!isMobile) const Text('User-submitted reports and bug reports', style: TextStyle(fontSize: 12, color: cMuted)),
         ]),
       ),
       Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Row(children: [
+          _Chip(label: 'User Reports', selected: !_showBugs, onTap: () => setState(() { _showBugs = false; _selected = null; })),
+          const SizedBox(width: 8),
+          _Chip(label: 'Bug Reports (${widget.bugReports.length})', selected: _showBugs, onTap: () => setState(() { _showBugs = true; _selected = null; })),
+        ]),
+      ),
+      if (!_showBugs) Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: Row(children: [
           _Chip(label: 'Open (${widget.reports.where((r) => !r.isResolved).length})', selected: !_showResolved, onTap: () => setState(() { _showResolved = false; _selected = null; })),
@@ -3070,51 +3177,160 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
         ]),
       ),
       Expanded(
-        child: isMobile
-            ? reports.isEmpty
-                ? _AdminEmptyState(message: _showResolved ? 'No resolved reports' : 'No open reports', icon: Icons.flag_outlined)
-                : ListView.builder(
-                    primary: false,
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    itemCount: reports.length,
-                    itemBuilder: (_, i) => GestureDetector(onTap: () => _openDetailPopup(reports[i]), child: _reportCard(reports[i])),
-                  )
-            : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SizedBox(
-                  width: 300,
-                  child: reports.isEmpty
-                      ? _AdminEmptyState(message: _showResolved ? 'No resolved reports' : 'No open reports', icon: Icons.flag_outlined)
-                      : ListView.builder(
-                          primary: false,
-                          padding: const EdgeInsets.fromLTRB(12, 0, 6, 12),
-                          itemCount: reports.length,
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () => setState(() { _selected = reports[i]; _error = null; }),
-                            child: _reportCard(reports[i], isSelected: selected?.id == reports[i].id),
-                          ),
-                        ),
-                ),
-                Container(width: 1, color: cBorder),
-                Expanded(
-                  child: selected == null
-                      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Container(width: 56, height: 56, decoration: const BoxDecoration(color: cRedLight, shape: BoxShape.circle), child: const Icon(Icons.flag_outlined, color: cRed, size: 24)),
-                          const SizedBox(height: 12),
-                          const Text('Select a report', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cMuted)),
-                          const SizedBox(height: 4),
-                          const Text('Choose a report from the left to review it', style: TextStyle(fontSize: 12, color: cMuted)),
-                        ]))
-                      : _ReportDetailPane(
-                          key: ValueKey(selected.id),
-                          report: selected,
-                          listingDetails: _findListing(selected.targetId, selected.targetType == 'lostfound'),
-                          targetUser: _findUser(selected),
-                          loading: _loading,
-                          error: _error,
-                          onAction: _doAction,
-                        ),
-                ),
+        child: _showBugs
+            ? _BugReportsView(bugReports: widget.bugReports)
+            : isMobile
+                ? reports.isEmpty
+                    ? _AdminEmptyState(message: _showResolved ? 'No resolved reports' : 'No open reports', icon: Icons.flag_outlined)
+                    : ListView.builder(
+                        primary: false,
+                        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                        itemCount: reports.length,
+                        itemBuilder: (_, i) => GestureDetector(onTap: () => _openDetailPopup(reports[i]), child: _reportCard(reports[i])),
+                      )
+                : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    SizedBox(
+                      width: 300,
+                      child: reports.isEmpty
+                          ? _AdminEmptyState(message: _showResolved ? 'No resolved reports' : 'No open reports', icon: Icons.flag_outlined)
+                          : ListView.builder(
+                              primary: false,
+                              padding: const EdgeInsets.fromLTRB(12, 0, 6, 12),
+                              itemCount: reports.length,
+                              itemBuilder: (_, i) => GestureDetector(
+                                onTap: () => setState(() { _selected = reports[i]; _error = null; }),
+                                child: _reportCard(reports[i], isSelected: selected?.id == reports[i].id),
+                              ),
+                            ),
+                    ),
+                    Container(width: 1, color: cBorder),
+                    Expanded(
+                      child: selected == null
+                          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                              Container(width: 56, height: 56, decoration: const BoxDecoration(color: cRedLight, shape: BoxShape.circle), child: const Icon(Icons.flag_outlined, color: cRed, size: 24)),
+                              const SizedBox(height: 12),
+                              const Text('Select a report', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cMuted)),
+                              const SizedBox(height: 4),
+                              const Text('Choose a report from the left to review it', style: TextStyle(fontSize: 12, color: cMuted)),
+                            ]))
+                          : _ReportDetailPane(
+                              key: ValueKey(selected.id),
+                              report: selected,
+                              listingDetails: _findListing(selected.targetId, selected.targetType == 'lostfound'),
+                              targetUser: _findUser(selected),
+                              loading: _loading,
+                              error: _error,
+                              onAction: _doAction,
+                            ),
+                    ),
+                  ]),
+      ),
+    ]);
+  }
+}
+
+// ── Bug Reports View ─────────────────────────────────────────────────────────
+
+class _BugReportsView extends StatelessWidget {
+  final List<BugReport> bugReports;
+  const _BugReportsView({required this.bugReports});
+
+  static const _catColor = <String, Color>{
+    'UI/UX':       Color(0xFF7C3AED),
+    'Performance': Color(0xFFD97706),
+    'Crash':       Color(0xFFDC2626),
+    'Feature':     Color(0xFF2563EB),
+    'Security':    Color(0xFF059669),
+    'Other':       Color(0xFF6B7280),
+  };
+
+  static const _catBg = <String, Color>{
+    'UI/UX':       Color(0xFFF5F3FF),
+    'Performance': Color(0xFFFFFBEB),
+    'Crash':       Color(0xFFFEF2F2),
+    'Feature':     Color(0xFFEFF6FF),
+    'Security':    Color(0xFFF0FDF4),
+    'Other':       Color(0xFFF3F4F6),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (bugReports.isEmpty) {
+      return const _AdminEmptyState(message: 'No bug reports submitted', icon: Icons.bug_report_outlined);
+    }
+    return ListView.builder(
+      primary: false,
+      padding: const EdgeInsets.all(12),
+      itemCount: bugReports.length,
+      itemBuilder: (_, i) {
+        final bug     = bugReports[i];
+        final color   = _catColor[bug.category] ?? const Color(0xFF6B7280);
+        final bgColor = _catBg[bug.category]    ?? const Color(0xFFF3F4F6);
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cBorder),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 6, offset: const Offset(0, 2))],
+          ),
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+              childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+              leading: Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.bug_report_outlined, size: 18, color: color),
+              ),
+              title: Text(bug.category, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+              subtitle: Text(bug.email, style: const TextStyle(fontSize: 11, color: cMuted)),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(formatDate(bug.createdAt), style: const TextStyle(fontSize: 10, color: cMuted)),
+                const SizedBox(width: 4),
+                const Icon(Icons.expand_more_rounded, color: cMuted, size: 18),
               ]),
+              children: [
+                const Divider(height: 1, color: cBorder),
+                const SizedBox(height: 12),
+                _BugField(label: 'Description', value: bug.description),
+                if (bug.steps.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _BugField(label: 'Steps to Reproduce', value: bug.steps),
+                ],
+                const SizedBox(height: 10),
+                Row(children: [
+                  const Icon(Icons.person_outline_rounded, size: 13, color: cMuted),
+                  const SizedBox(width: 5),
+                  Text('User ID: ${bug.userId}', style: const TextStyle(fontSize: 11, color: cMuted)),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.access_time_rounded, size: 13, color: cMuted),
+                  const SizedBox(width: 5),
+                  Text(formatDate(bug.createdAt), style: const TextStyle(fontSize: 11, color: cMuted)),
+                ]),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BugField extends StatelessWidget {
+  final String label, value;
+  const _BugField({required this.label, required this.value});
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: cMuted, letterSpacing: 0.3)),
+      const SizedBox(height: 4),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(8), border: Border.all(color: cBorder)),
+        child: Text(value, style: const TextStyle(fontSize: 13, color: cText, height: 1.5)),
       ),
     ]);
   }
