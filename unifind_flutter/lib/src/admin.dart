@@ -376,7 +376,7 @@ class _StandardUserShell extends StatelessWidget {
         onDeleteLostFound: deleteLostFound,
       ),
       MessagingScreen(userId: userId ?? 0, userEmail: email),
-      ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
+      ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId, role: role),
       userId != null
           ? OffersScreen(key: ValueKey('offers-$offersNonce'), userId: userId!)
           : const Center(child: Text('Sign in to view offers.')),
@@ -389,7 +389,7 @@ class _StandardUserShell extends StatelessWidget {
       appBar: isMobile
           ? AppBar(
               backgroundColor: cNavBg, foregroundColor: Colors.white, elevation: 0, centerTitle: true,
-              title: Row(mainAxisSize: MainAxisSize.min, children: [
+              title: Column(mainAxisSize: MainAxisSize.min, children: [
                 Image.asset('assets/images/whitelogo.png', height: 36, fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white))),
                 if (role == UserRole.fac) ...[
@@ -414,7 +414,7 @@ class _StandardUserShell extends StatelessWidget {
                     child:Stack(children: [
                     // Logo pinned to the left
                     Positioned(left: 12, top: 0, bottom: 0, child: Center(
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
                         Image.asset('assets/images/whitelogo.png', height: 42, fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Text('UniFind',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white))),
