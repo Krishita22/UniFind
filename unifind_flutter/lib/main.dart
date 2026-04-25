@@ -38,6 +38,7 @@ part 'src/ratings_screen.dart';
 part 'src/payment_screen.dart';
 part 'src/offers_screen.dart';
 part 'src/propose_meeting.dart';
+part 'src/report_bug.dart';
 
 typedef AuthSuccessCallback = void Function(
   String email, [
@@ -1087,7 +1088,7 @@ class _UniFindAppState extends State<UniFindApp> {
     await deleteLostFoundItem(id: item.id, email: _email);
     setState(() => _lostFound.removeWhere((m) => m.id == item.id));
   }
-
+  
   void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
     setState(() {
       _loggedIn = true;

@@ -107,7 +107,11 @@ class ChatMessage {
 
 // ── MEETUP MODELS ─────────────────────────────────────────────────────────────
 
-enum MeetupStatus { userPending, adminPending, confirmed, userDenied, adminDenied, userCancelled, completed }
+// completionPending added
+enum MeetupStatus {
+  userPending, adminPending, confirmed, userDenied, adminDenied,
+  userCancelled, completed, completionPending,
+}
 
 class MeetupProposal {
   final int? id;
@@ -137,14 +141,15 @@ class MeetupProposal {
   factory MeetupProposal.fromMap(Map<String, dynamic> m) {
     MeetupStatus parseStatus(String s) {
       switch (s.toLowerCase()) {
-        case 'user_pending':   return MeetupStatus.userPending;
-        case 'admin_pending':  return MeetupStatus.adminPending;
-        case 'confirmed':      return MeetupStatus.confirmed;
-        case 'user_denied':    return MeetupStatus.userDenied;
-        case 'admin_denied':   return MeetupStatus.adminDenied;
-        case 'user_cancelled': return MeetupStatus.userCancelled;
-        case 'completed':      return MeetupStatus.completed;
-        default:               return MeetupStatus.userPending;
+        case 'user_pending':        return MeetupStatus.userPending;
+        case 'admin_pending':       return MeetupStatus.adminPending;
+        case 'confirmed':           return MeetupStatus.confirmed;
+        case 'user_denied':         return MeetupStatus.userDenied;
+        case 'admin_denied':        return MeetupStatus.adminDenied;
+        case 'user_cancelled':      return MeetupStatus.userCancelled;
+        case 'completed':           return MeetupStatus.completed;
+        case 'completion_pending':  return MeetupStatus.completionPending;
+        default:                    return MeetupStatus.userPending;
       }
     }
     final timeParts = (m['meet_time']?.toString() ?? '12:00').split(':');
@@ -501,11 +506,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (!mounted) return;
       final msgs = raw.map(ChatMessage.fromMap).toList();
       await _syncMeetupStatuses(msgs);
-      // Read is_complete from the raw messages response or fall back to conv flag
-      bool isComplete = widget.conv.isComplete;
-      try {
-        isComplete = await getConversationIsComplete(conversationId: widget.conv.id);
-      } catch (_) {}
+      final isComplete = await getConversationIsComplete(conversationId: widget.conv.id);
       if (!mounted) return;
       setState(() {
         _msgs..clear()..addAll(msgs);
@@ -531,12 +532,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
         setState(() { _msgs..clear()..addAll(incoming); });
         _scrollToBottom();
       }
-      // Check if conversation was marked complete by the other user
       if (!_isComplete) {
         final nowComplete = await getConversationIsComplete(conversationId: widget.conv.id);
         if (nowComplete && mounted) {
           setState(() => _isComplete = true);
-          // Show rating dialog for the other person (the one who didn't click Mark Complete)
           await RatingDialog.show(context,
             targetName:     widget.conv.otherName,
             targetUserId:   widget.conv.otherId,
@@ -586,14 +585,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   MeetupStatus _parseStatus(String s) {
     switch (s.toLowerCase()) {
-      case 'user_pending':   return MeetupStatus.userPending;
-      case 'admin_pending':  return MeetupStatus.adminPending;
-      case 'confirmed':      return MeetupStatus.confirmed;
-      case 'user_denied':    return MeetupStatus.userDenied;
-      case 'admin_denied':   return MeetupStatus.adminDenied;
-      case 'user_cancelled': return MeetupStatus.userCancelled;
-      case 'completed':      return MeetupStatus.completed;
-      default:               return MeetupStatus.userPending;
+      case 'user_pending':        return MeetupStatus.userPending;
+      case 'admin_pending':       return MeetupStatus.adminPending;
+      case 'confirmed':           return MeetupStatus.confirmed;
+      case 'user_denied':         return MeetupStatus.userDenied;
+      case 'admin_denied':        return MeetupStatus.adminDenied;
+      case 'user_cancelled':      return MeetupStatus.userCancelled;
+      case 'completed':           return MeetupStatus.completed;
+      case 'completion_pending':  return MeetupStatus.completionPending;
+      default:                    return MeetupStatus.userPending;
     }
   }
 
@@ -609,13 +609,112 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (json['success'] != true) throw Exception(json['error']);
   }
 
+  // ── Photo submission ──────────────────────────────────────────────────────
+
+  Future<void> _submitCompletionPhoto(int meetupId) async {
+    final picker = ImagePicker();
+    XFile? picked;
+
+    if (kIsWeb) {
+      picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70, maxWidth: 1000);
+    } else {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        backgroundColor: cSurface,
+        builder: (ctx) => Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 36, height: 4,
+                decoration: BoxDecoration(color: cBorder, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            const Text('Submit Completion Photo',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: cText)),
+            const SizedBox(height: 4),
+            const Text(
+              'Take a photo at the meetup location to confirm the transaction.',
+              style: TextStyle(fontSize: 12, color: cMuted),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(width: 36, height: 36,
+                  decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.camera_alt_outlined, color: cRed, size: 18)),
+              title: const Text('Take a Photo', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: Container(width: 36, height: 36,
+                  decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.photo_library_outlined, color: cRed, size: 18)),
+              title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w600)),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ]),
+        ),
+      );
+      if (source == null || !mounted) return;
+      picked = await picker.pickImage(source: source, imageQuality: 70, maxWidth: 1000);
+    }
+
+    if (picked == null || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Row(children: [
+        SizedBox(width: 16, height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+        SizedBox(width: 12),
+        Text('Uploading photo...'),
+      ]),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 30),
+    ));
+
+    try {
+      final bytes    = await picked.readAsBytes();
+      final photoUrl = await uploadImage(picked.path, bytes, type: 'meetup');
+
+      final result = await submitCompletionPhoto(
+        meetupId: meetupId,
+        userId:   widget.myId,
+        photoUrl: photoUrl,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      final bothSubmitted = result['both_submitted'] == true;
+      if (bothSubmitted) {
+        setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.completionPending);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Both photos submitted! Waiting for admin to process.'),
+          backgroundColor: Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Photo submitted! Waiting for the other party to submit theirs.'),
+          backgroundColor: Color(0xFF2980B9),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed to submit photo: $e'),
+        backgroundColor: cRedDark,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+      ));
+    }
+  }
+
   // ── Email helpers ─────────────────────────────────────────────────────────
 
-  /// Called after User A proposes — notifies User B
   Future<void> _notifyProposalReceived(int meetupId, {
-    required String date,
-    required String time,
-    required String location,
+    required String date, required String time, required String location,
   }) async {
     try {
       await http.post(
@@ -631,12 +730,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           'location':     location,
         }),
       );
-    } catch (e) {
-      debugPrint('notify_proposal_received error: $e');
-    }
+    } catch (e) { debugPrint('notify_proposal_received error: $e'); }
   }
 
-  /// Called after User B accepts — notifies User A
   Future<void> _notifyProposalAccepted(int meetupId) async {
     try {
       await http.post(
@@ -644,12 +740,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'meetup_id': meetupId}),
       );
-    } catch (e) {
-      debugPrint('notify_proposal_accepted error: $e');
-    }
+    } catch (e) { debugPrint('notify_proposal_accepted error: $e'); }
   }
 
-  /// Called after User B declines — notifies User A
   Future<void> _notifyProposalDeclined(int meetupId) async {
     try {
       await http.post(
@@ -657,9 +750,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'meetup_id': meetupId}),
       );
-    } catch (e) {
-      debugPrint('notify_proposal_declined error: $e');
-    }
+    } catch (e) { debugPrint('notify_proposal_declined error: $e'); }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -733,7 +824,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // ── UPDATED: notifies User B after proposal is sent ───────────────────────
   void _openProposeMeetupSheet() {
     showDialog(
       context: context,
@@ -751,8 +841,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       ),
     );
   }
-
-  // ── Meetup action handlers ────────────────────────────────────────────────
 
   Future<void> _withdrawMeetup(int meetupId) async {
     final confirmed = await showDialog<bool>(
@@ -776,10 +864,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       await _updateMeetupStatusInDb(meetupId, 'user_cancelled');
       if (!mounted) return;
       setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.userCancelled);
-      // No email needed — User A is withdrawing their own proposal
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Meetup proposal withdrawn.'),
-        behavior: SnackBarBehavior.floating,
+        content: Text('Meetup proposal withdrawn.'), behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       if (!mounted) return;
@@ -788,18 +874,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // ── UPDATED: notifies User A that proposal was accepted ──────────────────
   Future<void> _confirmMeetup(int meetupId) async {
     try {
       await _updateMeetupStatusInDb(meetupId, 'admin_pending');
       if (!mounted) return;
       setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.adminPending);
-      // Email User A: your proposal was accepted, pending admin
       await _notifyProposalAccepted(meetupId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Meetup confirmed! Pending admin approval.'),
-        behavior: SnackBarBehavior.floating,
+        content: Text('Meetup confirmed! Pending admin approval.'), behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       if (!mounted) return;
@@ -808,7 +891,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // ── UPDATED: notifies User A only when User B declines (not when proposer cancels) ──
   Future<void> _declineOrCancelMeetup(int meetupId, bool isProposer) async {
     final label = isProposer ? 'Cancel' : 'Decline';
     final confirmed = await showDialog<bool>(
@@ -832,10 +914,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       await _updateMeetupStatusInDb(meetupId, 'user_cancelled');
       if (!mounted) return;
       setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.userCancelled);
-      // Only email User A if User B is the one declining — not if proposer is cancelling their own
-      if (!isProposer) {
-        await _notifyProposalDeclined(meetupId);
-      }
+      if (!isProposer) await _notifyProposalDeclined(meetupId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(label == 'Cancel' ? 'Meetup cancelled.' : 'Meetup declined.'),
@@ -847,10 +926,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
         SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 5)));
     }
   }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  //  BUILD
-  // ─────────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -865,8 +940,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             Text(widget.conv.otherName,
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
-            Container(
-              width: 8, height: 8,
+            Container(width: 8, height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _otherOnline ? const Color(0xFF27AE60) : Colors.white38,
@@ -874,8 +948,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             ),
             const SizedBox(width: 4),
             Text(_otherOnline ? 'Online' : 'Offline',
-                style: TextStyle(
-                    fontSize: 10,
+                style: TextStyle(fontSize: 10,
                     color: _otherOnline ? const Color(0xFF27AE60) : Colors.white38,
                     fontWeight: FontWeight.w600)),
           ]),
@@ -910,38 +983,32 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       ElevatedButton(onPressed: _load, child: const Text('Retry')),
                     ]))
                   : _msgs.isEmpty
-                      ? const Center(
-                          heightFactor: 6,
-                          child: Text('No messages yet. Say hello!',
-                              style: TextStyle(color: cMuted)))
+                      ? const Center(heightFactor: 6,
+                          child: Text('No messages yet. Say hello!', style: TextStyle(color: cMuted)))
                       : ListView.builder(
                           controller: _scroll,
                           padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
                           itemCount: _msgs.length,
                           itemBuilder: (_, i) {
                             final msg = _msgs[i];
-
                             if (msg.isMeetupMessage) {
                               final proposal = msg.toMeetupProposal(myId: widget.myId);
                               if (proposal == null) return const SizedBox.shrink();
-
                               final effectiveStatus = proposal.id != null
                                   ? (_meetupStatusOverrides[proposal.id!] ?? proposal.status)
                                   : proposal.status;
-                              final effective = proposal.copyWith(status: effectiveStatus);
+                              final effective  = proposal.copyWith(status: effectiveStatus);
                               final isProposer = effective.proposerId == widget.myId;
-
                               return _MeetupCard(
-                                proposal: effective,
-                                myId: widget.myId,
-                                onWithdraw: () => _withdrawMeetup(effective.id ?? 0),
-                                onConfirm:  () => _confirmMeetup(effective.id ?? 0),
-                                onDeclineOrCancel: () =>
-                                    _declineOrCancelMeetup(effective.id ?? 0, isProposer),
-                                onProposeNew: _openProposeMeetupSheet,
+                                proposal:          effective,
+                                myId:              widget.myId,
+                                onWithdraw:        () => _withdrawMeetup(effective.id ?? 0),
+                                onConfirm:         () => _confirmMeetup(effective.id ?? 0),
+                                onDeclineOrCancel: () => _declineOrCancelMeetup(effective.id ?? 0, isProposer),
+                                onProposeNew:      _openProposeMeetupSheet,
+                                onSubmitPhoto:     () => _submitCompletionPhoto(effective.id ?? 0),
                               );
                             }
-
                             return _MsgBubble(msg: msg, isMine: msg.senderId == widget.myId);
                           },
                         ),
@@ -964,10 +1031,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF27AE60),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  decoration: BoxDecoration(color: const Color(0xFF27AE60), borderRadius: BorderRadius.circular(8)),
                   child: const Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.star_rounded, color: Colors.white, size: 13),
                     SizedBox(width: 4),
@@ -980,8 +1044,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         else
           Container(
             color: cSurface,
-            padding: EdgeInsets.fromLTRB(
-                12, 10, 12, 10 + MediaQuery.of(context).viewInsets.bottom),
+            padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + MediaQuery.of(context).viewInsets.bottom),
             child: SafeArea(
               top: false,
               child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -994,8 +1057,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       child: Container(
                         width: 44, height: 44,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: cRedLight,
+                          shape: BoxShape.circle, color: cRedLight,
                           border: Border.all(color: cRed.withValues(alpha: 0.3)),
                         ),
                         child: const Icon(Icons.location_on_outlined, color: cRed, size: 20),
@@ -1031,10 +1093,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   child: AnimatedContainer(
                     duration: kFast,
                     width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _sending ? cMuted : cRed,
-                    ),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: _sending ? cMuted : cRed),
                     child: _sending
                         ? const Padding(padding: EdgeInsets.all(10),
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -1125,11 +1184,13 @@ class _MeetupCard extends StatelessWidget {
   final VoidCallback onConfirm;
   final VoidCallback onDeclineOrCancel;
   final VoidCallback onProposeNew;
+  final VoidCallback onSubmitPhoto; // NEW
 
   const _MeetupCard({
     required this.proposal, required this.myId,
     required this.onWithdraw, required this.onConfirm,
     required this.onDeclineOrCancel, required this.onProposeNew,
+    required this.onSubmitPhoto,
   });
 
   bool get _isProposer => proposal.proposerId == myId;
@@ -1187,27 +1248,17 @@ class _MeetupCard extends StatelessWidget {
             if (proposal.note != null && proposal.note!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: cBg, borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: cBorder),
-                ),
-                child: Text(proposal.note!,
-                    style: const TextStyle(fontSize: 12, color: cMuted, height: 1.4)),
+                width: double.infinity, padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(8), border: Border.all(color: cBorder)),
+                child: Text(proposal.note!, style: const TextStyle(fontSize: 12, color: cMuted, height: 1.4)),
               ),
             ],
-            if ((proposal.status == MeetupStatus.adminDenied ||
-                 proposal.status == MeetupStatus.userDenied) &&
+            if ((proposal.status == MeetupStatus.adminDenied || proposal.status == MeetupStatus.userDenied) &&
                 proposal.denialReason != null) ...[
               const SizedBox(height: 8),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: cRedLight, borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: cRed.withValues(alpha: 0.3)),
-                ),
+                width: double.infinity, padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8), border: Border.all(color: cRed.withValues(alpha: 0.3))),
                 child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Icon(Icons.info_outline, color: cRed, size: 14),
                   const SizedBox(width: 6),
@@ -1219,16 +1270,72 @@ class _MeetupCard extends StatelessWidget {
             if (proposal.status == MeetupStatus.adminPending) ...[
               const SizedBox(height: 8),
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE6F1FB), borderRadius: BorderRadius.circular(8),
-                ),
+                width: double.infinity, padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFE6F1FB), borderRadius: BorderRadius.circular(8)),
                 child: const Row(children: [
                   Icon(Icons.info_outline, color: Color(0xFF185FA5), size: 13),
                   SizedBox(width: 6),
                   Expanded(child: Text('Waiting for admin approval.',
                       style: TextStyle(fontSize: 11, color: Color(0xFF185FA5)))),
+                ]),
+              ),
+            ],
+            // ── confirmed: show photo upload ──────────────────────────────
+            if (proposal.status == MeetupStatus.confirmed) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity, padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.35)),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Row(children: [
+                    Icon(Icons.camera_alt_rounded, size: 14, color: Color(0xFF16A34A)),
+                    SizedBox(width: 6),
+                    Expanded(child: Text(
+                      'Both users must submit a photo at the meetup location to confirm the transaction.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF166534), height: 1.4),
+                    )),
+                  ]),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onSubmitPhoto,
+                      icon: const Icon(Icons.add_a_photo_rounded, size: 16),
+                      label: const Text('Submit Completion Photo'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            ],
+            // ── completion_pending: waiting for admin ─────────────────────
+            if (proposal.status == MeetupStatus.completionPending) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity, padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.hourglass_top_rounded, color: Color(0xFF16A34A), size: 14),
+                  SizedBox(width: 6),
+                  Expanded(child: Text(
+                    'Photos submitted! Waiting for admin to process the transaction.',
+                    style: TextStyle(fontSize: 11, color: Color(0xFF166534)),
+                  )),
                 ]),
               ),
             ],
@@ -1240,9 +1347,7 @@ class _MeetupCard extends StatelessWidget {
   }
 
   List<Widget> _hoursHint() {
-    final spot = kSafeSpots.firstWhere(
-      (s) => s['name'] == proposal.safeSpot, orElse: () => {},
-    );
+    final spot = kSafeSpots.firstWhere((s) => s['name'] == proposal.safeSpot, orElse: () => {});
     if (spot.isEmpty) return [];
     return [
       const SizedBox(height: 4),
@@ -1254,12 +1359,13 @@ class _MeetupCard extends StatelessWidget {
   }
 
   List<Widget> _buildActions() {
-    if (proposal.status == MeetupStatus.confirmed)     return [];
-    if (proposal.status == MeetupStatus.completed)     return [];
-    if (proposal.status == MeetupStatus.userCancelled) return [];
+    // No action buttons for these terminal states
+    if (proposal.status == MeetupStatus.confirmed)        return [];
+    if (proposal.status == MeetupStatus.completed)        return [];
+    if (proposal.status == MeetupStatus.completionPending) return [];
+    if (proposal.status == MeetupStatus.userCancelled)    return [];
 
-    if (proposal.status == MeetupStatus.userDenied ||
-        proposal.status == MeetupStatus.adminDenied) {
+    if (proposal.status == MeetupStatus.userDenied || proposal.status == MeetupStatus.adminDenied) {
       return [
         const SizedBox(height: 12),
         SizedBox(
@@ -1355,53 +1461,58 @@ class _MeetupCard extends StatelessWidget {
 
   Color _statusBorderColor() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return const Color(0xFFC0DD97);
+      case MeetupStatus.confirmed:          return const Color(0xFFC0DD97);
+      case MeetupStatus.completionPending:  return const Color(0xFF86EFAC);
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return const Color(0xFFF09595);
-      case MeetupStatus.adminPending: return const Color(0xFFB5D4F4);
-      default:                        return cBorder;
+      case MeetupStatus.adminDenied:        return const Color(0xFFF09595);
+      case MeetupStatus.adminPending:       return const Color(0xFFB5D4F4);
+      default:                              return cBorder;
     }
   }
 
   Color _statusIconBg() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return const Color(0xFFEAF3DE);
+      case MeetupStatus.confirmed:          return const Color(0xFFEAF3DE);
+      case MeetupStatus.completionPending:  return const Color(0xFFDCFCE7);
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return const Color(0xFFFCEBEB);
-      case MeetupStatus.adminPending: return const Color(0xFFE6F1FB);
-      default:                        return cRedLight;
+      case MeetupStatus.adminDenied:        return const Color(0xFFFCEBEB);
+      case MeetupStatus.adminPending:       return const Color(0xFFE6F1FB);
+      default:                              return cRedLight;
     }
   }
 
   Color _statusIconColor() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return const Color(0xFF3B6D11);
+      case MeetupStatus.confirmed:          return const Color(0xFF3B6D11);
+      case MeetupStatus.completionPending:  return const Color(0xFF16A34A);
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return cRed;
-      case MeetupStatus.adminPending: return const Color(0xFF185FA5);
-      default:                        return cRed;
+      case MeetupStatus.adminDenied:        return cRed;
+      case MeetupStatus.adminPending:       return const Color(0xFF185FA5);
+      default:                              return cRed;
     }
   }
 
   IconData _statusIcon() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return Icons.check_circle_outline;
+      case MeetupStatus.confirmed:          return Icons.check_circle_outline;
+      case MeetupStatus.completionPending:  return Icons.hourglass_top_rounded;
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return Icons.cancel_outlined;
-      case MeetupStatus.adminPending: return Icons.pending_outlined;
-      default:                        return Icons.location_on_outlined;
+      case MeetupStatus.adminDenied:        return Icons.cancel_outlined;
+      case MeetupStatus.adminPending:       return Icons.pending_outlined;
+      default:                              return Icons.location_on_outlined;
     }
   }
 
   String _statusSubtitle() {
     switch (proposal.status) {
-      case MeetupStatus.userPending:   return _isProposer ? 'Waiting for their confirmation' : 'Awaiting your response';
-      case MeetupStatus.adminPending:  return 'Pending admin approval';
-      case MeetupStatus.confirmed:     return 'Admin approved — meetup is on!';
-      case MeetupStatus.userDenied:    return 'Proposal was declined';
-      case MeetupStatus.adminDenied:   return 'Admin denied this proposal';
-      case MeetupStatus.userCancelled: return 'Meetup was cancelled';
-      case MeetupStatus.completed:     return 'Meetup completed';
+      case MeetupStatus.userPending:        return _isProposer ? 'Waiting for their confirmation' : 'Awaiting your response';
+      case MeetupStatus.adminPending:       return 'Pending admin approval';
+      case MeetupStatus.confirmed:          return 'Submit your photo to complete the transaction';
+      case MeetupStatus.completionPending:  return 'Photos submitted — awaiting admin processing';
+      case MeetupStatus.userDenied:         return 'Proposal was declined';
+      case MeetupStatus.adminDenied:        return 'Admin denied this proposal';
+      case MeetupStatus.userCancelled:      return 'Meetup was cancelled';
+      case MeetupStatus.completed:          return 'Meetup completed';
     }
   }
 }
@@ -1431,6 +1542,8 @@ class _StatusBadge extends StatelessWidget {
         bg = const Color(0xFFE6F1FB); fg = const Color(0xFF185FA5); label = 'Admin review'; break;
       case MeetupStatus.confirmed:
         bg = const Color(0xFFEAF3DE); fg = const Color(0xFF3B6D11); label = 'Confirmed'; break;
+      case MeetupStatus.completionPending:
+        bg = const Color(0xFFDCFCE7); fg = const Color(0xFF16A34A); label = 'Verifying'; break;
       case MeetupStatus.userDenied:
         bg = const Color(0xFFFCEBEB); fg = const Color(0xFFA32D2D); label = 'Declined'; break;
       case MeetupStatus.adminDenied:
@@ -1447,3 +1560,4 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
+

@@ -2,7 +2,7 @@ part of '../main.dart';
 
 // ─── ADMIN DATA MODELS ────────────────────────────────────────────────────────
 
-enum AdminTab { dashboard, listings, lostFound, users, reports, profile }
+enum AdminTab { dashboard, listings, lostFound, meetups, users, reports, profile }
 
 enum UserRole { student, fac, admin, unknown }
 
@@ -173,6 +173,28 @@ class MatchedPair {
   });
 }
 
+class AdminMeetup {
+  final int meetupId, buyerId, sellerId;
+  final String buyerUsername, buyerEmail, sellerUsername, sellerEmail;
+  final String location, status, itemTitle, meetupTime;
+  final DateTime meetupDate, createdAt;
+  final String? buyerPhotoUrl, sellerPhotoUrl;
+  final String? itemImage, itemCategory;
+  final double? itemPrice;
+  final bool isMarketplace;
+
+  const AdminMeetup({
+    required this.meetupId, required this.buyerId, required this.sellerId,
+    required this.buyerUsername, required this.buyerEmail,
+    required this.sellerUsername, required this.sellerEmail,
+    required this.location, required this.status, required this.itemTitle,
+    required this.meetupTime, required this.meetupDate, required this.createdAt,
+    this.buyerPhotoUrl, this.sellerPhotoUrl,
+    this.itemImage, this.itemCategory, this.itemPrice,
+    this.isMarketplace = false,
+  });
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // AUTH WRAPPER
 // ═════════════════════════════════════════════════════════════════════════════
@@ -317,9 +339,6 @@ class _StandardUserShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final activeNavIndex = _navIndexForTab(tab);
 
-// Slots: 0=Market, 1=Lost&Found, 2=Post, 3=MyListings, 4=Messages, 5=Profile, 6=Offers
-    // IndexedStack is keyed on tab index, so list position must match the
-    // tabIndex values used in _studentNavItems and _facultyNavItems above.
     final screens = [
       MarketplaceScreen(items: market, onListItem: () => goToPostTab(), currentUserEmail: email, currentUserId: userId),
       LostFoundScreen(
@@ -345,14 +364,6 @@ class _StandardUserShell extends StatelessWidget {
       ),
       MessagingScreen(userId: userId ?? 0, userEmail: email),
       ProfileScreen(email: email, username: username, onLogout: onLogout, userId: userId),
-      // Slot 6: Offers. Faculty never reach this (their nav doesn't expose it
-      // and their default tab is 1); we still include a placeholder-safe
-      // widget for IndexedStack to render when userId is null.
-      // Keying on offersNonce forces a fresh initState/_load() whenever the
-      // parent bumps the nonce — i.e. when the user clicks the Offers tab
-      // or the poll detects new server-side activity. Without this, the
-      // screen holds its initial fetch forever because IndexedStack keeps
-      // the widget mounted.
       userId != null
           ? OffersScreen(key: ValueKey('offers-$offersNonce'), userId: userId!)
           : const Center(child: Text('Sign in to view offers.')),
@@ -408,8 +419,6 @@ class _StandardUserShell extends StatelessWidget {
                               item: _navItems[i],
                               isActive: activeNavIndex == i,
                               onTap: () => onTabChanged(_navItems[i].tabIndex),
-                              // Messages badge comes from unreadCount; Offers
-                              // badge (tab 6) comes from unseenOfferCount.
                               badgeCount: _navItems[i].tabIndex == 4
                                   ? unreadCount
                                   : _navItems[i].tabIndex == 6
@@ -451,14 +460,6 @@ class _StandardUserShell extends StatelessWidget {
               ],
             )
               : NavigationBar(
-              // Student mobile nav destinations map to tabs explicitly:
-              //   dest 0 -> tab 0 (Market)
-              //   dest 1 -> tab 1 (Lost/Found)
-              //   dest 2 -> tab 2 (Post)
-              //   dest 3 -> tab 3 (Listings)
-              //   dest 4 -> tab 4 (Messages)
-              //   dest 5 -> tab 6 (Offers)   ← not 5, because Offers came later
-              //   dest 6 -> tab 5 (Profile)
               selectedIndex: tab == 6 ? 5 : tab == 5 ? 6 : tab,
               backgroundColor: cNavBg,
               indicatorColor: Colors.white.withValues(alpha: 0.2),
@@ -504,6 +505,7 @@ class _AdminAppState extends State<AdminApp> {
   final List<AdminReport>        _reports  = [];
   final List<AdminLostFoundItem> _lf       = [];
   final List<MatchedPair>        _matches  = [];
+  final List<AdminMeetup>         _meetups  = [];
 
   @override
   void initState() { super.initState(); _loadAll(); }
@@ -655,6 +657,35 @@ class _AdminAppState extends State<AdminApp> {
         _matches..clear()..addAll(_parseMatches(rawMatches));
         _loading = false;
       });
+      // Load meetups (admin_pending + completion_pending)
+      try {
+        final pending    = await getAdminMeetups(status: 'admin_pending');
+        final completing = await getAdminMeetups(status: 'completion_pending');
+        final rawMeetups = [...pending, ...completing];
+        if (!mounted) return;
+        final meetups = rawMeetups.map((m) => AdminMeetup(
+          meetupId:       int.tryParse(_s(m['meetup_id'])) ?? 0,
+          buyerId:        int.tryParse(_s(m['buyer_id'])) ?? 0,
+          sellerId:       int.tryParse(_s(m['seller_id'])) ?? 0,
+          buyerUsername:  _s(m['buyer_username']).isEmpty ? 'Unknown' : _s(m['buyer_username']),
+          buyerEmail:     _s(m['buyer_email']),
+          sellerUsername: _s(m['seller_username']).isEmpty ? 'Unknown' : _s(m['seller_username']),
+          sellerEmail:    _s(m['seller_email']),
+          location:       _s(m['location']),
+          status:         _s(m['status']),
+          itemTitle:      _s(m['item_title']).isEmpty ? 'Meetup' : _s(m['item_title']),
+          meetupTime:     _s(m['meetup_time']),
+          meetupDate:     _d(m['meetup_date']),
+          createdAt:      _d(m['created_at']),
+          buyerPhotoUrl:  m['buyer_photo_url']?.toString(),
+          sellerPhotoUrl: m['seller_photo_url']?.toString(),
+          itemImage:      m['item_image']?.toString(),
+          itemCategory:   m['item_category']?.toString(),
+          itemPrice:      m['item_price'] != null ? double.tryParse(m['item_price'].toString()) : null,
+          isMarketplace:  (m['is_marketplace']?.toString() == '1') || (m['item_id'] != null && m['item_id'].toString().isNotEmpty && m['item_id'].toString() != 'null'),
+        )).toList();
+        if (mounted) setState(() => _meetups..clear()..addAll(meetups));
+      } catch (_) {}
     } catch (_) { if (mounted) setState(() => _loading = false); }
   }
 
@@ -724,6 +755,7 @@ class _AdminAppState extends State<AdminApp> {
                 matchedPairs: _matches,
                 onRefresh: _loadAll,
               ),
+              _AdminMeetupsPanel(meetups: _meetups, onRefresh: _loadAll),
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
               _AdminReportsPanel(reports: _reports, users: _users, allListings: [..._pending, ..._active], allLFItems: _lf, onRefresh: _loadAll),
               _AdminProfileTab(
@@ -749,6 +781,7 @@ class _AdminAppState extends State<AdminApp> {
             _dest(Icons.dashboard_rounded, 'Dashboard'),
             _dest(Icons.storefront_outlined, 'Listings', badge: _stats.pendingApprovals > 0 ? '${_stats.pendingApprovals}' : null),
             _dest(Icons.search_rounded, 'Lost/Found'),
+            _dest(Icons.handshake_outlined, 'Meetups', badge: _meetups.isNotEmpty ? '${_meetups.length}' : null),
             _dest(Icons.people_outline_rounded, 'Users'),
             _dest(Icons.flag_outlined, 'Reports', badge: _openReports > 0 ? '$_openReports' : null),
             _dest(Icons.person_outline_rounded, 'Profile'),
@@ -847,6 +880,7 @@ class _AdminDashboard extends StatelessWidget {
               _QuickAction(icon: Icons.flag_rounded, iconBg: const Color.fromARGB(255, 254, 247, 226), iconColor: const Color.fromARGB(255, 161, 122, 39), label: 'Reports', sub: '${stats.openReports} reports need action', onTap: () => onNavigate(AdminTab.reports, showActive: false)),
               _QuickAction(icon: Icons.people_outline_rounded, iconBg: const Color.fromARGB(255, 219, 254, 221), iconColor: const Color(0xFF16A34A), label: 'Users', sub: 'View, warn, or ban accounts', onTap: () => onNavigate(AdminTab.users, showActive: false)),
               _QuickAction(icon: Icons.search_rounded, iconBg: const Color.fromARGB(255, 209, 227, 250), iconColor: const Color.fromARGB(255, 22, 83, 163), label: 'Lost & Found', sub: 'Review claims and matches', onTap: () => onNavigate(AdminTab.lostFound, showActive: false)),
+              _QuickAction(icon: Icons.handshake_outlined, iconBg: const Color.fromARGB(255, 254, 243, 199), iconColor: const Color(0xFF7B5800), label: 'Meetups', sub: 'Approve or deny meetup proposals', onTap: () => onNavigate(AdminTab.meetups, showActive: false)),
             ]),
           ),
           const SizedBox(height: 12),
@@ -1889,6 +1923,387 @@ class _DetailChip extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// MEETUPS PANEL
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _AdminMeetupsPanel extends StatefulWidget {
+  final List<AdminMeetup> meetups;
+  final VoidCallback onRefresh;
+  const _AdminMeetupsPanel({required this.meetups, required this.onRefresh});
+
+  @override
+  State<_AdminMeetupsPanel> createState() => _AdminMeetupsPanelState();
+}
+
+class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
+  bool _loading = false;
+  String? _error;
+  bool _showCompletion = false;
+  final TextEditingController _reasonCtrl = TextEditingController();
+
+  @override
+  void dispose() { _reasonCtrl.dispose(); super.dispose(); }
+
+  List<AdminMeetup> get _pendingList =>
+      widget.meetups.where((m) => m.status == 'admin_pending').toList();
+  List<AdminMeetup> get _completionList =>
+      widget.meetups.where((m) => m.status == 'completion_pending').toList();
+
+  String _fmtDate(DateTime d) {
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dy = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    return '${dy[(d.weekday-1)%7]}, ${mo[d.month-1]} ${d.day}, ${d.year}';
+  }
+
+  String _fmtTime(String t) {
+    try {
+      final p = t.split(':');
+      int h = int.parse(p[0]);
+      final m = p[1];
+      final ap = h >= 12 ? 'PM' : 'AM';
+      if (h > 12) h -= 12;
+      if (h == 0) h = 12;
+      return '$h:$m $ap';
+    } catch (_) { return t; }
+  }
+
+  Future<void> _approve(AdminMeetup m) async {
+    final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Approve Meetup?', style: TextStyle(fontWeight: FontWeight.w800)),
+      content: Text('Both @${m.buyerUsername} and @${m.sellerUsername} will be notified.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Approve', style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w700))),
+      ],
+    ));
+    if (ok != true) return;
+    setState(() { _loading = true; _error = null; });
+    try { await adminApproveMeetup(meetupId: m.meetupId); widget.onRefresh(); }
+    catch (e) { setState(() => _error = e.toString()); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
+
+  Future<void> _deny(AdminMeetup m) async {
+    _reasonCtrl.clear();
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Deny Meetup', style: TextStyle(fontWeight: FontWeight.w800)),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Both @${m.buyerUsername} and @${m.sellerUsername} will be notified.', style: const TextStyle(color: cMuted, fontSize: 13)),
+        const SizedBox(height: 12),
+        const Text('Reason (required)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _reasonCtrl, maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Explain why this meetup is being denied...',
+            hintStyle: const TextStyle(color: cMuted, fontSize: 13),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cRed, width: 2)),
+            filled: true, fillColor: cBg, contentPadding: const EdgeInsets.all(12),
+          ),
+        ),
+      ]),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () { if (_reasonCtrl.text.trim().isEmpty) return; Navigator.pop(ctx, true); },
+          child: const Text('Deny', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700)),
+        ),
+      ],
+    ));
+    if (ok != true || _reasonCtrl.text.trim().isEmpty) return;
+    setState(() { _loading = true; _error = null; });
+    try { await adminDenyMeetup(meetupId: m.meetupId, reason: _reasonCtrl.text.trim()); widget.onRefresh(); }
+    catch (e) { setState(() => _error = e.toString()); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
+
+  Future<void> _completeMeetup(AdminMeetup m) async {
+    final label = m.isMarketplace ? 'Complete & Process Payment' : 'Complete Meetup';
+    final body  = m.isMarketplace
+        ? 'Both photos have been verified. This will mark the meetup as completed, process the payment, and mark the listing as sold. Both users will be notified.'
+        : 'Both photos have been verified. This will mark the meetup as completed. Both users will be notified.';
+    final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+      content: Text(body),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: Text(label, style: const TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w700))),
+      ],
+    ));
+    if (ok != true) return;
+    setState(() { _loading = true; _error = null; });
+    try { await adminCompleteMeetup(meetupId: m.meetupId); widget.onRefresh(); }
+    catch (e) { setState(() => _error = e.toString()); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
+
+  Widget _card(AdminMeetup m, {required bool isCompletion}) {
+    final accentColor = isCompletion ? const Color(0xFF16A34A) : const Color(0xFF7B5800);
+    final accentBg    = isCompletion ? const Color(0xFFECFDF5) : const Color(0xFFFFF8EC);
+    final badgeColor  = isCompletion ? const Color(0xFF16A34A).withValues(alpha: 0.12) : const Color(0xFFFFE082);
+    final badgeText   = isCompletion ? 'VERIFY' : 'PENDING';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isCompletion ? const Color(0xFF16A34A).withValues(alpha: 0.3) : cBorder),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Header ──
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+          decoration: BoxDecoration(
+            color: accentBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+            border: Border(bottom: BorderSide(color: cBorder)),
+          ),
+          child: Row(children: [
+            // Item image or icon
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: m.itemImage != null && m.itemImage!.isNotEmpty
+                  ? Image.network(m.itemImage!, width: 44, height: 44, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(width: 44, height: 44,
+                          decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(8)),
+                          child: Icon(isCompletion ? Icons.camera_alt_rounded : Icons.handshake_outlined, size: 20, color: accentColor)))
+                  : Container(width: 44, height: 44,
+                      decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(8)),
+                      child: Icon(isCompletion ? Icons.camera_alt_rounded : Icons.handshake_outlined, size: 20, color: accentColor)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(m.itemTitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Row(children: [
+                if (m.itemPrice != null) ...[
+                  Text('\$${m.itemPrice!.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cRed)),
+                  const Text(' · ', style: TextStyle(fontSize: 11, color: cMuted)),
+                ],
+                if (m.itemCategory != null)
+                  Text(m.itemCategory!, style: const TextStyle(fontSize: 11, color: cMuted)),
+              ]),
+              Text('Submitted ${formatDate(m.createdAt)}', style: const TextStyle(fontSize: 10, color: cMuted)),
+            ])),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(6)),
+              child: Text(badgeText, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: accentColor, letterSpacing: 0.5)),
+            ),
+          ]),
+        ),
+        // ── Body ──
+        Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Users
+            Row(children: [
+              Expanded(child: _MeetupUserChip(label: 'Buyer', username: m.buyerUsername, email: m.buyerEmail, color: const Color(0xFF2980B9))),
+              const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.sync_alt_rounded, size: 16, color: cMuted)),
+              Expanded(child: _MeetupUserChip(label: 'Seller', username: m.sellerUsername, email: m.sellerEmail, color: const Color(0xFF16A34A))),
+            ]),
+            const SizedBox(height: 12),
+            // Location / Date / Time
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(10), border: Border.all(color: cBorder)),
+              child: Column(children: [
+                _MeetupDetailRow(icon: Icons.location_on_outlined, label: m.location),
+                const SizedBox(height: 6),
+                _MeetupDetailRow(icon: Icons.calendar_today_outlined, label: _fmtDate(m.meetupDate)),
+                const SizedBox(height: 6),
+                _MeetupDetailRow(icon: Icons.access_time_rounded, label: _fmtTime(m.meetupTime)),
+              ]),
+            ),
+            // Completion photos
+            if (isCompletion) ...[
+              const SizedBox(height: 12),
+              const Text('Completion Photos', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: cText)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: _PhotoPreview(label: 'Buyer Photo', url: m.buyerPhotoUrl)),
+                const SizedBox(width: 8),
+                Expanded(child: _PhotoPreview(label: 'Seller Photo', url: m.sellerPhotoUrl)),
+              ]),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _loading ? null : () => _completeMeetup(m),
+                  icon: _loading
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_circle_rounded, size: 16),
+                  label: Text(m.isMarketplace ? 'Complete & Process Payment' : 'Complete Meetup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _loading ? null : () => _deny(m),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: const Text('Deny'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : () => _approve(m),
+                    icon: _loading
+                        ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_rounded, size: 16),
+                    label: const Text('Approve'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ]),
+            ],
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pending    = _pendingList;
+    final completing = _completionList;
+    final shown      = _showCompletion ? completing : pending;
+
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Meetup Proposals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+          const Text('Review and approve or deny pending meetup proposals', style: TextStyle(fontSize: 12, color: cMuted)),
+          const SizedBox(height: 10),
+          Row(children: [
+            _Chip(label: 'Pending (${pending.length})', selected: !_showCompletion, onTap: () => setState(() => _showCompletion = false)),
+            const SizedBox(width: 8),
+            _Chip(label: 'Verify (${completing.length})', selected: _showCompletion, onTap: () => setState(() => _showCompletion = true)),
+          ]),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: cRedLight, borderRadius: BorderRadius.circular(8), border: Border.all(color: cRed.withValues(alpha: 0.3))),
+              child: Row(children: [const Icon(Icons.error_outline_rounded, size: 14, color: cRed), const SizedBox(width: 8), Expanded(child: Text(_error!, style: const TextStyle(color: cRedDark, fontSize: 12)))]),
+            ),
+          ],
+        ]),
+      ),
+      const SizedBox(height: 12),
+      Expanded(
+        child: shown.isEmpty
+            ? _AdminEmptyState(
+                message: _showCompletion ? 'No meetups awaiting verification' : 'No pending meetup proposals',
+                icon: _showCompletion ? Icons.camera_alt_outlined : Icons.handshake_outlined,
+              )
+            : ListView.builder(
+                primary: false,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                itemCount: shown.length,
+                itemBuilder: (_, i) => _card(shown[i], isCompletion: _showCompletion),
+              ),
+      ),
+    ]);
+  }
+}
+
+class _PhotoPreview extends StatelessWidget {
+  final String label;
+  final String? url;
+  const _PhotoPreview({required this.label, this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPhoto = url != null && url!.isNotEmpty;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cMuted)),
+      const SizedBox(height: 4),
+      Container(
+        height: 110,
+        decoration: BoxDecoration(
+          color: cBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: hasPhoto ? const Color(0xFF16A34A).withValues(alpha: 0.4) : cBorder),
+        ),
+        child: hasPhoto
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: Image.network(url!, fit: BoxFit.cover, width: double.infinity,
+                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, color: cMuted))),
+              )
+            : const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.camera_alt_outlined, color: cMuted, size: 20),
+                SizedBox(height: 4),
+                Text('Not submitted', style: TextStyle(fontSize: 10, color: cMuted)),
+              ])),
+      ),
+    ]);
+  }
+}
+
+class _MeetupUserChip extends StatelessWidget {
+  final String label, username, email;
+  final Color color;
+  const _MeetupUserChip({required this.label, required this.username, required this.email, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: 0.2))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color, letterSpacing: 0.5)),
+        const SizedBox(height: 3),
+        Text('@$username', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cText), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(email, style: const TextStyle(fontSize: 10, color: cMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+      ]),
+    );
+  }
+}
+
+class _MeetupDetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _MeetupDetailRow({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Icon(icon, size: 14, color: cRed),
+      const SizedBox(width: 8),
+      Expanded(child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cText))),
+    ]);
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // USERS PANEL
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -1956,7 +2371,7 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
                           ]),
                           const SizedBox(height: 4),
                           Text('Registered: ${formatDate(user.registeredAt)}', style: const TextStyle(fontSize: 12, color: cMuted)),
-                          Text('Last Active: ${user.lastActive != null ? formatDate(user.lastActive!) : 'Never'}', style: const TextStyle(fontSize: 12, color: cMuted)),
+                          Text('Last Active: ${user.lastActive != null ? _lastActiveLabel(user.lastActive!) : 'Never'}', style: const TextStyle(fontSize: 12, color: cMuted)),
                           const SizedBox(height: 16),
                           const _AdminLabel('Marketplace Listings'),
                           const SizedBox(height: 8),
@@ -1979,119 +2394,163 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
 
   Future<void> _openDetail(AdminUser user) async {
     bool loading = false; String? error;
+    // Fetch online status before opening dialog
+    bool? isOnline;
+    try { isOnline = await getUserOnlineStatus(userId: user.id); } catch (_) { isOnline = false; }
+    int marketCount = 0;
+    int lfCount = 0;
+    try {
+      final market = await getUserMarketListings(user.id);
+      final lf     = await getUserLostFoundListings(user.id);
+      marketCount  = market.where((m) => m['status']?.toString() == 'active').length;
+      lfCount      = lf.where((l) => l['status']?.toString() == 'active').length;
+    } catch (_) {}
     await showGeneralDialog(
       context: context, barrierDismissible: true, barrierLabel: 'User',
       barrierColor: Colors.black.withValues(alpha: 0.4), transitionDuration: kMid,
       pageBuilder: (_, __, ___) => const SizedBox.shrink(),
-      transitionBuilder: (ctx, anim, __, ___) => Opacity(
-        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
-        child: StatefulBuilder(builder: (ctx, setS) => Center(
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
-              child: Material(color: Colors.transparent, child: SingleChildScrollView(padding: const EdgeInsets.all(20),
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    CircleAvatar(backgroundColor: user.isBanned ? cRedDark : cRedLight, radius: 24, child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U', style: TextStyle(color: user.isBanned ? Colors.white : cRed, fontWeight: FontWeight.w900, fontSize: 20))),
-                    const SizedBox(width: 12),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(user.displayName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: cText)),
-                      Text('@${user.username}', style: const TextStyle(fontSize: 12, color: cMuted)),
-                      Text(user.email, style: const TextStyle(fontSize: 12, color: cMuted)),
-                    ])),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
-                  ]),
-                  const SizedBox(height: 16),
-                  _UserInfoRow(label: 'Role',           value: user.role.label),
-                  _UserInfoRow(label: 'Registered',     value: formatDate(user.registeredAt)),
-                  _UserInfoRow(label: 'Last Active',    value: user.lastActive != null ? formatDate(user.lastActive!) : 'Never'),
-                  _UserInfoRow(label: 'Total Listings', value: '${user.listingCount}'),
-                  _UserInfoRow(label: 'Email Verified', value: user.isVerified ? 'Yes' : 'No'),
-                  _UserInfoRow(label: 'Warning Issued', value: user.hasWarning ? (user.warnedAt != null ? 'Yes · ${formatDate(user.warnedAt!)}' : 'Yes') : 'No', highlight: user.hasWarning),
-                  _UserInfoRow(label: 'Status',         value: user.isBanned ? 'BANNED' : 'Active', highlight: user.isBanned),
-                  const SizedBox(height: 12),
-                  if (!user.isBanned && !user.hasWarning)
-                    Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE082))),
-                      child: const Row(children: [Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFE67E22)), SizedBox(width: 8), Expanded(child: Text('A warning must be issued before a user can be permanently banned.', style: TextStyle(fontSize: 12, color: Color(0xFF7B5800), height: 1.4)))])),
-                  if (!user.isBanned && user.hasWarning)
-                    Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFDECEC), borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.4))),
-                      child: const Row(children: [Icon(Icons.warning_amber_rounded, size: 15, color: cRedDark), SizedBox(width: 8), Expanded(child: Text('This user has already received their one-time warning. They can now be permanently banned if a further violation occurs.', style: TextStyle(fontSize: 12, color: cRedDark, height: 1.4)))])),
-                  const SizedBox(height: 16),
-                  if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    OutlinedButton.icon(icon: const Icon(Icons.history_rounded, size: 16), label: const Text('View Listing History'), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9))), onPressed: () => _openListingHistory(ctx, user)),
-                    if (!user.isBanned && !user.hasWarning)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
-                        label: const Text('Issue Warning'),
-                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Issue a Warning?'), content: Text('This will send a one-time warning to @${user.username}.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Issue Warning', style: TextStyle(color: Color(0xFFE67E22))))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminIssueWarning(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
+      transitionBuilder: (ctx, anim, __, ___) {
+        return Opacity(
+          opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut).value,
+          child: StatefulBuilder(builder: (ctx, setS) {
+            return Center(
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: cBorder)),
+                  child: Material(color: Colors.transparent, child: SingleChildScrollView(padding: const EdgeInsets.all(20),
+                    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        CircleAvatar(backgroundColor: user.isBanned ? cRedDark : cRedLight, radius: 24, child: Text(user.username.isNotEmpty ? user.username[0].toUpperCase() : 'U', style: TextStyle(color: user.isBanned ? Colors.white : cRed, fontWeight: FontWeight.w900, fontSize: 20))),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(user.displayName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: cText)),
+                          Text('@${user.username}', style: const TextStyle(fontSize: 12, color: cMuted)),
+                          Text(user.email, style: const TextStyle(fontSize: 12, color: cMuted)),
+                        ])),
+                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                      ]),
+                      const SizedBox(height: 16),
+                      _UserInfoRow(label: 'Role',           value: user.role.label),
+                      _UserInfoRow(label: 'Registered',     value: formatDate(user.registeredAt)),
+                      _UserInfoRow(label: 'Last Active',    value: user.lastActive != null ? _lastActiveLabel(user.lastActive!) : 'Never'),
+                      _UserInfoRow(label: 'Active Marketplace', value: '$marketCount'),
+                      _UserInfoRow(label: 'Active Lost & Found', value: '$lfCount'),
+                      _UserInfoRow(label: 'Warning Issued', value: user.hasWarning ? (user.warnedAt != null ? 'Yes · ${formatDate(user.warnedAt!)}' : 'Yes') : 'No', highlight: user.hasWarning),
+                      // ── Status row with online indicator ──
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(children: [
+                          const Text('Status', style: TextStyle(fontSize: 12, color: cMuted, fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          if (user.isBanned)
+                            const Text('BANNED', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cRedDark))
+                          else
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                              Container(
+                                width: 8, height: 8,
+                                decoration: BoxDecoration(
+                                  color: isOnline == true ? const Color(0xFF4ADE80) : const Color(0xFF9CA3AF),
+                                  shape: BoxShape.circle,
+                                  boxShadow: isOnline == true ? [BoxShadow(color: const Color(0xFF4ADE80).withValues(alpha: 0.5), blurRadius: 4)] : [],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                isOnline == true ? 'Online' : 'Offline',
+                                style: TextStyle(
+                                  fontSize: 13, fontWeight: FontWeight.w700,
+                                  color: isOnline == true ? const Color(0xFF16A34A) : const Color(0xFF6B7280),
+                                ),
+                              ),
+
+                            ]),
+                        ]),
                       ),
-                    if (!user.isBanned && user.hasWarning)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.undo_rounded, size: 16),
-                        label: const Text('Revoke Warning'),
-                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Revoke Warning?'), content: Text('This will remove the warning from @${user.username}\'s account.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Color(0xFFE67E22))))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminRevokeWarning(userId: user.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
-                      ),
-                    if (!user.isBanned && user.hasWarning)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.block_rounded, size: 16),
-                        label: const Text('Ban User'),
-                        style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Permanently Ban This User?'), content: Text('@${user.username} has already been warned. This will permanently ban them and blacklist their email.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ban Permanently', style: TextStyle(color: cRedDark)))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminBanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
-                      ),
-                    if (user.isBanned)
-                      OutlinedButton.icon(
-                        icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_open_rounded, size: 16),
-                        label: const Text('Unban User'),
-                        style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
-                        onPressed: loading ? null : () async {
-                          final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Unban This User?'), content: Text('This will allow @${user.username} back onto UniFind.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Unban', style: TextStyle(color: cRedDark)))]));
-                          if (confirm != true) return;
-                          setS(() { loading = true; error = null; });
-                          try { await adminUnbanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                          catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                        },
-                      ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.delete_forever_rounded, size: 16),
-                      label: const Text('Delete Account'),
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade900, side: BorderSide(color: Colors.red.shade900)),
-                      onPressed: loading ? null : () async {
-                        final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Delete Account?'), content: Text('Permanently deletes @${user.username} and all their data. Their email can be used to create a new account afterwards.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red)))]));
-                        if (confirm != true) return;
-                        setS(() { loading = true; error = null; });
-                        try { await adminDeleteUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
-                        catch (e) { setS(() { loading = false; error = e.toString(); }); }
-                      },
-                    ),
-                  ]),
-                ]),
-              )),
-            ),
-          ),
-        )),
-      ),
+                      const SizedBox(height: 12),
+                      if (!user.isBanned && !user.hasWarning)
+                        Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFFF8E1), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE082))),
+                          child: const Row(children: [Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFE67E22)), SizedBox(width: 8), Expanded(child: Text('A warning must be issued before a user can be permanently banned.', style: TextStyle(fontSize: 12, color: Color(0xFF7B5800), height: 1.4)))])),
+                      if (!user.isBanned && user.hasWarning)
+                        Container(width: double.infinity, padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFFDECEC), borderRadius: BorderRadius.circular(10), border: Border.all(color: cRed.withValues(alpha: 0.4))),
+                          child: const Row(children: [Icon(Icons.warning_amber_rounded, size: 15, color: cRedDark), SizedBox(width: 8), Expanded(child: Text('This user has already received their one-time warning. They can now be permanently banned if a further violation occurs.', style: TextStyle(fontSize: 12, color: cRedDark, height: 1.4)))])),
+                      const SizedBox(height: 16),
+                      if (error != null) ...[Text(error!, style: const TextStyle(color: cRedDark, fontSize: 12)), const SizedBox(height: 8)],
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        OutlinedButton.icon(icon: const Icon(Icons.history_rounded, size: 16), label: const Text('View Listing History'), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF2980B9), side: const BorderSide(color: Color(0xFF2980B9))), onPressed: () => _openListingHistory(ctx, user)),
+                        if (!user.isBanned && !user.hasWarning)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.warning_amber_rounded, size: 16),
+                            label: const Text('Issue Warning'),
+                            style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Issue a Warning?'), content: Text('This will send a one-time warning to @${user.username}.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Issue Warning', style: TextStyle(color: Color(0xFFE67E22))))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminIssueWarning(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        if (!user.isBanned && user.hasWarning)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.undo_rounded, size: 16),
+                            label: const Text('Revoke Warning'),
+                            style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFE67E22), side: const BorderSide(color: Color(0xFFE67E22))),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Revoke Warning?'), content: Text('This will remove the warning from @' + user.username + "'s account."), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Revoke', style: TextStyle(color: Color(0xFFE67E22))))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminRevokeWarning(userId: user.id); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        if (!user.isBanned && user.hasWarning)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.block_rounded, size: 16),
+                            label: const Text('Ban User'),
+                            style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Permanently Ban This User?'), content: Text('@${user.username} has already been warned. This will permanently ban them and blacklist their email.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ban Permanently', style: TextStyle(color: cRedDark)))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminBanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        if (user.isBanned)
+                          OutlinedButton.icon(
+                            icon: loading ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.lock_open_rounded, size: 16),
+                            label: const Text('Unban User'),
+                            style: OutlinedButton.styleFrom(foregroundColor: cRedDark, side: const BorderSide(color: cRedDark)),
+                            onPressed: loading ? null : () async {
+                              final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Unban This User?'), content: Text('This will allow @${user.username} back onto UniFind.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Unban', style: TextStyle(color: cRedDark)))]));
+                              if (confirm != true) return;
+                              setS(() { loading = true; error = null; });
+                              try { await adminUnbanUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                              catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                            },
+                          ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                          label: const Text('Delete Account'),
+                          style: OutlinedButton.styleFrom(foregroundColor: Colors.red.shade900, side: BorderSide(color: Colors.red.shade900)),
+                          onPressed: loading ? null : () async {
+                            final confirm = await showDialog<bool>(context: ctx, builder: (_) => AlertDialog(title: const Text('Delete Account?'), content: Text('Permanently deletes @${user.username} and all their data. Their email can be used to create a new account afterwards.'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')), TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red)))]));
+                            if (confirm != true) return;
+                            setS(() { loading = true; error = null; });
+                            try { await adminDeleteUser(userId: user.id, email: user.email); if (ctx.mounted) Navigator.pop(ctx); widget.onRefresh(); }
+                            catch (e) { setS(() { loading = false; error = e.toString(); }); }
+                          },
+                        ),
+                      ]),
+                    ]),
+                  )),
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 
@@ -2367,6 +2826,18 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
       ),
     ]);
   }
+}
+
+String _lastActiveLabel(DateTime dt) {
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  final dateStr = formatDate(dt);
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago · $dateStr';
+  if (diff.inHours < 24)   return '${diff.inHours}h ago · $dateStr';
+  if (diff.inDays == 1)    return 'Yesterday · $dateStr';
+  if (diff.inDays < 30)    return '${diff.inDays} days ago · $dateStr';
+  if (diff.inDays < 365)   return '${(diff.inDays / 30).floor()} months ago · $dateStr';
+  return '${(diff.inDays / 365).floor()} year(s) ago · $dateStr';
 }
 
 class _UserInfoRow extends StatelessWidget {
@@ -2745,7 +3216,30 @@ class _ReportDetailPane extends StatelessWidget {
               const SizedBox(height: 6),
             ],
             if (targetUser != null) ...[
-              _ActionButton(icon: Icons.gavel_rounded, label: 'Remove Listing & Ban User', bgColor: const Color(0xFFFEF2F2), borderColor: Colors.red.shade900.withValues(alpha: 0.3), iconColor: Colors.red.shade900, textColor: Colors.red.shade900, loading: loading, onTap: () => onAction(() async { await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound); await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
+              _ActionButton(
+                icon: Icons.gavel_rounded,
+                label: 'Remove Listing & Ban User',
+                bgColor: const Color(0xFFFEF2F2),
+                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
+                iconColor: Colors.red.shade900,
+                textColor: Colors.red.shade900,
+                loading: loading,
+                onTap: () {
+                  if (!targetUser!.hasWarning) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Text('Cannot Ban User', style: TextStyle(fontWeight: FontWeight.w800)),
+                        content: const Text('A warning must be issued to this user before they can be permanently banned.', style: TextStyle(color: cMuted)),
+                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: cRed, fontWeight: FontWeight.w700)))],
+                      ),
+                    );
+                    return;
+                  }
+                  onAction(() async { await adminRemoveListing(listingId: report.targetId, isLostFound: isLostFound); await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); });
+                },
+              ),
               const SizedBox(height: 6),
             ],
           ],
@@ -2755,7 +3249,30 @@ class _ReportDetailPane extends StatelessWidget {
               const SizedBox(height: 6),
             ],
             if (targetUser != null) ...[
-              _ActionButton(icon: Icons.block_rounded, label: 'Ban User', bgColor: const Color(0xFFFEF2F2), borderColor: Colors.red.shade900.withValues(alpha: 0.3), iconColor: Colors.red.shade900, textColor: Colors.red.shade900, loading: loading, onTap: () => onAction(() async { await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); })),
+              _ActionButton(
+                icon: Icons.block_rounded,
+                label: 'Ban User',
+                bgColor: const Color(0xFFFEF2F2),
+                borderColor: Colors.red.shade900.withValues(alpha: 0.3),
+                iconColor: Colors.red.shade900,
+                textColor: Colors.red.shade900,
+                loading: loading,
+                onTap: () {
+                  if (!targetUser!.hasWarning) {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        title: const Text('Cannot Ban User', style: TextStyle(fontWeight: FontWeight.w800)),
+                        content: const Text('A warning must be issued to this user before they can be permanently banned.', style: TextStyle(color: cMuted)),
+                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: cRed, fontWeight: FontWeight.w700)))],
+                      ),
+                    );
+                    return;
+                  }
+                  onAction(() async { await adminBanUser(userId: targetUser!.id, email: targetUser!.email); await adminResolveReport(reportId: report.id); });
+                },
+              ),
               const SizedBox(height: 6),
             ],
           ],
@@ -3150,3 +3667,4 @@ class _AdminProfileTabState extends State<_AdminProfileTab> {
     );
   }
 }
+

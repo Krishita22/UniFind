@@ -346,6 +346,17 @@ String get _displayHandle {
             MaterialPageRoute(builder: (_) => const TermsAndConditionsScreen(initialTab: 1)),
           ),
         ),
+        _ProfileActionTile(
+          icon: Icons.bug_report_outlined,
+          label: 'Report a Bug',
+          subtitle: 'Help us improve UniFind',
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ReportBugScreen(
+              userEmail: widget.email,
+              userId: widget.userId ?? 0,
+            )),
+          ),
+        ),
         const SizedBox(height: 20),
 
         // ── Session section ─────────────────────────────────────────────
