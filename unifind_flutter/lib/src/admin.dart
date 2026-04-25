@@ -1461,16 +1461,17 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                         ]),
                       ),
                       const SizedBox(height: 16),
-                      Row(children: [
-                        Icon(Icons.volunteer_activism_outlined, size: 16, color: item.claims.isNotEmpty ? _cOrange : cMuted),
-                        const SizedBox(width: 6),
-                        Text('Claims (${item.claims.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
-                      ]),
-                      const SizedBox(height: 8),
-                      if (item.claims.isEmpty)
-                        const Text('No claims submitted.', style: TextStyle(fontSize: 12, color: cMuted))
-                      else
-                        ...item.claims.map((c) {
+                      if (!isLost) ...[
+                        Row(children: [
+                          Icon(Icons.volunteer_activism_outlined, size: 16, color: item.claims.isNotEmpty ? _cOrange : cMuted),
+                          const SizedBox(width: 6),
+                          Text('Claims (${item.claims.length})', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: cText)),
+                        ]),
+                        const SizedBox(height: 8),
+                        if (item.claims.isEmpty)
+                          const Text('No claims submitted.', style: TextStyle(fontSize: 12, color: cMuted))
+                        else
+                          ...item.claims.map((c) {
                           final cColor = c.status == 'pending' ? _cOrange : c.status == 'approved' ? _cGreen : _cLost;
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(12),
@@ -1530,6 +1531,7 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                             ]),
                           );
                         }),
+                      ],
                       const SizedBox(height: 16),
                       Row(children: [
                         Expanded(child: OutlinedButton.icon(
@@ -1643,6 +1645,100 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
     }
+  }
+
+  Future<void> _showScheduleMeetupDialog(MatchedPair pair) async {
+    final dateCtrl = TextEditingController();
+    final timeCtrl = TextEditingController();
+    final locCtrl = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Schedule Meetup', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Set meeting details for the exchange:', style: TextStyle(fontSize: 12, color: cMuted)),
+          const SizedBox(height: 12),
+          const Text('Date', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: dateCtrl,
+            decoration: InputDecoration(
+              hintText: 'YYYY-MM-DD',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2)),
+              filled: true, fillColor: cBg, contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Time', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: timeCtrl,
+            decoration: InputDecoration(
+              hintText: 'HH:MM',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2)),
+              filled: true, fillColor: cBg, contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text('Location', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          TextField(
+            controller: locCtrl,
+            decoration: InputDecoration(
+              hintText: 'Meeting location',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: cBorder)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2)),
+              filled: true, fillColor: cBg, contentPadding: const EdgeInsets.all(12),
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (dateCtrl.text.trim().isEmpty || timeCtrl.text.trim().isEmpty || locCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                await createLostFoundMeetup(matchId: int.parse(pair.matchId), date: dateCtrl.text.trim(), time: timeCtrl.text.trim(), location: locCtrl.text.trim());
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: const Row(children: [
+                      Icon(Icons.calendar_today_rounded, color: Colors.white, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(child: Text('Meetup scheduled! Users will be notified.')),
+                    ]),
+                    backgroundColor: _cGreen,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.all(12),
+                  ));
+                  widget.onRefresh();
+                }
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+              }
+              dateCtrl.dispose();
+              timeCtrl.dispose();
+              locCtrl.dispose();
+            },
+            icon: const Icon(Icons.check_circle_rounded, size: 14),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _cGreen, foregroundColor: Colors.white,
+              textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            label: const Text('Schedule'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildItemList({required List<AdminLostFoundItem> items, required bool isLost, required EdgeInsets padding}) {
@@ -1904,34 +2000,51 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                         if (!isResolved)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-                            child: Row(children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => _unmatch(pair.matchId),
-                                  icon: const Icon(Icons.link_off_rounded, size: 14),
-                                  label: const Text('Unmatch'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
+                            child: Column(children: [
+                              SizedBox(
+                                width: double.infinity,
                                 child: ElevatedButton.icon(
-                                  onPressed: () => _resolve(pair.matchId),
-                                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
-                                  label: const Text('Resolve'),
+                                  onPressed: () => _showScheduleMeetupDialog(pair),
+                                  icon: const Icon(Icons.calendar_today_rounded, size: 14),
+                                  label: const Text('Schedule Meetup'),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: _cGreen, foregroundColor: Colors.white,
+                                    backgroundColor: const Color(0xFF3B82F6), foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 10),
+                              Row(children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _unmatch(pair.matchId),
+                                    icon: const Icon(Icons.link_off_rounded, size: 14),
+                                    label: const Text('Unmatch'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _resolve(pair.matchId),
+                                    icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
+                                    label: const Text('Resolve'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: _cGreen, foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 10),
+                                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ),
+                              ]),
                             ]),
                           )
                         else
