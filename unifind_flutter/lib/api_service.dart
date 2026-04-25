@@ -790,7 +790,7 @@ Future<Map<String, dynamic>> adminToggleVerification({
 
 // ─── ADMIN: GET LOST & FOUND ITEMS ───────────────────────────────────────────
 Future<List<Map<String, dynamic>>> getAdminLostFoundItems() async {
-  final response = await http.get(Uri.parse('$_baseUrl/admin/lostfound/get_lostfound_admin.php'));
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_lostfound_admin.php'));
   final data = jsonDecode(response.body);
   if (response.statusCode == 200 && data['success'] == true) {
     return List<Map<String, dynamic>>.from(data['data'] ?? []);
@@ -803,7 +803,7 @@ Future<Map<String, dynamic>> adminMarkLostFoundResolved({
   required String itemId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/lostfound/resolve_lostfound.php'),
+    Uri.parse('$_baseUrl/admin/resolve_lostfound.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'item_id': itemId}),
   );
