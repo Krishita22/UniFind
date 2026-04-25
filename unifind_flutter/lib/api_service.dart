@@ -1156,6 +1156,21 @@ Future<int> createLostFoundMeetup({
   throw Exception(data['error'] ?? 'Failed to create meetup.');
 }
 
+Future<Map<String, dynamic>?> getLostFoundMeetup({int? matchId, int? itemId}) async {
+  if (matchId == null && itemId == null) return null;
+  try {
+    final url = matchId != null
+        ? '$_baseUrl/messaging/meetup/get_lost_found_meetup.php?match_id=$matchId'
+        : '$_baseUrl/messaging/meetup/get_lost_found_meetup.php?item_id=$itemId';
+    final response = await http.get(Uri.parse(url));
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true && data['data'] != null) {
+      return Map<String, dynamic>.from(data['data']);
+    }
+  } catch (_) {}
+  return null;
+}
+
 // ── RATINGS ───────────────────────────────────────────────────────────────────
 
 Future<Map<String, dynamic>> getUserRating({required int userId}) async {
