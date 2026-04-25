@@ -107,7 +107,17 @@ class ChatMessage {
 
 // ── MEETUP MODELS ─────────────────────────────────────────────────────────────
 
-enum MeetupStatus { userPending, adminPending, confirmed, userDenied, adminDenied, userCancelled, completed }
+// FIX 1: Added missing `completionPending` to enum
+enum MeetupStatus {
+  userPending,
+  adminPending,
+  confirmed,
+  userDenied,
+  adminDenied,
+  userCancelled,
+  completed,
+  completionPending,
+}
 
 class MeetupProposal {
   final int? id;
@@ -137,14 +147,15 @@ class MeetupProposal {
   factory MeetupProposal.fromMap(Map<String, dynamic> m) {
     MeetupStatus parseStatus(String s) {
       switch (s.toLowerCase()) {
-        case 'user_pending':   return MeetupStatus.userPending;
-        case 'admin_pending':  return MeetupStatus.adminPending;
-        case 'confirmed':      return MeetupStatus.confirmed;
-        case 'user_denied':    return MeetupStatus.userDenied;
-        case 'admin_denied':   return MeetupStatus.adminDenied;
-        case 'user_cancelled': return MeetupStatus.userCancelled;
-        case 'completed':      return MeetupStatus.completed;
-        default:               return MeetupStatus.userPending;
+        case 'user_pending':        return MeetupStatus.userPending;
+        case 'admin_pending':       return MeetupStatus.adminPending;
+        case 'confirmed':           return MeetupStatus.confirmed;
+        case 'user_denied':         return MeetupStatus.userDenied;
+        case 'admin_denied':        return MeetupStatus.adminDenied;
+        case 'user_cancelled':      return MeetupStatus.userCancelled;
+        case 'completed':           return MeetupStatus.completed;
+        case 'completion_pending':  return MeetupStatus.completionPending;
+        default:                    return MeetupStatus.userPending;
       }
     }
     final timeParts = (m['meet_time']?.toString() ?? '12:00').split(':');
@@ -468,9 +479,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Timer? _statusTimer;
 
   final Map<int, MeetupStatus> _meetupStatusOverrides = {};
-  final Map<int, String> _meetupDenialReasons = {}; // meetup ID -> denial reason from server
-  final Set<int> _myPhotoSubmitted = {}; // meetup IDs where this user already submitted a photo
-  final Map<int, bool> _meetupPaymentStatus = {}; // meetup ID -> has buyer paid
+  final Map<int, String> _meetupDenialReasons = {};
+  final Set<int> _myPhotoSubmitted = {};
+  final Map<int, bool> _meetupPaymentStatus = {};
 
   @override
   void initState() {
@@ -578,11 +589,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           final id = int.tryParse(key);
           if (id == null) return;
 
-          // value is now a map with status + photo URLs
           String statusStr;
           if (value is Map) {
             statusStr = value['status']?.toString() ?? '';
-            // Check if this user has already submitted their photo
             final buyerId  = int.tryParse(value['buyer_id']?.toString() ?? '');
             final sellerId = int.tryParse(value['seller_id']?.toString() ?? '');
             final buyerPhoto  = value['buyer_photo_url']?.toString() ?? '';
@@ -593,13 +602,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 (isSeller && sellerPhoto.isNotEmpty)) {
               _myPhotoSubmitted.add(id);
             }
-            // Store denial reason if present
             final denialReason = value['denial_reason']?.toString() ?? '';
             if (denialReason.isNotEmpty) {
               _meetupDenialReasons[id] = denialReason;
             }
           } else {
-            // legacy: plain string
             statusStr = value.toString();
           }
           _meetupStatusOverrides[id] = _parseStatus(statusStr);
@@ -612,14 +619,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   MeetupStatus _parseStatus(String s) {
     switch (s.toLowerCase()) {
-      case 'user_pending':   return MeetupStatus.userPending;
-      case 'admin_pending':  return MeetupStatus.adminPending;
-      case 'confirmed':      return MeetupStatus.confirmed;
-      case 'user_denied':    return MeetupStatus.userDenied;
-      case 'admin_denied':   return MeetupStatus.adminDenied;
-      case 'user_cancelled': return MeetupStatus.userCancelled;
-      case 'completed':      return MeetupStatus.completed;
-      default:               return MeetupStatus.userPending;
+      case 'user_pending':        return MeetupStatus.userPending;
+      case 'admin_pending':       return MeetupStatus.adminPending;
+      case 'confirmed':           return MeetupStatus.confirmed;
+      case 'user_denied':         return MeetupStatus.userDenied;
+      case 'admin_denied':        return MeetupStatus.adminDenied;
+      case 'user_cancelled':      return MeetupStatus.userCancelled;
+      case 'completed':           return MeetupStatus.completed;
+      case 'completion_pending':  return MeetupStatus.completionPending;
+      default:                    return MeetupStatus.userPending;
     }
   }
 
@@ -638,13 +646,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
   // ── Photo submission ──────────────────────────────────────────────────────
 
   Future<void> _submitCompletionPhoto(int meetupId) async {
-    // Check if buyer has paid before allowing photo submission
     final hasPaid = await _checkMeetupPayment(meetupId);
     if (!hasPaid && mounted) {
-      // Find the listing item for this meetup from the conversation
       final listingId = widget.conv.listingId;
       if (listingId != null) {
-        // Find the marketplace item
         final items = await getListings();
         final rawItem = items.firstWhere(
           (i) => i['id']?.toString() == listingId.toString(),
@@ -675,7 +680,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
               buyerEmail: widget.conv.otherEmail,
             ),
           ));
-          // Refresh payment status after returning
           if (mounted) {
             setState(() => _meetupPaymentStatus.remove(meetupId));
             await _checkMeetupPayment(meetupId);
@@ -683,7 +687,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
           return;
         }
       }
-      // Fallback if listing not found
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Please complete payment before submitting a photo.'),
@@ -767,7 +770,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
       final bothSubmitted = result['both_submitted'] == true;
       setState(() {
-        _myPhotoSubmitted.add(meetupId); // always mark this user as submitted
+        _myPhotoSubmitted.add(meetupId);
         if (bothSubmitted) {
           _meetupStatusOverrides[meetupId] = MeetupStatus.completionPending;
         }
@@ -800,7 +803,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
   // ── Payment check ────────────────────────────────────────────────────────
 
   Future<bool> _checkMeetupPayment(int meetupId) async {
-    // Return cached result if available
     if (_meetupPaymentStatus.containsKey(meetupId)) {
       return _meetupPaymentStatus[meetupId]!;
     }
@@ -818,12 +820,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (e) {
       debugPrint('checkMeetupPayment error: $e');
     }
-    return true; // default to allowing if check fails
+    return true;
   }
 
   // ── Email helpers ─────────────────────────────────────────────────────────
 
-  /// Called after User A proposes — notifies User B
   Future<void> _notifyProposalReceived(int meetupId, {
     required String date,
     required String time,
@@ -848,7 +849,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  /// Called after User B accepts — notifies User A
   Future<void> _notifyProposalAccepted(int meetupId) async {
     try {
       await http.post(
@@ -861,7 +861,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  /// Called after User B declines — notifies User A
   Future<void> _notifyProposalDeclined(int meetupId) async {
     try {
       await http.post(
@@ -945,7 +944,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // ── UPDATED: notifies User B after proposal is sent ───────────────────────
   void _openProposeMeetupSheet() {
     showDialog(
       context: context,
@@ -988,7 +986,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       await _updateMeetupStatusInDb(meetupId, 'user_cancelled');
       if (!mounted) return;
       setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.userCancelled);
-      // No email needed — User A is withdrawing their own proposal
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Meetup proposal withdrawn.'),
         behavior: SnackBarBehavior.floating,
@@ -1000,13 +997,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // ── UPDATED: notifies User A that proposal was accepted ──────────────────
   Future<void> _confirmMeetup(int meetupId) async {
     try {
       await _updateMeetupStatusInDb(meetupId, 'admin_pending');
       if (!mounted) return;
       setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.adminPending);
-      // Email User A: your proposal was accepted, pending admin
       await _notifyProposalAccepted(meetupId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -1020,11 +1015,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // ── UPDATED: notifies User A only when User B declines (not when proposer cancels) ──
-  Future<void> _declineOrCancelMeetup(int meetupId, bool isProposer) async {
+  // FIX 2: Removed duplicate method definition; kept the complete version only
   Future<void> _declineOrCancelMeetup(int meetupId, bool isProposer, {bool isConfirmed = false}) async {
     final label = isProposer ? 'Cancel' : 'Decline';
-    // Different warning if confirmed meetup (buyer may have paid)
     final content = isConfirmed
         ? 'Are you sure you want to cancel this confirmed meetup? If you have completed payment, it will be cancelled.'
         : 'Are you sure you want to $label this meetup?';
@@ -1048,16 +1041,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       await _updateMeetupStatusInDb(meetupId, 'user_cancelled');
       if (!mounted) return;
-      setState(() => _meetupStatusOverrides[meetupId] = MeetupStatus.userCancelled);
-      // Only email User A if User B is the one declining — not if proposer is cancelling their own
-      if (!isProposer) {
-        await _notifyProposalDeclined(meetupId);
-      }
       setState(() {
         _meetupStatusOverrides[meetupId] = MeetupStatus.userCancelled;
         _meetupPaymentStatus.remove(meetupId);
       });
-      // Cancel any pending payment offer if this was a confirmed meetup
       if (isConfirmed && widget.conv.listingId != null) {
         try {
           await http.post(
@@ -1068,8 +1055,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
               'user_id': widget.myId,
             }),
           );
-        } catch (_) {} // non-fatal
+        } catch (_) {}
       }
+      // FIX 3: Removed duplicate _notifyProposalDeclined call; only notify when non-proposer declines
       if (!isProposer) await _notifyProposalDeclined(meetupId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1163,28 +1151,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               final effectiveStatus = proposal.id != null
                                   ? (_meetupStatusOverrides[proposal.id!] ?? proposal.status)
                                   : proposal.status;
-                              final effective = proposal.copyWith(status: effectiveStatus);
-                              final isProposer = effective.proposerId == widget.myId;
-
-                              return _MeetupCard(
-                                proposal: effective,
-                                myId: widget.myId,
-                                onWithdraw: () => _withdrawMeetup(effective.id ?? 0),
-                                onConfirm:  () => _confirmMeetup(effective.id ?? 0),
-                                onDeclineOrCancel: () =>
-                                    _declineOrCancelMeetup(effective.id ?? 0, isProposer),
-                                onProposeNew: _openProposeMeetupSheet,
                               final effectiveDenialReason = proposal.id != null
                                   ? (_meetupDenialReasons[proposal.id!] ?? proposal.denialReason)
                                   : proposal.denialReason;
-                              final effective  = proposal.copyWith(status: effectiveStatus, denialReason: effectiveDenialReason);
+                              // FIX 4: Removed old partial _MeetupCard call; single correct call below
+                              final effective = proposal.copyWith(
+                                status: effectiveStatus,
+                                denialReason: effectiveDenialReason,
+                              );
                               final isProposer = effective.proposerId == widget.myId;
-                              // Check payment status for confirmed meetups
                               bool? buyerHasPaid;
                               if (effectiveStatus == MeetupStatus.confirmed && effective.id != null) {
                                 buyerHasPaid = _meetupPaymentStatus[effective.id!];
                                 if (buyerHasPaid == null) {
-                                  // Trigger async check without awaiting
                                   _checkMeetupPayment(effective.id!);
                                 }
                               }
@@ -1385,8 +1364,8 @@ class _MeetupCard extends StatelessWidget {
   final VoidCallback onDeclineOrCancel;
   final VoidCallback onProposeNew;
   final VoidCallback onSubmitPhoto;
-  final bool myPhotoSubmitted; // true if this user already submitted their photo
-  final bool? buyerHasPaid;   // null = unknown/not buyer, true = paid, false = not paid
+  final bool myPhotoSubmitted;
+  final bool? buyerHasPaid;
 
   const _MeetupCard({
     required this.proposal, required this.myId,
@@ -1497,10 +1476,8 @@ class _MeetupCard extends StatelessWidget {
                 ]),
               ),
             ],
-            // ── confirmed: payment gate for buyer, then photo upload ────
             if (proposal.status == MeetupStatus.confirmed) ...[
               const SizedBox(height: 10),
-              // Buyer hasn't paid yet — show payment prompt
               if (buyerHasPaid == false) ...[
                 Container(
                   width: double.infinity, padding: const EdgeInsets.all(12),
@@ -1538,7 +1515,6 @@ class _MeetupCard extends StatelessWidget {
                   ]),
                 ),
               ] else ...[
-                // Paid (or seller) — show photo upload
                 myPhotoSubmitted
                     ? Container(
                         width: double.infinity, padding: const EdgeInsets.all(10),
@@ -1592,7 +1568,6 @@ class _MeetupCard extends StatelessWidget {
                         ]),
                       ),
               ],
-              // Cancel button — always shown in confirmed state (payment cancelled if applicable)
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
@@ -1610,7 +1585,6 @@ class _MeetupCard extends StatelessWidget {
                 ),
               ),
             ],
-            // ── completion_pending: waiting for admin ─────────────────────
             if (proposal.status == MeetupStatus.completionPending) ...[
               const SizedBox(height: 10),
               Container(
@@ -1652,9 +1626,10 @@ class _MeetupCard extends StatelessWidget {
   }
 
   List<Widget> _buildActions() {
-    if (proposal.status == MeetupStatus.confirmed)     return [];
-    if (proposal.status == MeetupStatus.completed)     return [];
-    if (proposal.status == MeetupStatus.userCancelled) return [];
+    if (proposal.status == MeetupStatus.confirmed)         return [];
+    if (proposal.status == MeetupStatus.completed)         return [];
+    if (proposal.status == MeetupStatus.userCancelled)     return [];
+    if (proposal.status == MeetupStatus.completionPending) return [];
 
     if (proposal.status == MeetupStatus.userDenied ||
         proposal.status == MeetupStatus.adminDenied) {
@@ -1753,53 +1728,58 @@ class _MeetupCard extends StatelessWidget {
 
   Color _statusBorderColor() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return const Color(0xFFC0DD97);
+      case MeetupStatus.confirmed:
+      case MeetupStatus.completionPending: return const Color(0xFFC0DD97);
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return const Color(0xFFF09595);
-      case MeetupStatus.adminPending: return const Color(0xFFB5D4F4);
-      default:                        return cBorder;
+      case MeetupStatus.adminDenied:       return const Color(0xFFF09595);
+      case MeetupStatus.adminPending:      return const Color(0xFFB5D4F4);
+      default:                             return cBorder;
     }
   }
 
   Color _statusIconBg() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return const Color(0xFFEAF3DE);
+      case MeetupStatus.confirmed:
+      case MeetupStatus.completionPending: return const Color(0xFFEAF3DE);
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return const Color(0xFFFCEBEB);
-      case MeetupStatus.adminPending: return const Color(0xFFE6F1FB);
-      default:                        return cRedLight;
+      case MeetupStatus.adminDenied:       return const Color(0xFFFCEBEB);
+      case MeetupStatus.adminPending:      return const Color(0xFFE6F1FB);
+      default:                             return cRedLight;
     }
   }
 
   Color _statusIconColor() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return const Color(0xFF3B6D11);
+      case MeetupStatus.confirmed:
+      case MeetupStatus.completionPending: return const Color(0xFF3B6D11);
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return cRed;
-      case MeetupStatus.adminPending: return const Color(0xFF185FA5);
-      default:                        return cRed;
+      case MeetupStatus.adminDenied:       return cRed;
+      case MeetupStatus.adminPending:      return const Color(0xFF185FA5);
+      default:                             return cRed;
     }
   }
 
   IconData _statusIcon() {
     switch (proposal.status) {
-      case MeetupStatus.confirmed:    return Icons.check_circle_outline;
+      case MeetupStatus.confirmed:
+      case MeetupStatus.completionPending: return Icons.check_circle_outline;
       case MeetupStatus.userDenied:
-      case MeetupStatus.adminDenied:  return Icons.cancel_outlined;
-      case MeetupStatus.adminPending: return Icons.pending_outlined;
-      default:                        return Icons.location_on_outlined;
+      case MeetupStatus.adminDenied:       return Icons.cancel_outlined;
+      case MeetupStatus.adminPending:      return Icons.pending_outlined;
+      default:                             return Icons.location_on_outlined;
     }
   }
 
   String _statusSubtitle() {
     switch (proposal.status) {
-      case MeetupStatus.userPending:   return _isProposer ? 'Waiting for their confirmation' : 'Awaiting your response';
-      case MeetupStatus.adminPending:  return 'Pending admin approval';
-      case MeetupStatus.confirmed:     return 'Admin approved — meetup is on!';
-      case MeetupStatus.userDenied:    return 'Proposal was declined';
-      case MeetupStatus.adminDenied:   return 'Admin denied this proposal';
-      case MeetupStatus.userCancelled: return 'Meetup was cancelled';
-      case MeetupStatus.completed:     return 'Meetup completed';
+      case MeetupStatus.userPending:        return _isProposer ? 'Waiting for their confirmation' : 'Awaiting your response';
+      case MeetupStatus.adminPending:       return 'Pending admin approval';
+      case MeetupStatus.confirmed:          return 'Admin approved — meetup is on!';
+      case MeetupStatus.userDenied:         return 'Proposal was declined';
+      case MeetupStatus.adminDenied:        return 'Admin denied this proposal';
+      case MeetupStatus.userCancelled:      return 'Meetup was cancelled';
+      case MeetupStatus.completed:          return 'Meetup completed';
+      case MeetupStatus.completionPending:  return 'Waiting for admin to process';
     }
   }
 }
@@ -1816,6 +1796,7 @@ class _InfoRow extends StatelessWidget {
   ]);
 }
 
+// FIX 5: Added missing `completionPending` case to _StatusBadge
 class _StatusBadge extends StatelessWidget {
   final MeetupStatus status;
   const _StatusBadge({required this.status});
@@ -1837,6 +1818,8 @@ class _StatusBadge extends StatelessWidget {
         bg = const Color(0xFFF1EFE8); fg = const Color(0xFF5F5E5A); label = 'Cancelled'; break;
       case MeetupStatus.completed:
         bg = const Color(0xFFEAF3DE); fg = const Color(0xFF3B6D11); label = 'Completed'; break;
+      case MeetupStatus.completionPending:
+        bg = const Color(0xFFE6F1FB); fg = const Color(0xFF185FA5); label = 'Processing'; break;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -1845,3 +1828,4 @@ class _StatusBadge extends StatelessWidget {
     );
   }
 }
+
