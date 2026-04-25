@@ -593,7 +593,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (ids.isEmpty) return;
     try {
       final resp = await http.get(Uri.parse(
-        'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/get_meetup_status.php?ids=${ids.join(',')}',
+        'https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/get_meetup_status.php?ids=${ids.join(',')}',
       ));
       if (resp.statusCode != 200) return;
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -649,7 +649,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Future<void> _updateMeetupStatusInDb(int meetupId, String status) async {
     final resp = await http.post(
-      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/update_meetup.php'),
+      Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/update_meetup.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'meetup_id': meetupId, 'status': status}),
     );
@@ -824,7 +824,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
     try {
       final resp = await http.get(Uri.parse(
-        'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/check_meetup_payment.php'
+        'https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/check_meetup_payment.php'
         '?meetup_id=$meetupId&user_id=${widget.myId}',
       ));
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
@@ -848,7 +848,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }) async {
     try {
       await http.post(
-        Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/emails/notify_proposal_received.php'),
+        Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/emails/notify_proposal_received.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'buyer_name':   widget.myName,
@@ -868,7 +868,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Future<void> _notifyProposalAccepted(int meetupId) async {
     try {
       await http.post(
-        Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/emails/notify_proposal_accepted.php'),
+        Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/emails/notify_proposal_accepted.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'meetup_id': meetupId}),
       );
@@ -880,7 +880,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Future<void> _notifyProposalDeclined(int meetupId) async {
     try {
       await http.post(
-        Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/emails/notify_proposal_declined.php'),
+        Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/messaging/meetup/emails/notify_proposal_declined.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'meetup_id': meetupId}),
       );
@@ -1063,7 +1063,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (isConfirmed && widget.conv.listingId != null) {
         try {
           await http.post(
-            Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/payments/cancel_offer_by_listing.php'),
+            Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/payments/cancel_offer_by_listing.php'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
               'listing_id': widget.conv.listingId,

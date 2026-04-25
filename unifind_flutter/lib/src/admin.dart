@@ -560,7 +560,7 @@ class _AdminAppState extends State<AdminApp> {
   }).toList();
 
   Future<List<BugReport>> _fetchBugReports() async {
-    final res = await http.get(Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/admin/reports/get_bug_reports.php'));
+    final res = await http.get(Uri.parse('https://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/admin/reports/get_bug_reports.php'));
     final data = jsonDecode(res.body);
     if (data['success'] != true) return [];
     return (data['data'] as List).map((b) => BugReport(
