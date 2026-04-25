@@ -411,41 +411,47 @@ class _StandardUserShell extends StatelessWidget {
                   bottom: false,
                   child: SizedBox(
                     height: 90,
-                    child: Stack(children: [
-                      Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Row(mainAxisSize: MainAxisSize.min, children: [
-                          Image.asset('assets/images/whitelogo.png', height: 36, fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Text('UniFind', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.3))),
-                          if (role == UserRole.fac) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
-                              child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
-                            ),
-                          ],
-                        ]),
-                        const SizedBox(height: 4),
-                        Row(mainAxisSize: MainAxisSize.min, children: [
-                          for (int i = 0; i < _navItems.length; i++) ...[
-                            _TopNavTab(
-                              item: _navItems[i],
-                              isActive: activeNavIndex == i,
-                              onTap: () => onTabChanged(_navItems[i].tabIndex),
-                              badgeCount: _navItems[i].tabIndex == 4
-                                  ? unreadCount
-                                  : _navItems[i].tabIndex == 6
-                                      ? unseenOfferCount
-                                      : 0,
-                            ),
-                            if (role != UserRole.fac && i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
-                          ],
-                        ]),
-                      ])),
-                      Positioned(top: 0, right: 4, bottom: 0, child: Center(
-                        child: IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white), onPressed: onLogout),
-                      )),
-                    ]),
+                    child:Stack(children: [
+                    // Logo pinned to the left
+                    Positioned(left: 12, top: 0, bottom: 0, child: Center(
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Image.asset('assets/images/whitelogo.png', height: 42, fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Text('UniFind',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white))),
+                        if (role == UserRole.fac) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(5)),
+                            child: const Text('FACULTY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+                          ),
+                        ],
+                      ]),
+                    )),
+                    // Nav tabs stay centered
+                    Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      const SizedBox(height: 4),
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        for (int i = 0; i < _navItems.length; i++) ...[
+                          _TopNavTab(
+                            item: _navItems[i],
+                            isActive: activeNavIndex == i,
+                            onTap: () => onTabChanged(_navItems[i].tabIndex),
+                            badgeCount: _navItems[i].tabIndex == 4
+                                ? unreadCount
+                                : _navItems[i].tabIndex == 6
+                                    ? unseenOfferCount
+                                    : 0,
+                          ),
+                          if (role != UserRole.fac && i == 2) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
+                        ],
+                      ]),
+                    ])),
+                    // Logout stays on the right
+                    Positioned(top: 0, right: 4, bottom: 0, child: Center(
+                      child: IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white), onPressed: onLogout),
+                    )),
+                  ]),
                   ),
                 ),
               ),
@@ -1134,7 +1140,7 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
   Future<void> _openReview(PendingListing listing) async {
     final titleCtrl   = TextEditingController(text: listing.title);
     final descCtrl    = TextEditingController(text: listing.description);
-    final priceCtrl   = TextEditingController(text: listing.price > 0 ? listing.price.toStringAsFixed(0) : '');
+    final priceCtrl   = TextEditingController(text: listing.price > 0 ? listing.price.toStringAsFixed(2) : '');
     final locCtrl     = TextEditingController(text: listing.location);
     final explainCtrl = TextEditingController();
     String category   = listing.category;
@@ -1358,7 +1364,7 @@ class _PendingListingTile extends StatelessWidget {
             Row(children: [
               const Icon(Icons.person_outline, size: 11, color: cMuted), const SizedBox(width: 3),
               Text(listing.sellerUsername, style: const TextStyle(fontSize: 11, color: cMuted)),
-              if (listing.price > 0) ...[const SizedBox(width: 8), Text('\$${listing.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cRed))],
+              if (listing.price > 0) ...[const SizedBox(width: 8), Text('\$${listing.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cRed))],
               const SizedBox(width: 8), Text(formatDate(listing.submittedAt), style: const TextStyle(fontSize: 11, color: cMuted)),
             ]),
           ])),
@@ -3027,7 +3033,7 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
     } else {
       for (final item in widget.allListings) {
         if (item.id == listingId) {
-          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.type, 'seller_username': item.sellerUsername, 'price': item.price > 0 ? item.price.toStringAsFixed(0) : ''};
+          return {'title': item.title, 'description': item.description, 'category': item.category, 'location': item.location, 'image': item.image, 'status': item.type, 'seller_username': item.sellerUsername, 'price': item.price > 0 ? item.price.toStringAsFixed(2) : ''};
         }
       }
     }
