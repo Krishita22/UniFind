@@ -1131,6 +1131,31 @@ Future<int> createMeetup({
   throw Exception(data['error'] ?? 'Failed to create meetup');
 }
 
+// CREATE MEETUP FOR LOST & FOUND
+Future<int> createLostFoundMeetup({
+  required int matchId,
+  required String date,
+  required String time,
+  required String location,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/messaging/meetup/create_meetup.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'match_id': matchId,
+      'meetup_date': date,
+      'meetup_time': time,
+      'meetup_location': location,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return data['data']['meetup_id'] as int;
+  }
+  throw Exception(data['error'] ?? 'Failed to create meetup.');
+}
+
 // ── RATINGS ───────────────────────────────────────────────────────────────────
 
 Future<Map<String, dynamic>> getUserRating({required int userId}) async {
