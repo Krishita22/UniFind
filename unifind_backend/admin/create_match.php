@@ -51,13 +51,12 @@ $foundItem = $fStmt->get_result()->fetch_assoc();
 $fStmt->close();
 if (!$foundItem) api_error('Found item not found.', 404);
 
-// Create the match (submitted_by, found_location, found_when, match_details are NOT NULL on server)
-$adminId = (int)$lostItem['poster_id'];
+// Create the match
 $ins = $conn->prepare(
-    'INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, found_location, found_when, match_details, status, created_at) VALUES (?, ?, ?, "Admin matched", "N/A", "Matched by admin", "pending", NOW())'
+    'INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, status, created_at) VALUES (?, ?, "pending", NOW())'
 );
 if (!$ins) api_error('Server error.', 500);
-$ins->bind_param('iii', $lostItemId, $foundItemId, $adminId);
+$ins->bind_param('ii', $lostItemId, $foundItemId);
 if (!$ins->execute()) api_error('Failed to create match.', 500);
 $matchId = (int)$ins->insert_id;
 $ins->close();
