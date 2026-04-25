@@ -964,7 +964,7 @@ Future<Map<String, dynamic>> adminResolveMatch({
   required String matchId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/matches/resolve_match.php'),
+    Uri.parse('$_baseUrl/admin/resolve_match.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'match_id': matchId}),
   );
