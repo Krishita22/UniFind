@@ -36,9 +36,10 @@ $reason = (string)($body['reason'] ?? '');
 if ($meetupId <= 0) api_error('meetup_id required.', 400);
 if (empty($reason)) api_error('reason required.', 400);
 
-$upd = $conn->prepare('UPDATE lost_found_meetups SET status = "denied", denial_reason = ? WHERE id = ?');
+$status = 'denied';
+$upd = $conn->prepare('UPDATE lost_found_meetups SET status = ?, denial_reason = ? WHERE id = ?');
 if (!$upd) api_error('Failed to prepare: ' . $conn->error, 500);
-$upd->bind_param('si', $reason, $meetupId);
+$upd->bind_param('ssi', $status, $reason, $meetupId);
 if (!$upd->execute()) api_error('Failed to deny: ' . $upd->error, 500);
 $upd->close();
 
