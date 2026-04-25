@@ -33,9 +33,10 @@ $body = api_body();
 $meetupId = (int)($body['meetup_id'] ?? 0);
 if ($meetupId <= 0) api_error('meetup_id required.', 400);
 
-$upd = $conn->prepare('UPDATE lost_found_meetups SET status = "approved" WHERE id = ?');
+$status = 'approved';
+$upd = $conn->prepare('UPDATE lost_found_meetups SET status = ? WHERE id = ?');
 if (!$upd) api_error('Failed to prepare: ' . $conn->error, 500);
-$upd->bind_param('i', $meetupId);
+$upd->bind_param('si', $status, $meetupId);
 if (!$upd->execute()) api_error('Failed to approve: ' . $upd->error, 500);
 $upd->close();
 
