@@ -1015,12 +1015,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // FIX 2: Removed duplicate method definition; kept the complete version only
   Future<void> _declineOrCancelMeetup(int meetupId, bool isProposer, {bool isConfirmed = false}) async {
     final label = isProposer ? 'Cancel' : 'Decline';
     final content = isConfirmed
         ? 'Are you sure you want to cancel this confirmed meetup? If you have completed payment, it will be cancelled.'
-        : 'Are you sure you want to $label this meetup?';
+        : 'Are you sure you want to ${label.toLowerCase()} this meetup?';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
