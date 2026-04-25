@@ -938,7 +938,7 @@ Future<Map<String, dynamic>> adminCreateMatch({
   required String foundItemId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/matches/create_match.php'),
+    Uri.parse('$_baseUrl/admin/create_match.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'lost_item_id': lostItemId, 'found_item_id': foundItemId}),
   );
@@ -951,7 +951,7 @@ Future<Map<String, dynamic>> adminCreateMatch({
 
 // ─── ADMIN: GET MATCHES ─────────────────────────────────────────────────────
 Future<List<Map<String, dynamic>>> adminGetMatches() async {
-  final response = await http.get(Uri.parse('$_baseUrl/admin/matches/get_matches.php'));
+  final response = await http.get(Uri.parse('$_baseUrl/admin/get_matches.php'));
   final data = jsonDecode(response.body);
   if (response.statusCode == 200 && data['success'] == true) {
     return List<Map<String, dynamic>>.from(data['data'] ?? []);
@@ -979,7 +979,7 @@ Future<Map<String, dynamic>> adminUnmatch({
   required String matchId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/matches/unmatch.php'),
+    Uri.parse('$_baseUrl/admin/unmatch.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'match_id': matchId}),
   );
