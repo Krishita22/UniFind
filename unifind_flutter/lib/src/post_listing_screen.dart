@@ -284,13 +284,16 @@ class _PostListingScreenState extends State<PostListingScreen> {
                 validator: (v) => (v == null || v.isEmpty) ? 'Category is required' : null,
               ),
               const SizedBox(height: 12),
-              _StyledField(
-                label: 'Location *',
-                hint: 'e.g. Blanton Hall',
-                icon: Icons.location_on_outlined,
-                onChanged: (v) => _loc = v,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Location is required' : null,
-              ),
+              if (_type != ListingType.marketplace) ...[
+                const SizedBox(height: 12),
+                _StyledField(
+                  label: 'Location *',
+                  hint: 'e.g. Blanton Hall',
+                  icon: Icons.location_on_outlined,
+                  onChanged: (v) => _loc = v,
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Location is required' : null,
+                ),
+              ],
               const SizedBox(height: 12),
               _FormLabel(label: 'Image'),
               const SizedBox(height: 6),
