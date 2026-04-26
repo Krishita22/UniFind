@@ -1582,6 +1582,18 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
                                 )),
+                                const SizedBox(height: 8),
+                                SizedBox(width: double.infinity, child: OutlinedButton.icon(
+                                  onPressed: () => _showRejectClaimDialog(ctx, c, item),
+                                  icon: const Icon(Icons.close_rounded, size: 14),
+                                  label: const Text('Reject Claim'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
+                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                    textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                )),
                               ],
                             ]),
                           );
@@ -1623,6 +1635,63 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
           ),
         );
       },
+    );
+  }
+
+  void _showRejectClaimDialog(BuildContext ctx, dynamic claim, dynamic item) {
+    final reasonCtrl = TextEditingController();
+    showDialog(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Reject Claim?', style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Please provide a reason for rejection:', style: TextStyle(color: cMuted, fontSize: 13)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: reasonCtrl,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: 'e.g., Insufficient proof, Item belongs to someone else...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              if (reasonCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(dialogCtx).showSnackBar(const SnackBar(content: Text('Reason required')));
+                return;
+              }
+              try {
+                await adminRejectClaim(claimId: claim.id, itemId: item.id, reason: reasonCtrl.text.trim());
+                if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                    content: const Row(children: [
+                      Icon(Icons.block_rounded, color: Colors.white, size: 16),
+                      SizedBox(width: 8),
+                      Expanded(child: Text('Claim rejected. Claimant notified.')),
+                    ]),
+                    backgroundColor: cRedDark,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    margin: const EdgeInsets.all(12),
+                  ));
+                }
+                widget.onRefresh();
+              } catch (e) {
+                if (dialogCtx.mounted) ScaffoldMessenger.of(dialogCtx).showSnackBar(SnackBar(content: Text('Error: $e')));
+              }
+            },
+            child: const Text('Reject', style: TextStyle(color: cRedDark, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
     );
   }
 
