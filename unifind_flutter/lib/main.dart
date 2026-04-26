@@ -976,19 +976,18 @@ class _UniFindAppState extends State<UniFindApp> {
       await _loadListings();
       await _loadLostFound();
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      _messengerKey.currentState?.showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 5),
         ),
       );
-      return;
+      rethrow; // re-throw so post_listing_screen.dart catch block shows the error there too
     }
 
     setState(() {
-      _tab = in_.type == ListingType.marketplace ? 0 : 1;
+      _tab = 1; // Go to marketplace page after posting
     });
   }
 
