@@ -773,29 +773,36 @@ class _AdminAppState extends State<AdminApp> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0F0),
       appBar: AppBar(
-        backgroundColor: cNavBgDark, foregroundColor: Colors.white, elevation: 0, centerTitle: true,
-        title: LayoutBuilder(builder: (ctx, c) {
-          final compact = c.maxWidth < 280;
-          return Row(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.admin_panel_settings_rounded, size: 14, color: Colors.white),
-                if (!compact) ...[
-                  const SizedBox(width: 6),
-                  const Text('ADMIN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.white)),
-                ],
-              ]),
+        toolbarHeight: 70,
+        backgroundColor: cNavBgDark,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 6),
+          Image.asset(
+            'assets/images/whitelogo.png',
+            height: 36,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Text(
+              'UniFind',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Colors.white),
             ),
-            const SizedBox(width: 8),
-            Flexible(child: Text(widget.adminUsername, style: const TextStyle(fontSize: 14, color: Colors.white70), overflow: TextOverflow.ellipsis)),
-          ]);
-        }),
+          ),
+          const SizedBox (height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: const Text(
+              'ADMIN',
+              style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8),
+            ),
+          ),
+          const SizedBox(height: 6),
+        ]),
         actions: [
           IconButton(tooltip: 'Refresh', icon: const Icon(Icons.refresh_rounded), onPressed: _loadAll),
           IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded), onPressed: widget.onLogout),
@@ -1327,16 +1334,38 @@ class _AdminListingsPanelState extends State<_AdminListingsPanel> {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_showActive ? 'Active Listings' : 'Pending Listings', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-          Text(_showActive ? 'All live marketplace listings' : 'Review, edit, approve or deny submissions', style: const TextStyle(fontSize: 12, color: cMuted)),
-          const SizedBox(height: 10),
-          Row(children: [
-            _Chip(label: 'Pending', selected: !_showActive, onTap: () => setState(() => _showActive = false)),
-            const SizedBox(width: 8),
-            _Chip(label: 'Active', selected: _showActive, onTap: () => setState(() => _showActive = true)),
-          ]),
-        ]),
-      ),
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Icon(
+                  _showActive ? Icons.storefront_rounded : Icons.pending_actions_rounded,
+                  color: Colors.white, size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_showActive ? 'Active Listings' : 'Pending Listings', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+                  Text(_showActive ? 'All live marketplace listings' : 'Review, edit, approve or deny submissions', style: const TextStyle(fontSize: 12, color: cMuted)),
+                ],
+              ),
+            ],
+          ),
+    const SizedBox(height: 10),
+    Row(children: [
+      _Chip(label: 'Pending', selected: !_showActive, onTap: () => setState(() => _showActive = false)),
+      const SizedBox(width: 8),
+      _Chip(label: 'Active', selected: _showActive, onTap: () => setState(() => _showActive = true)),
+    ]),
+  ]),
+),
       if (!_showActive)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1711,54 +1740,77 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Lost & Found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-            Text(isMobile ? 'Tap to view, long-press to select' : 'Select one from each side, then match', style: const TextStyle(fontSize: 12, color: cMuted)),
-          ])),
-        ]),
+        child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Icon(
+                _showMatched ? Icons.link_rounded : Icons.compare_arrows_rounded,
+                color: Colors.white, size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Lost & Found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+                Text(
+                  _showMatched ? 'Tap to view, long-press to select' : 'Select one from each side, then match',
+                  style: const TextStyle(fontSize: 12, color: cMuted),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Row(children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _showMatched = false),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: !_showMatched ? cRed : cSurface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: !_showMatched ? cRed : cBorder),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _showMatched = false),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: !_showMatched ? cRed : cSurface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: !_showMatched ? cRed : cBorder),
+                  ),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.compare_arrows_rounded, size: 16, color: !_showMatched ? Colors.white : cMuted),
+                    const SizedBox(width: 6),
+                    Text('Match Items', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: !_showMatched ? Colors.white : cMuted)),
+                  ]),
                 ),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.compare_arrows_rounded, size: 16, color: !_showMatched ? Colors.white : cMuted),
-                  const SizedBox(width: 6),
-                  Text('Match Items', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: !_showMatched ? Colors.white : cMuted)),
-                ]),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _showMatched = true),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _showMatched ? cRed : cSurface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _showMatched ? cRed : cBorder),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _showMatched = true),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: _showMatched ? cRed : cSurface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: _showMatched ? cRed : cBorder),
+                  ),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.link_rounded, size: 16, color: _showMatched ? Colors.white : cMuted),
+                    const SizedBox(width: 6),
+                    Text('Matched (${widget.matchedPairs.length})', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _showMatched ? Colors.white : cMuted)),
+                  ]),
                 ),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.link_rounded, size: 16, color: _showMatched ? Colors.white : cMuted),
-                  const SizedBox(width: 6),
-                  Text('Matched (${widget.matchedPairs.length})', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _showMatched ? Colors.white : cMuted)),
-                ]),
               ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
       if (!_showMatched) ...[
         if (_selectedLostId != null || _selectedFoundId != null)
@@ -2233,8 +2285,30 @@ class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Meetup Proposals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-          const Text('Review and approve or deny pending meetup proposals', style: TextStyle(fontSize: 12, color: cMuted)),
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Icon(
+                  _showCompletion ? Icons.camera_alt_rounded : Icons.handshake_outlined,
+                  color: Colors.white, size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Meetup Proposals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+                  Text('Review and approve or deny pending meetup proposals', style: TextStyle(fontSize: 12, color: cMuted)),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           Row(children: [
             _Chip(label: 'Pending (${pending.length})', selected: !_showCompletion, onTap: () => setState(() => _showCompletion = false)),
@@ -2852,6 +2926,16 @@ class _AdminUsersPanelState extends State<_AdminUsersPanel> {
     return Column(children: [
       Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [cRed, cRedDark]),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: const Icon(Icons.people_outline_rounded, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('User Management', style: TextStyle(fontSize: isMobile ? 18 : 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
             if (!isMobile) const Text('View, warn, ban, or delete users', style: TextStyle(fontSize: 12, color: cMuted)),
@@ -3150,8 +3234,25 @@ class _AdminReportsPanelState extends State<_AdminReportsPanel> {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Reports & Flags', style: TextStyle(fontSize: isMobile ? 18 : 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
-          if (!isMobile) const Text('User-submitted reports and bug reports', style: TextStyle(fontSize: 12, color: cMuted)),
+          Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Icon(
+                _showBugs ? Icons.bug_report_outlined : Icons.flag_rounded,
+                color: Colors.white, size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Reports & Flags', style: TextStyle(fontSize: isMobile ? 18 : 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+              if (!isMobile) const Text('User-submitted reports and bug reports', style: TextStyle(fontSize: 12, color: cMuted)),
+            ]),
+          ]),
         ]),
       ),
       Padding(
