@@ -226,7 +226,7 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
 
       // ── Create meetup using api_service ───────────────────────────────
       final meetupId = await createMeetup(
-        itemId:         widget.conv.listingId ?? 0,
+        itemId:         widget.conv.isLostFound ? 0 : (widget.conv.listingId ?? 0),
         conversationId: widget.conv.id,
         buyerId:        widget.myId,
         sellerId:       widget.conv.otherId,
