@@ -992,12 +992,11 @@ Future<Map<String, dynamic>> adminUnmatch({
 
 Future<Map<String, dynamic>> adminAcceptClaim({
   required String claimId,
-  required String itemId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/claims/accept_claim.php'),
+    Uri.parse('$_baseUrl/admin/claims/approve_claim.php'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'claim_id': claimId, 'item_id': itemId}),
+    body: jsonEncode({'claim_id': claimId}),
   );
   final data = jsonDecode(response.body);
   if (response.statusCode == 200 && data['success'] == true) {
