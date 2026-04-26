@@ -1,7 +1,7 @@
 part of '../main.dart';
 
 class PostListingScreen extends StatefulWidget {
-  final void Function(NewListingInput) onPost;
+  final Future<void> Function(NewListingInput) onPost;
   final ListingType initialType;
   final bool hideSale;
   const PostListingScreen({
@@ -353,7 +353,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         );
       }
 
-      widget.onPost(NewListingInput(
+      await widget.onPost(NewListingInput(
         type: _type,
         title: _title.trim(),
         description: _desc.trim(),
