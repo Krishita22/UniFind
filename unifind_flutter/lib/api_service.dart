@@ -964,7 +964,7 @@ Future<Map<String, dynamic>> adminResolveMatch({
   required String matchId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/resolve_match.php'),
+    Uri.parse('$_baseUrl/admin/matches/resolve_match.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'match_id': matchId}),
   );
@@ -981,7 +981,7 @@ Future<Map<String, dynamic>> adminUnmatch({
   final response = await http.post(
     Uri.parse('$_baseUrl/admin/matches/unmatch.php'),
     headers: {'Content-Type': 'application/json'},
-    body: jsonEncode({'match_id': matchId}),
+    body: jsonEncode({'match_id': int.tryParse(matchId) ?? 0}),
   );
   final data = jsonDecode(response.body);
   if (response.statusCode == 200 && data['success'] == true) {
@@ -1131,7 +1131,32 @@ Future<int> createMeetup({
   throw Exception(data['error'] ?? 'Failed to create meetup');
 }
 
-// CREATE MEETUP FOR LOST & FOUND
+Future<Map<String, dynamic>> createLostFoundMeetup({
+  required int claimId,
+  required String date,
+  required String time,
+  required String location,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/meetup/create_meetup.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'claim_id': claimId,
+      'meetup_date': date,
+      'meetup_time': time,
+      'meetup_location': location,
+    }),
+  );
+
+  final data = jsonDecode(response.body);
+
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data['data'] ?? {});
+  }
+
+  throw Exception(data['error'] ?? 'Failed to create meetup');
+}
+
 // ── RATINGS ───────────────────────────────────────────────────────────────────
 
 Future<Map<String, dynamic>> getUserRating({required int userId}) async {
@@ -1600,6 +1625,9 @@ Future<Map<String, dynamic>> createAdminUser({
 Future<List<Map<String, dynamic>>> getAdminMeetups({required String status}) async {
   final res = await http.get(Uri.parse('$_baseUrl/admin/meetup/get_admin_meetups.php?status=$status'));
   final data = jsonDecode(res.body);
+  print('getAdminMeetups($status) status: ${res.statusCode}');
+  print('getAdminMeetups($status) body: ${res.body}');
+  print('getAdminMeetups($status) data[data]: ${data['data']}');
   return List<Map<String, dynamic>>.from(data['data'] ?? []);
 }
 
