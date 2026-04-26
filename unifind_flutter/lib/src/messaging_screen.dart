@@ -10,6 +10,7 @@ class Conversation {
   final int unread;
   final int? listingId;
   final bool isComplete;
+  final bool isLostFound;
   const Conversation({
     required this.id, required this.subject,
     required this.otherName, required this.otherEmail,
@@ -18,8 +19,10 @@ class Conversation {
     this.lastMessage, this.lastAt,
     required this.unread, this.listingId,
     this.isComplete = false,
+    this.isLostFound = false,
   });
   factory Conversation.fromMap(Map<String, dynamic> m, int myId) {
+    debugPrint('CONV MAP: ${jsonEncode(m)}');
     final u1 = int.tryParse(m['user1_id'].toString()) ?? 0;
     final u2 = int.tryParse(m['user2_id'].toString()) ?? 0;
     final otherId      = u1 == myId ? u2 : u1;
@@ -44,6 +47,8 @@ class Conversation {
       unread:        int.tryParse(m['unread']?.toString() ?? '0') ?? 0,
       listingId:     m['listing_id'] != null ? int.tryParse(m['listing_id'].toString()) : null,
       isComplete:    m['is_complete'] == 1 || m['is_complete'] == true || m['is_complete'] == '1',
+      isLostFound:   m['is_lost_found'] == 1 || m['is_lost_found'] == true || m['is_lost_found'] == '1'
+                     || (m['listing_id'] == null),  // fallback if backend doesn't send flag
     );
   }
 }
@@ -98,6 +103,7 @@ class ChatMessage {
         safeSpot: p['location']?.toString() ?? 'Student Center',
         note:     p['note']?.toString(),
         status:   MeetupStatus.userPending,
+        claimId:  p['claim_id'] != null ? (p['claim_id'] as num).toInt() : null,
       );
     } catch (_) {
       return null;
@@ -130,6 +136,7 @@ class MeetupProposal {
   final String? note;
   final MeetupStatus status;
   final String? denialReason;
+  final int? claimId;
 
   const MeetupProposal({
     this.id,
@@ -142,6 +149,7 @@ class MeetupProposal {
     this.note,
     this.status = MeetupStatus.userPending,
     this.denialReason,
+    this.claimId,
   });
 
   factory MeetupProposal.fromMap(Map<String, dynamic> m) {
@@ -173,6 +181,7 @@ class MeetupProposal {
       note:           m['note']?.toString(),
       status:         parseStatus(m['status']?.toString() ?? ''),
       denialReason:   m['denial_reason']?.toString(),
+      claimId:        int.tryParse(m['claim_id']?.toString() ?? ''),
     );
   }
 
@@ -187,6 +196,7 @@ class MeetupProposal {
     note:           note,
     status:         status ?? this.status,
     denialReason:   denialReason ?? this.denialReason,
+    claimId:        claimId,
   );
 
   String get formattedDate {
@@ -662,55 +672,61 @@ class _ConversationScreenState extends State<ConversationScreen> {
   // ── Photo submission ──────────────────────────────────────────────────────
 
   Future<void> _submitCompletionPhoto(int meetupId) async {
-    final hasPaid = await _checkMeetupPayment(meetupId);
-    if (!hasPaid && mounted) {
-      final listingId = widget.conv.listingId;
-      if (listingId != null) {
-        final items = await getListings();
-        final rawItem = items.firstWhere(
-          (i) => i['id']?.toString() == listingId.toString(),
-          orElse: () => <String, dynamic>{},
-        );
-        if (!mounted) return;
-        if (rawItem.isNotEmpty) {
-          final item = MarketplaceItem(
-            id: rawItem['id']?.toString() ?? '',
-            title: rawItem['title']?.toString() ?? '',
-            price: double.tryParse(rawItem['price']?.toString() ?? '0') ?? 0,
-            description: rawItem['description']?.toString() ?? '',
-            category: rawItem['category']?.toString() ?? '',
-            condition: rawItem['condition']?.toString() ?? '',
-            image: rawItem['image']?.toString().isNotEmpty == true
-                ? rawItem['image'].toString()
-                : rawItem['image_url']?.toString() ?? '',
-            seller: rawItem['username']?.toString() ?? rawItem['seller_username']?.toString() ?? '',
-            sellerEmail: rawItem['seller_email']?.toString() ?? '',
-            location: rawItem['location']?.toString() ?? '',
-            createdAt: DateTime.tryParse(rawItem['created_at']?.toString() ?? '') ?? DateTime.now(),
+    final bool isLostFound = widget.conv.isLostFound;
+
+    if (!isLostFound) {
+      // Marketplace only: check payment before allowing photo submission
+      final hasPaid = await _checkMeetupPayment(meetupId);
+      if (!hasPaid && mounted) {
+        final listingId = widget.conv.listingId;
+        if (listingId != null) {
+          final items = await getListings();
+          final rawItem = items.firstWhere(
+            (i) => i['id']?.toString() == listingId.toString(),
+            orElse: () => <String, dynamic>{},
           );
-          await Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => PaymentScreen(
-              item: item,
-              buyerId: widget.myId,
-              sellerId: widget.conv.otherId,
-              buyerEmail: widget.conv.otherEmail,
-            ),
-          ));
-          if (mounted) {
-            setState(() => _meetupPaymentStatus.remove(meetupId));
-            await _checkMeetupPayment(meetupId);
+          if (!mounted) return;
+          if (rawItem.isNotEmpty) {
+            final item = MarketplaceItem(
+              id: rawItem['id']?.toString() ?? '',
+              title: rawItem['title']?.toString() ?? '',
+              price: double.tryParse(rawItem['price']?.toString() ?? '0') ?? 0,
+              description: rawItem['description']?.toString() ?? '',
+              category: rawItem['category']?.toString() ?? '',
+              condition: rawItem['condition']?.toString() ?? '',
+              image: rawItem['image']?.toString().isNotEmpty == true
+                  ? rawItem['image'].toString()
+                  : rawItem['image_url']?.toString() ?? '',
+              seller: rawItem['username']?.toString() ?? rawItem['seller_username']?.toString() ?? '',
+              sellerEmail: rawItem['seller_email']?.toString() ?? '',
+              location: rawItem['location']?.toString() ?? '',
+              createdAt: DateTime.tryParse(rawItem['created_at']?.toString() ?? '') ?? DateTime.now(),
+            );
+            await Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => PaymentScreen(
+                item: item,
+                buyerId: widget.myId,
+                sellerId: widget.conv.otherId,
+                buyerEmail: widget.conv.otherEmail,
+              ),
+            ));
+            if (mounted) {
+              setState(() => _meetupPaymentStatus.remove(meetupId));
+              await _checkMeetupPayment(meetupId);
+            }
+            return;
           }
-          return;
         }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please complete payment before submitting a photo.'),
+          backgroundColor: Color(0xFFD97706),
+          behavior: SnackBarBehavior.floating,
+        ));
+        return;
       }
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please complete payment before submitting a photo.'),
-        backgroundColor: Color(0xFFD97706),
-        behavior: SnackBarBehavior.floating,
-      ));
-      return;
     }
+    // Lost & found OR marketplace with confirmed payment: proceed to photo picker
 
     final picker = ImagePicker();
     XFile? picked;
@@ -1175,8 +1191,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                 denialReason: effectiveDenialReason,
                               );
                               final isProposer = effective.proposerId == widget.myId;
+                              final bool isLostFound = widget.conv.isLostFound;
                               bool? buyerHasPaid;
-                              if (effectiveStatus == MeetupStatus.confirmed && effective.id != null) {
+                              if (!isLostFound && effectiveStatus == MeetupStatus.confirmed && effective.id != null) {
                                 buyerHasPaid = _meetupPaymentStatus[effective.id!];
                                 if (buyerHasPaid == null) {
                                   _checkMeetupPayment(effective.id!);
@@ -1187,6 +1204,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                 myId:              widget.myId,
                                 myPhotoSubmitted:  effective.id != null && _myPhotoSubmitted.contains(effective.id),
                                 buyerHasPaid:      buyerHasPaid,
+                                isLostFound:       widget.conv.isLostFound,
                                 onWithdraw:        () => _withdrawMeetup(effective.id ?? 0),
                                 onConfirm:         () => _confirmMeetup(effective.id ?? 0),
                                 onDeclineOrCancel: () => _declineOrCancelMeetup(
@@ -1381,6 +1399,7 @@ class _MeetupCard extends StatelessWidget {
   final VoidCallback onSubmitPhoto;
   final bool myPhotoSubmitted;
   final bool? buyerHasPaid;
+  final bool isLostFound;
 
   const _MeetupCard({
     required this.proposal, required this.myId,
@@ -1389,6 +1408,7 @@ class _MeetupCard extends StatelessWidget {
     required this.onSubmitPhoto,
     this.myPhotoSubmitted = false,
     this.buyerHasPaid,
+    this.isLostFound = false,
   });
 
   bool get _isProposer => proposal.proposerId == myId;
@@ -1493,7 +1513,7 @@ class _MeetupCard extends StatelessWidget {
             ],
             if (proposal.status == MeetupStatus.confirmed) ...[
               const SizedBox(height: 10),
-              if (buyerHasPaid == false) ...[
+              if (!isLostFound && buyerHasPaid == false) ...[
                 Container(
                   width: double.infinity, padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1668,6 +1688,10 @@ class _MeetupCard extends StatelessWidget {
     }
 
     if (proposal.status == MeetupStatus.userPending) {
+      // Lost & Found meetups are auto-submitted for admin approval, no user action needed
+      if (proposal.claimId != null) {
+        return [];
+      }
       if (_isProposer) {
         return [
           const SizedBox(height: 12),
