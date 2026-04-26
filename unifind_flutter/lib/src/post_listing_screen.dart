@@ -1,7 +1,7 @@
 part of '../main.dart';
 
 class PostListingScreen extends StatefulWidget {
-  final void Function(NewListingInput) onPost;
+  final Future<void> Function(NewListingInput) onPost;
   final ListingType initialType;
   final bool hideSale;
   const PostListingScreen({
@@ -101,67 +101,71 @@ class _PostListingScreenState extends State<PostListingScreen> {
   }
   
   void _showSuccessCard() {
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 56, horizontal: 32),
-        decoration: BoxDecoration(
-          color: cSurface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: cBorder),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64, height: 64,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
-              ),
-              child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 60, vertical: 24),
+        backgroundColor: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 320),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+            decoration: BoxDecoration(
+              color: cSurface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: cBorder),
             ),
-            const SizedBox(height: 20),
-            const Text('Listing Posted!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText)),
-            const SizedBox(height: 8),
-            const Text('Your item has been submitted\nand is pending review.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: cMuted, height: 1.6)),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: cRed,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64, height: 64,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+                  ),
+                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
                 ),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() {
-                    _title = '';
-                    _desc = '';
-                    _cat = '';
-                    _cond = 'Good';
-                    _loc = '';
-                    _price = 0;
-                    _selectedImage = null;
-                    _selectedImageBytes = null;
-                    _formKey.currentState?.reset();
-                  });
-                },
-                child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              ),
+                const SizedBox(height: 20),
+                const Text('Listing Posted!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText)),
+                const SizedBox(height: 8),
+                const Text('Your item has been submitted\nand is pending review.', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: cMuted, height: 1.6)),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: cRed,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      setState(() {
+                        _title = '';
+                        _desc = '';
+                        _cat = '';
+                        _cond = 'Good';
+                        _loc = '';
+                        _price = 0;
+                        _selectedImage = null;
+                        _selectedImageBytes = null;
+                        _formKey.currentState?.reset();
+                      });
+                    },
+                    child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -349,7 +353,7 @@ class _PostListingScreenState extends State<PostListingScreen> {
         );
       }
 
-      widget.onPost(NewListingInput(
+      await widget.onPost(NewListingInput(
         type: _type,
         title: _title.trim(),
         description: _desc.trim(),
@@ -400,7 +404,7 @@ class _TypeBtn extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: kMid,
-        height: 44,
+        height: 40,
         decoration: BoxDecoration(
           gradient: selected ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
           color: selected ? null : cSurface,
