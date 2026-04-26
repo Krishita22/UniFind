@@ -1603,16 +1603,18 @@ Future<List<Map<String, dynamic>>> getAdminMeetups({required String status}) asy
   return List<Map<String, dynamic>>.from(data['data'] ?? []);
 }
 
-Future<void> adminApproveMeetup({required int meetupId}) async {
+Future<void> adminApproveMeetup({required int meetupId, String meetupType = 'marketplace'}) async {
   final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/approve_meetup.php'),
-    headers: {'Content-Type': 'application/json'}, body: jsonEncode({'meetup_id': meetupId}));
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'meetup_id': meetupId, 'meetup_type': meetupType}));
   final data = jsonDecode(res.body);
   if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to approve meetup');
 }
 
-Future<void> adminDenyMeetup({required int meetupId, required String reason}) async {
+Future<void> adminDenyMeetup({required int meetupId, required String reason, String meetupType = 'marketplace'}) async {
   final res = await http.post(Uri.parse('$_baseUrl/admin/meetup/deny_meetup.php'),
-    headers: {'Content-Type': 'application/json'}, body: jsonEncode({'meetup_id': meetupId, 'reason': reason}));
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'meetup_id': meetupId, 'reason': reason, 'meetup_type': meetupType}));
   final data = jsonDecode(res.body);
   if (data['success'] != true) throw Exception(data['error'] ?? 'Failed to deny meetup');
 }
