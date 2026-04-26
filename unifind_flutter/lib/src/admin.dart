@@ -548,8 +548,8 @@ class _AdminAppState extends State<AdminApp> {
   );
 
   List<MatchedPair> _parseMatches(List<Map<String, dynamic>> raw) => raw.map((m) {
-    final l = m['lost_item'] as Map<String, dynamic>? ?? {};
-    final f = m['found_item'] as Map<String, dynamic>? ?? {};
+    final l = (m['lost_item'] is Map) ? Map<String, dynamic>.from(m['lost_item'] as Map) : <String, dynamic>{};
+    final f = (m['found_item'] is Map) ? Map<String, dynamic>.from(m['found_item'] as Map) : <String, dynamic>{};
     return MatchedPair(
       matchId: _s(m['match_id'] ?? m['id']),
       status: _s(m['status']),
@@ -693,7 +693,12 @@ class _AdminAppState extends State<AdminApp> {
         _users..clear()..addAll(users);
         _reports..clear()..addAll(reports);
         _lf..clear()..addAll(lfItems);
-        _matches..clear()..addAll(_parseMatches(rawMatches));
+        try {
+          _matches..clear()..addAll(_parseMatches(rawMatches));
+        } catch (e) {
+          debugPrint('_parseMatches error: $e');
+          _matches.clear();
+        }
         _loading = false;
       });
       // Load bug reports
@@ -706,6 +711,8 @@ class _AdminAppState extends State<AdminApp> {
       try {
         final pending    = await getAdminMeetups(status: 'admin_pending');
         final completing = await getAdminMeetups(status: 'completion_pending');
+        print('Raw pending meetups: $pending');
+        print('Raw completing meetups: $completing');
         final rawMeetups = [...pending, ...completing];
         if (!mounted) return;
         final meetups = rawMeetups.map((m) => AdminMeetup(
@@ -730,8 +737,13 @@ class _AdminAppState extends State<AdminApp> {
           isMarketplace:  m['is_marketplace']?.toString() == '1',
         )).toList();
         if (mounted) setState(() => _meetups..clear()..addAll(meetups));
-      } catch (_) {}
-    } catch (_) { if (mounted) setState(() => _loading = false); }
+      } catch (e, stack) { 
+        debugPrint('Meetups error: $e\n$stack'); 
+      }
+    } catch (e, stack) { 
+      debugPrint('_loadAll outer error: $e\n$stack');
+      if (mounted) setState(() => _loading = false); 
+    }
   }
 
   int get _openReports => _reports.where((r) => !r.isResolved).length;

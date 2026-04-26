@@ -1625,6 +1625,9 @@ Future<Map<String, dynamic>> createAdminUser({
 Future<List<Map<String, dynamic>>> getAdminMeetups({required String status}) async {
   final res = await http.get(Uri.parse('$_baseUrl/admin/meetup/get_admin_meetups.php?status=$status'));
   final data = jsonDecode(res.body);
+  print('getAdminMeetups($status) status: ${res.statusCode}');
+  print('getAdminMeetups($status) body: ${res.body}');
+  print('getAdminMeetups($status) data[data]: ${data['data']}');
   return List<Map<String, dynamic>>.from(data['data'] ?? []);
 }
 
