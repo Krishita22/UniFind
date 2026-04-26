@@ -2119,9 +2119,19 @@ class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Users
             Row(children: [
-              Expanded(child: _MeetupUserChip(label: m.isMarketplace ? 'Buyer' : 'Lost', username: m.buyerUsername, email: m.buyerEmail, color: const Color(0xFF2980B9))),
+              Expanded(child: _MeetupUserChip(
+                label: m.isMarketplace ? 'Buyer' : 'Finder',
+                username: m.buyerUsername,
+                email: m.buyerEmail,
+                color: const Color(0xFF2980B9),
+              )),
               const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.sync_alt_rounded, size: 16, color: cMuted)),
-              Expanded(child: _MeetupUserChip(label: m.isMarketplace ? 'Seller' : 'Found', username: m.sellerUsername, email: m.sellerEmail, color: const Color(0xFF16A34A))),
+              Expanded(child: _MeetupUserChip(
+                label: m.isMarketplace ? 'Seller' : 'Owner',
+                username: m.sellerUsername,
+                email: m.sellerEmail,
+                color: const Color(0xFF16A34A),
+              )),
             ]),
             const SizedBox(height: 12),
             // Location / Date / Time
