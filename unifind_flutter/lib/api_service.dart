@@ -995,7 +995,7 @@ Future<Map<String, dynamic>> adminAcceptClaim({
   required String itemId,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/claims/approve_claim.php'),
+    Uri.parse('$_baseUrl/admin/claims/accept_claim.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({'claim_id': claimId, 'item_id': itemId}),
   );
