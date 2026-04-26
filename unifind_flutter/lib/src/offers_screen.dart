@@ -383,8 +383,12 @@ class OfferCard extends StatelessWidget {
               maxLines: 1, overflow: TextOverflow.ellipsis,
             )),
             const SizedBox(width: 8),
-            Text('Listing #${offer.listingId}',
-                style: const TextStyle(fontSize: 11, color: cMuted)),
+            Text(
+              'Listing: ${offer.listingTitle ?? '#${offer.listingId}'}',
+              style: const TextStyle(fontSize: 11, color: cMuted),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ]),
           if (offer.note != null && offer.note!.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -742,10 +746,12 @@ class _OfferThreadScreenState extends State<OfferThreadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: cBg,
+     backgroundColor: cBg,
       appBar: AppBar(
-        title: Text('Offer thread · Listing #${widget.rootOffer.listingId}',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        title: Text(
+          '${widget.rootOffer.listingTitle ?? 'Listing #${widget.rootOffer.listingId}'} · Offer Thread',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
         backgroundColor: cNavBg,
         foregroundColor: Colors.white,
         elevation: 0,
