@@ -98,6 +98,7 @@ class ChatMessage {
         safeSpot: p['location']?.toString() ?? 'Student Center',
         note:     p['note']?.toString(),
         status:   MeetupStatus.userPending,
+        claimId:  p['claim_id'] != null ? (p['claim_id'] as num).toInt() : null,
       );
     } catch (_) {
       return null;
@@ -130,6 +131,7 @@ class MeetupProposal {
   final String? note;
   final MeetupStatus status;
   final String? denialReason;
+  final int? claimId;
 
   const MeetupProposal({
     this.id,
@@ -142,6 +144,7 @@ class MeetupProposal {
     this.note,
     this.status = MeetupStatus.userPending,
     this.denialReason,
+    this.claimId,
   });
 
   factory MeetupProposal.fromMap(Map<String, dynamic> m) {
@@ -173,6 +176,7 @@ class MeetupProposal {
       note:           m['note']?.toString(),
       status:         parseStatus(m['status']?.toString() ?? ''),
       denialReason:   m['denial_reason']?.toString(),
+      claimId:        int.tryParse(m['claim_id']?.toString() ?? ''),
     );
   }
 
@@ -187,6 +191,7 @@ class MeetupProposal {
     note:           note,
     status:         status ?? this.status,
     denialReason:   denialReason ?? this.denialReason,
+    claimId:        claimId,
   );
 
   String get formattedDate {
@@ -1668,6 +1673,10 @@ class _MeetupCard extends StatelessWidget {
     }
 
     if (proposal.status == MeetupStatus.userPending) {
+      // Lost & Found meetups are auto-submitted for admin approval, no user action needed
+      if (proposal.claimId != null) {
+        return [];
+      }
       if (_isProposer) {
         return [
           const SizedBox(height: 12),

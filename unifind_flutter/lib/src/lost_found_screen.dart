@@ -33,6 +33,8 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
   String _q = '';
   // Maps item ID -> conversation ID for approved claims
   Map<String, int> _approvedClaimChats = {};
+  // Maps item ID -> claim ID for approved claims
+  Map<String, int> _approvedClaimIds = {};
 
   @override
   void initState() {
@@ -51,13 +53,19 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
     try {
       final claims = await getMyApprovedClaims(userId: widget.currentUserId!);
       if (!mounted) return;
-      final map = <String, int>{};
+      final chatMap = <String, int>{};
+      final claimMap = <String, int>{};
       for (final c in claims) {
         final itemId = c['item_id']?.toString() ?? '';
         final convId = int.tryParse(c['conversation_id']?.toString() ?? '') ?? 0;
-        if (itemId.isNotEmpty && convId > 0) map[itemId] = convId;
+        final claimId = int.tryParse(c['claim_id']?.toString() ?? '') ?? 0;
+        if (itemId.isNotEmpty && convId > 0) chatMap[itemId] = convId;
+        if (itemId.isNotEmpty && claimId > 0) claimMap[itemId] = claimId;
       }
-      setState(() => _approvedClaimChats = map);
+      setState(() {
+        _approvedClaimChats = chatMap;
+        _approvedClaimIds = claimMap;
+      });
     } catch (_) {}
   }
 
@@ -153,6 +161,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
                     currentUserEmail: widget.currentUserEmail,
                     currentUserId: widget.currentUserId,
                     approvedChatConvId: _approvedClaimChats[filtered[i].id],
+                    claimId: _approvedClaimIds[filtered[i].id],
                   ),
                 ),
         ),
@@ -172,6 +181,7 @@ void _showLostFoundPopup(
   required String currentUserEmail,
   int? currentUserId,
   int? approvedChatConvId,
+  int? claimId,
 }) {
   final isLost = item.type == LostFoundType.lost;
   final typeColor = isLost ? const Color(0xFFE74C3C) : const Color(0xFF27AE60);
@@ -414,6 +424,31 @@ void _showLostFoundPopup(
                                   ),
                                 ),
                                 const SizedBox(height: 8),
+                                // Propose Meetup button for Lost & Found
+                                if (claimId != null)
+                                  GestureDetector(
+                                    onTap: () async {
+                                      Navigator.pop(ctx);
+                                      await _showProposeMeetupDialog(context, claimId: claimId);
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF3498DB),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.calendar_today_rounded, color: Colors.white, size: 16),
+                                          SizedBox(width: 8),
+                                          Text('Propose Meetup', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(height: 8),
                               ],
                               // Hint
                               if (approvedChatConvId != null)
@@ -478,6 +513,7 @@ class _LostFoundCard extends StatefulWidget {
   final String currentUserEmail;
   final int? currentUserId;
   final int? approvedChatConvId;
+  final int? claimId;
   const _LostFoundCard({
     required this.item,
     required this.onClaim,
@@ -487,6 +523,7 @@ class _LostFoundCard extends StatefulWidget {
     required this.currentUserEmail,
     this.currentUserId,
     this.approvedChatConvId,
+    this.claimId,
   });
 
   @override
@@ -681,6 +718,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
           currentUserEmail: widget.currentUserEmail,
           currentUserId: widget.currentUserId,
           approvedChatConvId: widget.approvedChatConvId,
+          claimId: widget.claimId,
         );
       },
       onTapCancel: () => _c.reverse(),
@@ -915,4 +953,233 @@ class _LostFoundCardState extends State<_LostFoundCard>
       ),
     );
   }
+}
+
+// -- Propose Meetup Dialog for Lost & Found --
+Future<void> _showProposeMeetupDialog(BuildContext context, {required int claimId}) async {
+  final dateCtrl = TextEditingController();
+  final timeCtrl = TextEditingController();
+  final locationCtrl = TextEditingController();
+  String? error;
+
+  await showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Propose Meetup',
+    barrierColor: Colors.black.withValues(alpha: 0.35),
+    transitionDuration: kMid,
+    pageBuilder: (ctx, _, __) => const SizedBox.shrink(),
+    transitionBuilder: (ctx, anim, __, ___) {
+      final curved = CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+      return Opacity(
+        opacity: curved.value,
+        child: Transform.scale(
+          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved).value,
+          child: StatefulBuilder(
+            builder: (ctx, setModalState) => Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Container(
+                  margin: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cSurface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: cBorder),
+                    boxShadow: [BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 40,
+                      offset: const Offset(0, 12),
+                    )],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Propose Meetup',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: cText,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Suggest a date, time, and location to meet.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (error != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE74C3C)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFFE74C3C)
+                                      .withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Text(
+                                error!,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFE74C3C),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          // Date field
+                          TextField(
+                            controller: dateCtrl,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              labelText: 'Date',
+                              hintText: 'Select date',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
+                              suffixIcon: const Icon(Icons.calendar_today,
+                                  size: 18, color: cMuted),
+                            ),
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: ctx,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime.now(),
+                                lastDate:
+                                    DateTime.now().add(const Duration(days: 90)),
+                              );
+                              if (picked != null) {
+                                dateCtrl.text =
+                                    '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          // Time field
+                          TextField(
+                            controller: timeCtrl,
+                            readOnly: true,
+                            decoration: InputDecoration(
+                              labelText: 'Time',
+                              hintText: 'Select time',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
+                              suffixIcon: const Icon(Icons.access_time,
+                                  size: 18, color: cMuted),
+                            ),
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: ctx,
+                                initialTime: const TimeOfDay(hour: 14, minute: 0),
+                              );
+                              if (picked != null) {
+                                timeCtrl.text =
+                                    '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}:00';
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          // Location field
+                          TextField(
+                            controller: locationCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'Location',
+                              hintText: 'e.g., Sprague Library',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 12),
+                              suffixIcon: const Icon(Icons.location_on,
+                                  size: 18, color: cMuted),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Submit button
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF27AE60),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed: () async {
+                                if (dateCtrl.text.isEmpty ||
+                                    timeCtrl.text.isEmpty ||
+                                    locationCtrl.text.isEmpty) {
+                                  setModalState(() {
+                                    error = 'Please fill in all fields.';
+                                  });
+                                  return;
+                                }
+
+                                try {
+                                  await createLostFoundMeetup(
+                                    claimId: claimId,
+                                    date: dateCtrl.text,
+                                    time: timeCtrl.text,
+                                    location: locationCtrl.text,
+                                  );
+
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Meetup proposal sent to admin for approval!'),
+                                        backgroundColor: Color(0xFF27AE60),
+                                        duration: Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  setModalState(() {
+                                    error = e.toString().replaceFirst(
+                                        'Exception: ', '');
+                                  });
+                                }
+                              },
+                              child: const Text(
+                                'Propose Meetup',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
