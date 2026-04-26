@@ -22,18 +22,23 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   Uint8List? _avatarBytes;
+  String? _avatarUrl;
   double? _ratingAvg;
   int _ratingCount = 0;
   Timer? _ratingTimer;
   late String _localUsername = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _localUsername = widget.username;
-    _loadRating();
-    _ratingTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadRating());
-  }
+ @override
+void initState() {
+  super.initState();
+  _localUsername = widget.username;
+  _loadRating();
+  _loadAvatar(); 
+  _ratingTimer = Timer.periodic(
+    const Duration(seconds: 10),
+    (_) => _loadRating(),
+  );
+}
 
   @override
   void dispose() {
@@ -66,12 +71,48 @@ String get _displayHandle {
 }
 
   Future<void> _pickAvatar() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 400);
-    if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    setState(() => _avatarBytes = bytes);
+  final picker = ImagePicker();
+  final picked = await picker.pickImage(
+    source: ImageSource.gallery,
+    imageQuality: 80,
+    maxWidth: 400,
+  );
+  if (picked == null) return;
+
+  final bytes = await picked.readAsBytes();
+  setState(() => _avatarBytes = bytes);
+
+  try {
+    final url = await uploadImage(picked.path, bytes, type: 'avatars');
+
+    setState(() => _avatarUrl = url);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('avatar_url_${widget.email}', url);
+
+    if (widget.userId != null) {
+      await http.post(
+        Uri.parse(
+          'http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/auth/account/profile/update_avatar.php',
+        ),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': widget.userId,
+          'avatar_url': url,
+        }),
+      );
+    }
+  } catch (_) {}
+}
+
+Future<void> _loadAvatar() async {
+  final prefs = await SharedPreferences.getInstance();
+  final url = prefs.getString('avatar_url_${widget.email}');
+  if (url != null && url.isNotEmpty && mounted) {
+    setState(() => _avatarUrl = url);
   }
+}
+
 
   void _showAvatarOptions() {
     showModalBottomSheet(
@@ -107,13 +148,21 @@ String get _displayHandle {
                 setState(() => _avatarBytes = bytes);
               },
             ),
-            if (_avatarBytes != null) ...[
+            if (_avatarBytes != null || _avatarUrl != null) ...[
               const SizedBox(height: 8),
               _BottomSheetOption(
                 icon: Icons.delete_outline_rounded,
                 label: 'Remove Photo',
                 isDestructive: true,
-                onTap: () { Navigator.pop(ctx); setState(() => _avatarBytes = null); },
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _avatarBytes = null;
+                    _avatarUrl = null;
+                  });
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('avatar_url_${widget.email}');
+                },
               ),
             ],
           ],
@@ -155,11 +204,17 @@ String get _displayHandle {
                       ),
                       child: ClipOval(
                         child: _avatarBytes != null
-                            ? Image.memory(_avatarBytes!, fit: BoxFit.cover, width: 72, height: 72)
+                        ? Image.memory(_avatarBytes!, fit: BoxFit.cover, width: 72, height: 72)
+                        : _avatarUrl != null
+                            ? Image.network(_avatarUrl!, fit: BoxFit.cover, width: 72, height: 72)
                             : Center(
                                 child: Text(
                                   _initials,
-                                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white),
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                       ),
