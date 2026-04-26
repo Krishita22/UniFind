@@ -1192,6 +1192,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                 myId:              widget.myId,
                                 myPhotoSubmitted:  effective.id != null && _myPhotoSubmitted.contains(effective.id),
                                 buyerHasPaid:      buyerHasPaid,
+                                isLostFound:       widget.conv.listingId == null,
                                 onWithdraw:        () => _withdrawMeetup(effective.id ?? 0),
                                 onConfirm:         () => _confirmMeetup(effective.id ?? 0),
                                 onDeclineOrCancel: () => _declineOrCancelMeetup(
@@ -1386,6 +1387,7 @@ class _MeetupCard extends StatelessWidget {
   final VoidCallback onSubmitPhoto;
   final bool myPhotoSubmitted;
   final bool? buyerHasPaid;
+  final bool isLostFound;
 
   const _MeetupCard({
     required this.proposal, required this.myId,
@@ -1394,6 +1396,7 @@ class _MeetupCard extends StatelessWidget {
     required this.onSubmitPhoto,
     this.myPhotoSubmitted = false,
     this.buyerHasPaid,
+    this.isLostFound = false,
   });
 
   bool get _isProposer => proposal.proposerId == myId;
@@ -1498,7 +1501,7 @@ class _MeetupCard extends StatelessWidget {
             ],
             if (proposal.status == MeetupStatus.confirmed) ...[
               const SizedBox(height: 10),
-              if (buyerHasPaid == false) ...[
+              if (!isLostFound && buyerHasPaid == false) ...[
                 Container(
                   width: double.infinity, padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
