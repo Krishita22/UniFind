@@ -1273,15 +1273,16 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                   ),
                 ),
                 Expanded(
-                  flex: 3,
+                  flex: 2,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
+                        const SizedBox(height: 15),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -1294,6 +1295,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                             ),
                           ],
                         ),
+                        const Spacer(),
                         Row(
                           children: [
                             if (widget.item.ratingCount > 0) GestureDetector(
@@ -1309,6 +1311,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                                     style: const TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
                               ]),
                             ),
+                            const Spacer(),
                             if (widget.currentUserId != null && widget.item.sellerId != null && widget.currentUserId != widget.item.sellerId)
                               GestureDetector(
                                 onTap: _startingChat ? null : _openChat,
