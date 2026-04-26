@@ -318,12 +318,14 @@ class OfferCard extends StatelessWidget {
   final Offer offer;
   final int userId;
   final VoidCallback onChanged;
+  final bool readOnly;
 
   const OfferCard({
     super.key,
     required this.offer,
     required this.userId,
     required this.onChanged,
+    this.readOnly = false,
   });
 
   String _counterparty() {
@@ -341,7 +343,7 @@ class OfferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () async {
+      onTap: readOnly ? null : () async { 
         await Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => OfferThreadScreen(
             rootOffer: offer,
@@ -764,6 +766,7 @@ class _OfferThreadScreenState extends State<OfferThreadScreen> {
                       offer:     _thread[i],
                       userId:    widget.userId,
                       onChanged: _load,
+                      readOnly: true,
                     ),
                   ),
                 ),
