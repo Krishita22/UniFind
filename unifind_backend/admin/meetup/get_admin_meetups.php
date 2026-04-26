@@ -17,16 +17,17 @@ if (!in_array($status, $allowed, true)) api_error('Invalid status.');
 
 $rows = [];
 
-// Map lost & found statuses to marketplace statuses for unified filtering
+// Map marketplace statuses to lost & found statuses for unified filtering
 $lfStatusMap = [
-    'pending' => 'user_pending',
-    'approved' => 'admin_pending',
-    'denied' => 'admin_denied',
-    'resolved' => 'completed'
+    'admin_pending'      => 'pending',
+    'completion_pending' => 'pending',
+    'confirmed'          => 'approved',
+    'admin_denied'       => 'denied',
+    'completed'          => 'resolved',
 ];
-$lfStatus = array_search($status, $lfStatusMap) ?: $status;
+$lfStatus = isset($lfStatusMap[$status]) ? $lfStatusMap[$status] : null;
 
-// Get marketplace meetups (only if table exists)
+// Check if meetups table exists
 $tableCheckStmt = $conn->prepare("
     SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'meetups'
@@ -39,6 +40,7 @@ if ($tableCheckStmt) {
     $tableCheckStmt->close();
 }
 
+// Get marketplace meetups (only if table exists)
 if ($marketplaceTableExists) {
     $stmt = $conn->prepare("
         SELECT
@@ -70,7 +72,7 @@ if ($marketplaceTableExists) {
 }
 
 // Get lost & found meetups if status maps to one
-if (in_array($lfStatus, ['pending', 'approved', 'denied', 'resolved'])) {
+if ($lfStatus !== null) {
     $stmt = $conn->prepare("
         SELECT
             m.id AS meetup_id, m.match_id AS item_id, NULL AS buyer_id, NULL AS seller_id,
@@ -107,3 +109,4 @@ usort($rows, function($a, $b) {
 });
 
 api_success($rows);
+?>

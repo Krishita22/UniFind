@@ -55,14 +55,32 @@ if (!$item) api_error('Found item not found.', 404);
 $finderId = $item['poster_id'];
 $claimantId = $claim['claimant_id'];
 
-// Create a match between the found item and a "virtual" lost item represented by the claim
-// For claims, we use the claim_id as the match identifier
+// For user-initiated claims, there's a lost item that the claimant reported
+// We need to find that lost item. A claim is made ON a found item FOR a lost item
+// The claimant created a lost item post, then claims a found item
+// Get the lost item posted by this claimant
+$claimantLostItemStmt = $conn->prepare("
+    SELECT id FROM lost_found_items
+    WHERE poster_id = ? AND type = 'lost'
+    ORDER BY created_at DESC
+    LIMIT 1
+");
+if (!$claimantLostItemStmt) api_error('Get claimant lost item error: ' . $conn->error, 500);
+$claimantLostItemStmt->bind_param('i', $claimantId);
+if (!$claimantLostItemStmt->execute()) api_error('Get claimant lost item execute error: ' . $claimantLostItemStmt->error, 500);
+$claimantLostResult = $claimantLostItemStmt->get_result()->fetch_assoc();
+$claimantLostItemStmt->close();
+
+$lostItemId = $claimantLostResult ? (int)$claimantLostResult['id'] : 0;
+if ($lostItemId <= 0) api_error('Lost item not found for claimant.', 404);
+
+// Create a match between the lost and found items
 $matchStmt = $conn->prepare("
     INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, status)
     VALUES (?, ?, ?, 'active')
 ");
 if (!$matchStmt) api_error('Match insert prepare error: ' . $conn->error, 500);
-$matchStmt->bind_param('iii', $claimantId, $claim['found_item_id'], $claimantId);
+$matchStmt->bind_param('iii', $lostItemId, $claim['found_item_id'], $claimantId);
 if (!$matchStmt->execute()) api_error('Match insert execute error: ' . $matchStmt->error, 500);
 $matchId = $conn->insert_id;
 $matchStmt->close();

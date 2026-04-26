@@ -727,7 +727,7 @@ class _AdminAppState extends State<AdminApp> {
           itemImage:      m['item_image']?.toString(),
           itemCategory:   m['item_category']?.toString(),
           itemPrice:      m['item_price'] != null ? double.tryParse(m['item_price'].toString()) : null,
-          isMarketplace:  m['meetup_type']?.toString() == 'marketplace',
+          isMarketplace:  m['is_marketplace']?.toString() == '1',
         )).toList();
         if (mounted) setState(() => _meetups..clear()..addAll(meetups));
       } catch (_) {}
@@ -1563,26 +1563,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         )),
-                        const SizedBox(width: 10),
-                        Expanded(child: ElevatedButton.icon(
-                          onPressed: () async {
-                            try {
-                              await adminMarkLostFoundResolved(itemId: item.id);
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              widget.onRefresh();
-                            } catch (e) {
-                              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
-                            }
-                          },
-                          icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
-                          label: const Text('Resolve'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _cGreen, foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                        )),
                       ]),
                     ]))),
                   ])),
@@ -1636,15 +1616,6 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
     if (confirm != true) return;
     try {
       await adminUnmatch(matchId: matchId);
-      widget.onRefresh();
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
-    }
-  }
-
-  Future<void> _resolve(String matchId) async {
-    try {
-      await adminResolveMatch(matchId: matchId);
       widget.onRefresh();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
@@ -1910,35 +1881,20 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                         if (!isResolved)
                           Padding(
                             padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-                            child: Row(children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () => _unmatch(pair.matchId),
-                                  icon: const Icon(Icons.link_off_rounded, size: 14),
-                                  label: const Text('Unmatch'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _unmatch(pair.matchId),
+                                icon: const Icon(Icons.link_off_rounded, size: 14),
+                                label: const Text('Unmatch'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: cRedDark, side: const BorderSide(color: cRedDark),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () => _resolve(pair.matchId),
-                                  icon: const Icon(Icons.check_circle_outline_rounded, size: 14),
-                                  label: const Text('Resolve'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _cGreen, foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  ),
-                                ),
-                              ),
-                            ]),
+                            ),
                           )
                         else
                           const SizedBox(height: 14),
@@ -2151,9 +2107,9 @@ class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Users
             Row(children: [
-              Expanded(child: _MeetupUserChip(label: 'Buyer', username: m.buyerUsername, email: m.buyerEmail, color: const Color(0xFF2980B9))),
+              Expanded(child: _MeetupUserChip(label: m.isMarketplace ? 'Buyer' : 'Lost', username: m.buyerUsername, email: m.buyerEmail, color: const Color(0xFF2980B9))),
               const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.sync_alt_rounded, size: 16, color: cMuted)),
-              Expanded(child: _MeetupUserChip(label: 'Seller', username: m.sellerUsername, email: m.sellerEmail, color: const Color(0xFF16A34A))),
+              Expanded(child: _MeetupUserChip(label: m.isMarketplace ? 'Seller' : 'Found', username: m.sellerUsername, email: m.sellerEmail, color: const Color(0xFF16A34A))),
             ]),
             const SizedBox(height: 12),
             // Location / Date / Time
@@ -2174,9 +2130,9 @@ class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
               const Text('Completion Photos', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: cText)),
               const SizedBox(height: 8),
               Row(children: [
-                Expanded(child: _PhotoPreview(label: 'Buyer Photo', url: m.buyerPhotoUrl)),
+                Expanded(child: _PhotoPreview(label: m.isMarketplace ? 'Buyer Photo' : 'Lost Photo', url: m.buyerPhotoUrl)),
                 const SizedBox(width: 8),
-                Expanded(child: _PhotoPreview(label: 'Seller Photo', url: m.sellerPhotoUrl)),
+                Expanded(child: _PhotoPreview(label: m.isMarketplace ? 'Seller Photo' : 'Found Photo', url: m.sellerPhotoUrl)),
               ]),
               const SizedBox(height: 12),
               SizedBox(
