@@ -452,7 +452,7 @@ class _StandardUserShell extends StatelessWidget {
                       ]),
                     ])),
                     // Logout stays on the right
-                    Positioned(top: 0, right: 4, bottom: 0, child: Center(
+                    Positioned(top: 0, right: 8, bottom: 0, child: Center(
                       child: IconButton(tooltip: 'Log out', icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white), onPressed: onLogout),
                     )),
                   ]),
