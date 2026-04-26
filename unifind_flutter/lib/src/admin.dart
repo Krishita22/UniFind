@@ -727,7 +727,7 @@ class _AdminAppState extends State<AdminApp> {
           itemImage:      m['item_image']?.toString(),
           itemCategory:   m['item_category']?.toString(),
           itemPrice:      m['item_price'] != null ? double.tryParse(m['item_price'].toString()) : null,
-          isMarketplace:  (m['is_marketplace']?.toString() == '1') || (m['item_id'] != null && m['item_id'].toString().isNotEmpty && m['item_id'].toString() != 'null'),
+          isMarketplace:  m['meetup_type']?.toString() == 'marketplace',
         )).toList();
         if (mounted) setState(() => _meetups..clear()..addAll(meetups));
       } catch (_) {}
@@ -2026,7 +2026,7 @@ class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
     ));
     if (ok != true) return;
     setState(() { _loading = true; _error = null; });
-    try { await adminApproveMeetup(meetupId: m.meetupId); widget.onRefresh(); }
+    try { await adminApproveMeetup(meetupId: m.meetupId, meetupType: m.isMarketplace ? 'marketplace' : 'lost_found'); widget.onRefresh(); }
     catch (e) { setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _loading = false); }
   }
@@ -2063,7 +2063,7 @@ class _AdminMeetupsPanelState extends State<_AdminMeetupsPanel> {
     ));
     if (ok != true || _reasonCtrl.text.trim().isEmpty) return;
     setState(() { _loading = true; _error = null; });
-    try { await adminDenyMeetup(meetupId: m.meetupId, reason: _reasonCtrl.text.trim()); widget.onRefresh(); }
+    try { await adminDenyMeetup(meetupId: m.meetupId, reason: _reasonCtrl.text.trim(), meetupType: m.isMarketplace ? 'marketplace' : 'lost_found'); widget.onRefresh(); }
     catch (e) { setState(() => _error = e.toString()); }
     finally { if (mounted) setState(() => _loading = false); }
   }
