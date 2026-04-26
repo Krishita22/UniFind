@@ -1085,6 +1085,7 @@ class _UniFindAppState extends State<UniFindApp> {
   }
   
   void _login(String email, [int? userId, String? username, String? role, String? firstName]) {
+    print('======= LOGIN userId: $userId, email: $email =======');  // add this
     setState(() {
       _loggedIn = true;
       _email = email;

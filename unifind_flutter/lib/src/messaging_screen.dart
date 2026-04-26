@@ -400,45 +400,47 @@ class _MessagingScreenState extends State<MessagingScreen> {
                   ? const Center(child: CircularProgressIndicator(color: cRed))
                   : _error != null
                       ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          const Text('Failed to load inbox', style: TextStyle(color: cMuted)),
-                          const SizedBox(height: 8),
-                          ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                        ]))
-                      : _convs.isEmpty
-                          ? const Center(child: Text('No conversations yet.', style: TextStyle(color: cMuted)))
-                          : ListView.separated(
-                              padding: const EdgeInsets.all(12),
-                              itemCount: _convs.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
-                              itemBuilder: (_, i) {
-                                final c = _convs[i];
-                                return InkWell(
-                                  borderRadius: BorderRadius.circular(14),
-                                  onTap: () async {
-                                    await Navigator.of(context).push(MaterialPageRoute(
-                                      builder: (_) => ConversationScreen(conv: c, myId: widget.userId),
-                                    ));
-                                    _silentRefresh();
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: c.unread > 0 ? cRedLight : cSurface,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(color: c.unread > 0 ? cRed.withValues(alpha: 0.3) : cBorder),
-                                    ),
-                                    child: Row(children: [
-                                      CircleAvatar(
-                                        radius: 22,
-                                        backgroundColor: cRedLight,
-                                        child: Text(
-                                          c.otherName.isNotEmpty ? c.otherName[0].toUpperCase() : '?',
-                                          style: const TextStyle(color: cRed, fontWeight: FontWeight.w800, fontSize: 16),
-                                        ),
+                      const Text('Failed to load inbox', style: TextStyle(color: cMuted)),
+                      const SizedBox(height: 4),
+                      Text(_error ?? '', style: const TextStyle(color: cRed, fontSize: 11)),
+                      const SizedBox(height: 8),
+                      ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                    ]))
+                        : _convs.isEmpty
+                            ? const Center(child: Text('No conversations yet.', style: TextStyle(color: cMuted)))
+                            : ListView.separated(
+                                padding: const EdgeInsets.all(12),
+                                itemCount: _convs.length,
+                                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                itemBuilder: (_, i) {
+                                  final c = _convs[i];
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(14),
+                                    onTap: () async {
+                                      await Navigator.of(context).push(MaterialPageRoute(
+                                        builder: (_) => ConversationScreen(conv: c, myId: widget.userId),
+                                      ));
+                                      _silentRefresh();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: c.unread > 0 ? cRedLight : cSurface,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: c.unread > 0 ? cRed.withValues(alpha: 0.3) : cBorder),
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                        Row(children: [
+                                      child: Row(children: [
+                                        CircleAvatar(
+                                          radius: 22,
+                                          backgroundColor: cRedLight,
+                                          child: Text(
+                                            c.otherName.isNotEmpty ? c.otherName[0].toUpperCase() : '?',
+                                            style: const TextStyle(color: cRed, fontWeight: FontWeight.w800, fontSize: 16),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                          Row(children: [
                                           Expanded(child: Text(c.otherName,
                                               style: TextStyle(fontSize: 14,
                                                   fontWeight: c.unread > 0 ? FontWeight.w800 : FontWeight.w600,
