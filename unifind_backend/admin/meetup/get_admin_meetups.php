@@ -49,17 +49,16 @@ if ($marketplaceTableExists) {
             m.buyer_photo_url, m.seller_photo_url,
             b.username AS buyer_username, b.email AS buyer_email,
             s.username AS seller_username, s.email AS seller_email,
-            COALESCE(mi.title, lfi.title, 'Meetup') AS item_title,
+            mi.title AS item_title,
             mi.price AS item_price,
             mi.category AS item_category,
             mi.image_url AS item_image,
-            CASE WHEN mi.id IS NOT NULL THEN 1 ELSE 0 END AS is_marketplace,
+            1 AS is_marketplace,
             'marketplace' AS meetup_type
         FROM meetups m
         LEFT JOIN users b ON b.id = m.buyer_id
         LEFT JOIN users s ON s.id = m.seller_id
-        LEFT JOIN marketplace_items mi ON m.item_id IS NOT NULL AND mi.id = m.item_id
-        LEFT JOIN lost_found_items lfi ON m.item_id IS NOT NULL AND lfi.id = m.item_id
+        LEFT JOIN marketplace_items mi ON m.item_id = mi.id
         WHERE m.status = ?
         ORDER BY m.created_at DESC
     ");
