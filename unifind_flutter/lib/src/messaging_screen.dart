@@ -22,7 +22,6 @@ class Conversation {
     this.isLostFound = false,
   });
   factory Conversation.fromMap(Map<String, dynamic> m, int myId) {
-    debugPrint('CONV MAP: ${jsonEncode(m)}');
     final u1 = int.tryParse(m['user1_id'].toString()) ?? 0;
     final u2 = int.tryParse(m['user2_id'].toString()) ?? 0;
     final otherId      = u1 == myId ? u2 : u1;
