@@ -57,6 +57,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
     try {
       final data = await loginUser(_username.trim(), _password);
+      print('======= FULL LOGIN RESPONSE: $data ======='); 
+
       final user = data['user'] as Map<String, dynamic>?;
 
       print('DEBUG full response: $data');
@@ -1134,7 +1136,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           ),
         );
       } else {
-        await verifyCodeAndCreateAccount(
+        final result = await verifyCodeAndCreateAccount(
           email: _email.trim().toLowerCase(),
           password: _password,
           code: _code.trim(),
@@ -1146,11 +1148,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
           graduationYear: (_role == 'student' && _graduationYear.isNotEmpty)
               ? int.tryParse(_graduationYear)
               : null,
-          );
+        );
         if (!mounted) return;
+        final rawId = result?['user']?['id'] ?? result?['user_id'];
+        final newUserId = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+
         widget.onRegister(
           _email.trim().toLowerCase(),
-          null,
+          newUserId,
           _username.trim(),
           _role,
           _firstName.trim(),
@@ -1158,7 +1163,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> with TickerProv
       }
     } on ApiException catch (e) {
       if (!mounted) return;
-
       if (e.code == 'USER_EXISTS') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
