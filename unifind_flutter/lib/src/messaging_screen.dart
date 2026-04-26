@@ -369,12 +369,21 @@ class _MessagingScreenState extends State<MessagingScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                  ),
+                  child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Messages', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
-                      SizedBox(height: 2),
+                      Text('Messages', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
                       Text('Your conversations', style: TextStyle(fontSize: 15, color: cMuted)),
                     ],
                   ),
