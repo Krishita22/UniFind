@@ -86,27 +86,33 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Lost & Found', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
-              const SizedBox(height: 2),
-              const Text('Help reunite students with their belongings!', style: TextStyle(fontSize: 15, color: cMuted)),
+              Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                    ),
+                    child: const Icon(Icons.search_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Lost & Found', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
+                      Text('Help reunite students with their belongings!', style: TextStyle(fontSize: 15, color: cMuted)),
+                    ],
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Expanded(
-                    child: _RedButton(
-                      label: 'Report Lost',
-                      icon: Icons.report_problem_outlined,
-                      onTap: widget.onCreateLost,
-                    ),
-                  ),
+                  Expanded(child: _RedButton(label: 'Report Lost', icon: Icons.report_problem_outlined, onTap: widget.onCreateLost)),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: _RedButton(
-                      label: 'Post Found',
-                      icon: Icons.check_circle_outline_rounded,
-                      onTap: widget.onCreateFound,
-                    ),
-                  ),
+                  Expanded(child: _RedButton(label: 'Post Found', icon: Icons.check_circle_outline_rounded, onTap: widget.onCreateFound)),
                 ],
               ),
             ],
