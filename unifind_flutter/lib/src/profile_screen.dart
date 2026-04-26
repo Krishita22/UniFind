@@ -327,7 +327,7 @@ String get _displayHandle {
           label: 'Documentation',
           subtitle: 'How to use UniFind',
           onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const DocumentationScreen()),
+            MaterialPageRoute(builder: (_) => DocumentationScreen(facultyOnly: widget.role == UserRole.fac)),
           ),
         ),
         _ProfileActionTile(
