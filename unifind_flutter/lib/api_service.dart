@@ -1399,13 +1399,14 @@ class Offer {
   final int recipientId;
   final String? recipientName;
   final double amount;
-  final String status; // pending|accepted|rejected|countered|withdrawn|superseded
+  final String status; 
   final int? parentOfferId;
   final String? note;
   final DateTime createdAt;
   final DateTime? respondedAt;
-  final String role;         // "sender" or "recipient" from caller's POV
-  final bool canRespond;     // true iff pending && caller is recipient
+  final String role;         
+  final bool canRespond;    
+  final String? listingTitle;
 
   const Offer({
     required this.id,
@@ -1422,6 +1423,7 @@ class Offer {
     required this.respondedAt,
     required this.role,
     required this.canRespond,
+    this.listingTitle,
   });
 
   bool get isPending      => status == 'pending';
@@ -1442,6 +1444,7 @@ class Offer {
     return Offer(
       id:            (m['id']            as num).toInt(),
       listingId:     (m['listing_id']    as num).toInt(),
+      listingTitle:  m['listing_title']?.toString(),
       senderId:      (m['sender_id']     as num).toInt(),
       senderName:    m['sender_name']?.toString(),
       recipientId:   (m['recipient_id']  as num).toInt(),
