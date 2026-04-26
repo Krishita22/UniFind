@@ -404,7 +404,7 @@ class _TypeBtn extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: kMid,
-        height: 44,
+        height: 40,
         decoration: BoxDecoration(
           gradient: selected ? const LinearGradient(colors: [cRed, cRedDark], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
           color: selected ? null : cSurface,

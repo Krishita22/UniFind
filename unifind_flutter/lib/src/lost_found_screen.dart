@@ -834,82 +834,77 @@ class _LostFoundCardState extends State<_LostFoundCard>
                     ),
                     const SizedBox(height: 8),
                     // Action button — only non-owners can claim found items
-                    if (!isLost && !isOwner)
-                      SizedBox(
-                        height: 28,
-                        child: OutlinedButton.icon(
-                          onPressed: isClaimed || _claiming || isSubmitted
-                              ? null
-                              : () async {
-                                  final evidence = await _openClaimSheet();
-                                  if (evidence == null) return;
-                                  setState(() => _claiming = true);
-                                  try {
-                                    await widget.onClaim(evidence);
-                                  } finally {
-                                    if (mounted) {
-                                      setState(() => _claiming = false);
-                                    }
-                                  }
-                                },
-                          icon: _claiming
-                              ? const SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2))
-                              : Icon(
-                                  isClaimed
-                                      ? Icons.check_circle_outline_rounded
-                                      : isSubmitted
-                                          ? Icons.mark_email_read_outlined
-                                          : Icons.volunteer_activism_outlined,
-                                  size: 13),
-                          label: Text(
-                            isClaimed
-                                ? 'Claimed'
-                                : isSubmitted
-                                    ? 'Submitted'
-                                    : 'Claim',
-                            style: const TextStyle(fontSize: 11),
+                    Row(
+                      children: [
+                        if (!isLost && !isOwner)
+                          SizedBox(
+                            height: 28,
+                            child: OutlinedButton.icon(
+                              onPressed: isClaimed || _claiming || isSubmitted
+                                  ? null
+                                  : () async {
+                                      final evidence = await _openClaimSheet();
+                                      if (evidence == null) return;
+                                      setState(() => _claiming = true);
+                                      try {
+                                        await widget.onClaim(evidence);
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() => _claiming = false);
+                                        }
+                                      }
+                                    },
+                              icon: _claiming
+                                  ? const SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(strokeWidth: 2))
+                                  : Icon(
+                                      isClaimed
+                                          ? Icons.check_circle_outline_rounded
+                                          : isSubmitted
+                                              ? Icons.mark_email_read_outlined
+                                              : Icons.volunteer_activism_outlined,
+                                      size: 13),
+                              label: Text(
+                                isClaimed
+                                    ? 'Claimed'
+                                    : isSubmitted
+                                        ? 'Submitted'
+                                        : 'Claim',
+                                style: const TextStyle(fontSize: 11),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10),
+                                side: BorderSide(
+                                    color: isClaimed
+                                        ? cBorder
+                                        : const Color(0xFFE74C3C).withValues(alpha: 0.35)),
+                                foregroundColor:
+                                    isClaimed ? cMuted : const Color(0xFFE74C3C),
+                                textStyle: const TextStyle(
+                                    fontSize: 11, fontWeight: FontWeight.w700),
+                              ),
+                            ),
                           ),
-                          style: OutlinedButton.styleFrom(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 10),
-                            side: BorderSide(
-                                color: isClaimed
-                                    ? cBorder
-                                    : const Color(0xFFE74C3C)
-                                        .withValues(alpha: 0.35)),
-                            foregroundColor: isClaimed
-                                ? cMuted
-                                : const Color(0xFFE74C3C),
-                            textStyle: const TextStyle(
-                                fontSize: 11, fontWeight: FontWeight.w700),
+                        const Spacer(),
+                        TextButton.icon(
+                          icon: const Icon(Icons.flag_outlined, size: 13),
+                          label: const Text('Report'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: cMuted,
+                            textStyle: const TextStyle(fontSize: 11),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          ),
+                          onPressed: () => showReportDialog(
+                            context: context,
+                            targetId: widget.item.id,
+                            targetType: 'lostfound',
+                            targetTitle: widget.item.title,
+                            reporterEmail: widget.currentUserEmail,
                           ),
                         ),
-                      ),
-                    // L&F chat only available after admin matches or accepts a claim
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        icon: const Icon(Icons.flag_outlined, size: 13),
-                        label: const Text('Report'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: cMuted,
-                          textStyle: const TextStyle(fontSize: 11),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                        ),
-                        onPressed: () => showReportDialog(
-                          context: context,
-                          targetId: widget.item.id,
-                          targetType: 'lostfound',
-                          targetTitle: widget.item.title,
-                          reporterEmail: widget.currentUserEmail,
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
