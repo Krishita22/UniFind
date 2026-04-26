@@ -353,102 +353,118 @@ class _MessagingScreenState extends State<MessagingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: cBg,
-      appBar: AppBar(
-        title: const Text('Messages', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-        backgroundColor: cNavBg,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        color: cRed,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator(color: cRed))
-            : _error != null
-                ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text('Failed to load inbox', style: const TextStyle(color: cMuted)),
-                    const SizedBox(height: 8),
-                    ElevatedButton(onPressed: _load, child: const Text('Retry')),
-                  ]))
-                : _convs.isEmpty
-                    ? const Center(child: Text('No conversations yet.', style: TextStyle(color: cMuted)))
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _convs.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) {
-                          final c = _convs[i];
-                          return InkWell(
-                            borderRadius: BorderRadius.circular(14),
-                            onTap: () async {
-                              await Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => ConversationScreen(conv: c, myId: widget.userId),
-                              ));
-                              _silentRefresh();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: c.unread > 0 ? cRedLight : cSurface,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: c.unread > 0 ? cRed.withValues(alpha: 0.3) : cBorder),
-                              ),
-                              child: Row(children: [
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: cRedLight,
-                                  child: Text(
-                                    c.otherName.isNotEmpty ? c.otherName[0].toUpperCase() : '?',
-                                    style: const TextStyle(color: cRed, fontWeight: FontWeight.w800, fontSize: 16),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                  Row(children: [
-                                    Expanded(child: Text(c.otherName,
-                                        style: TextStyle(fontSize: 14,
-                                            fontWeight: c.unread > 0 ? FontWeight.w800 : FontWeight.w600,
-                                            color: cText),
-                                        maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                    Text(_timeStr(c.lastAt),
-                                        style: const TextStyle(fontSize: 11, color: cMuted)),
-                                  ]),
-                                  const SizedBox(height: 2),
-                                  Text(c.subject,
-                                      style: const TextStyle(fontSize: 11, color: cMuted),
-                                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  if (c.lastMessage != null) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      c.lastMessage!.startsWith('__meetup__')
-                                          ? '📍 Meetup proposed'
-                                          : c.lastMessage!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: c.unread > 0 ? cText : cMuted,
-                                        fontWeight: c.unread > 0 ? FontWeight.w600 : FontWeight.w400,
-                                      ),
-                                      maxLines: 1, overflow: TextOverflow.ellipsis,
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Messages', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
+                      SizedBox(height: 2),
+                      Text('Your conversations', style: TextStyle(fontSize: 15, color: cMuted)),
+                    ],
+                  ),
+                ),
+                IconButton(icon: const Icon(Icons.refresh, color: cMuted), onPressed: _load),
+              ],
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _load,
+              color: cRed,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: cRed))
+                  : _error != null
+                      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          const Text('Failed to load inbox', style: TextStyle(color: cMuted)),
+                          const SizedBox(height: 8),
+                          ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                        ]))
+                      : _convs.isEmpty
+                          ? const Center(child: Text('No conversations yet.', style: TextStyle(color: cMuted)))
+                          : ListView.separated(
+                              padding: const EdgeInsets.all(12),
+                              itemCount: _convs.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              itemBuilder: (_, i) {
+                                final c = _convs[i];
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () async {
+                                    await Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (_) => ConversationScreen(conv: c, myId: widget.userId),
+                                    ));
+                                    _silentRefresh();
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(14),
+                                    decoration: BoxDecoration(
+                                      color: c.unread > 0 ? cRedLight : cSurface,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: c.unread > 0 ? cRed.withValues(alpha: 0.3) : cBorder),
                                     ),
-                                  ],
-                                ])),
-                                if (c.unread > 0) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                    decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(10)),
-                                    child: Text('${c.unread}',
-                                        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                                    child: Row(children: [
+                                      CircleAvatar(
+                                        radius: 22,
+                                        backgroundColor: cRedLight,
+                                        child: Text(
+                                          c.otherName.isNotEmpty ? c.otherName[0].toUpperCase() : '?',
+                                          style: const TextStyle(color: cRed, fontWeight: FontWeight.w800, fontSize: 16),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                        Row(children: [
+                                          Expanded(child: Text(c.otherName,
+                                              style: TextStyle(fontSize: 14,
+                                                  fontWeight: c.unread > 0 ? FontWeight.w800 : FontWeight.w600,
+                                                  color: cText),
+                                              maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                          Text(_timeStr(c.lastAt),
+                                              style: const TextStyle(fontSize: 11, color: cMuted)),
+                                        ]),
+                                        const SizedBox(height: 2),
+                                        Text(c.subject,
+                                            style: const TextStyle(fontSize: 11, color: cMuted),
+                                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                                        if (c.lastMessage != null) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            c.lastMessage!.startsWith('__meetup__')
+                                                ? '📍 Meetup proposed'
+                                                : c.lastMessage!,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: c.unread > 0 ? cText : cMuted,
+                                              fontWeight: c.unread > 0 ? FontWeight.w600 : FontWeight.w400,
+                                            ),
+                                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ])),
+                                      if (c.unread > 0) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                          decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(10)),
+                                          child: Text('${c.unread}',
+                                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
+                                        ),
+                                      ],
+                                    ]),
                                   ),
-                                ],
-                              ]),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
+            ),
+          ),
+        ],
       ),
     );
   }
