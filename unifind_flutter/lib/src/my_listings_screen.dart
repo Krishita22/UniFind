@@ -8,6 +8,7 @@ class MyListingsScreen extends StatefulWidget {
   final Future<void> Function(LostFoundItem item, LostFoundUpdateInput update) onEditLostFound;
   final Future<void> Function(MarketplaceItem item) onDeleteMarketplace;
   final Future<void> Function(LostFoundItem item) onDeleteLostFound;
+  final bool lostFoundOnly;
   const MyListingsScreen({
     super.key,
     required this.marketplaceItems,
@@ -17,6 +18,7 @@ class MyListingsScreen extends StatefulWidget {
     required this.onEditLostFound,
     required this.onDeleteMarketplace,
     required this.onDeleteLostFound,
+    this.lostFoundOnly = false,
   });
 
   @override
@@ -25,6 +27,12 @@ class MyListingsScreen extends StatefulWidget {
 
 class _MyListingsScreenState extends State<MyListingsScreen> {
   bool _showMarket = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.lostFoundOnly) _showMarket = false;
+  }
 
   Future<void> _deleteMarketplace(MarketplaceItem item) async {
     final confirmed = await showDialog<bool>(
@@ -475,11 +483,21 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
         children: [
           Row(
             children: [
-              Expanded(
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text('My Listings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.5)),
+                  children: [
+                    Text('My Listings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4)),
                     Text('Your active posts', style: TextStyle(fontSize: 15, color: cMuted)),
                   ],
                 ),
@@ -488,13 +506,14 @@ class _MyListingsScreenState extends State<MyListingsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _TypeBtn(label: 'Marketplace', type: ListingType.marketplace, selected: _showMarket, onTap: () => setState(() => _showMarket = true))),
-              const SizedBox(width: 10),
-              Expanded(child: _TypeBtn(label: 'Lost & Found', type: ListingType.lost, selected: !_showMarket, onTap: () => setState(() => _showMarket = false))),
-            ],
-          ),
+            if (!widget.lostFoundOnly)
+            Row(
+              children: [
+                Expanded(child: _TypeBtn(label: 'Marketplace', type: ListingType.marketplace, selected: _showMarket, onTap: () => setState(() => _showMarket = true))),
+                const SizedBox(width: 10),
+                Expanded(child: _TypeBtn(label: 'Lost & Found', type: ListingType.lost, selected: !_showMarket, onTap: () => setState(() => _showMarket = false))),
+              ],
+            ),
           const SizedBox(height: 16),
           Expanded(
             child: empty

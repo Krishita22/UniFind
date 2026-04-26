@@ -914,33 +914,12 @@ class _UniFindAppState extends State<UniFindApp> {
 
   void _goToPostTab([ListingType type = ListingType.marketplace]) {
     setState(() {
-      _postDefaultType = type;
+      _postDefaultType = _userRole == UserRole.fac
+          ? (type == ListingType.marketplace ? ListingType.lost : type)
+          : type;
       _postFormNonce++;
+      _tab = 2;
     });
-    // Faculty has no Post tab — push as a full-screen route
-    if (_userRole == UserRole.fac) {
-      final navContext = _navigatorKey.currentContext;
-      if (navContext != null) {
-        Navigator.of(navContext).push(MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(
-              title: Text(type == ListingType.lost
-                  ? 'Report Lost Item' : 'Post Found Item'),
-              backgroundColor: cNavBg,
-              foregroundColor: Colors.white,
-            ),
-            body: PostListingScreen(
-              key: ValueKey(_postFormNonce),
-              onPost: _addListing,
-              initialType: type == ListingType.marketplace ? ListingType.lost : type,
-              hideSale: true,
-            ),
-          ),
-        ));
-      }
-      return;
-    }
-    setState(() => _tab = 2);
   }
 
   Future<void> _addListing(NewListingInput in_) async {

@@ -84,18 +84,23 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Row(
                 children: [
-                  Expanded(
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [cRed, cRedDark]),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [BoxShadow(color: cRed.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4))],
+                    ),
+                    child: const Icon(Icons.local_offer_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Offers',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            color: cText,
-                            letterSpacing: -0.5,
-                          ),
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: cText, letterSpacing: -0.4),
                         ),
                         Text(
                           'Your negotiation center',
@@ -105,7 +110,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.refresh, color: cText),
+                    icon: const Icon(Icons.refresh, color: cMuted),
                     onPressed: _load,
                   ),
                 ],
