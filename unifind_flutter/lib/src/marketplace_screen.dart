@@ -846,7 +846,12 @@ class _BrowserLayoutState extends State<_BrowserLayout> {
                   children: [
                     Expanded(child: _SearchField(hint: 'Search marketplace...', onChanged: widget.onSearch)),
                     const SizedBox(width: 12),
-                    _HoverButton(child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem)),
+                    _HoverButton(
+                      child: SizedBox(
+                        width: 120,
+                        child: _RedButton(label: 'List Item', icon: Icons.add_rounded, onTap: widget.onListItem),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1022,6 +1027,7 @@ class _SidePanelState extends State<_SidePanel> {
             child: Column(
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: TextField(
@@ -1031,7 +1037,8 @@ class _SidePanelState extends State<_SidePanel> {
                         decoration: InputDecoration(
                           hintText: 'Min', hintStyle: const TextStyle(color: cMuted, fontSize: 11),
                           prefixText: '\$', prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cRed, width: 1.5)),
@@ -1039,7 +1046,10 @@ class _SidePanelState extends State<_SidePanel> {
                         ),
                       ),
                     ),
-                    const Padding(padding: EdgeInsets.symmetric(horizontal: 5), child: Text('--', style: TextStyle(color: cMuted, fontWeight: FontWeight.w700))),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 5),
+                      child: Text('--', style: TextStyle(color: cMuted, fontWeight: FontWeight.w700)),
+                    ),
                     Expanded(
                       child: TextField(
                         controller: widget.maxCtrl,
@@ -1048,7 +1058,8 @@ class _SidePanelState extends State<_SidePanel> {
                         decoration: InputDecoration(
                           hintText: 'Max', hintStyle: const TextStyle(color: cMuted, fontSize: 11),
                           prefixText: '\$', prefixStyle: const TextStyle(color: cMuted, fontSize: 12),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+                          isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 12),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cBorder)),
                           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: cRed, width: 1.5)),
@@ -1071,7 +1082,7 @@ class _SidePanelState extends State<_SidePanel> {
                       backgroundColor: cRed, foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      padding: const EdgeInsets.symmetric(vertical: 5),
                     ),
                     child: const Text('Apply', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                   ),
@@ -1262,15 +1273,16 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                   ),
                 ),
                 Expanded(
-                  flex: 3,
+                  flex: 2,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
+                        const SizedBox(height: 15),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -1283,6 +1295,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                             ),
                           ],
                         ),
+                        const Spacer(),
                         Row(
                           children: [
                             if (widget.item.ratingCount > 0) GestureDetector(
@@ -1298,6 +1311,7 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
                                     style: const TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
                               ]),
                             ),
+                            const Spacer(),
                             if (widget.currentUserId != null && widget.item.sellerId != null && widget.currentUserId != widget.item.sellerId)
                               GestureDetector(
                                 onTap: _startingChat ? null : _openChat,

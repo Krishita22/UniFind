@@ -35,6 +35,7 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    _tabs.addListener(() => setState(() {}));
     _load();
   }
 
@@ -46,14 +47,8 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
-    // Fire-and-forget: viewing the offers list counts as acknowledging the
-    // notifications, so clear the badge server-side. The call is cheap and
-    // its own errors don't matter here — worst case the badge re-clears on
-    // the next poll.
     markOffersSeen(userId: widget.userId);
     try {
-      // Two parallel list calls rather than one "both" call so the tab counts
-      // can be shown in the TabBar without a second pass through the data.
       final results = await Future.wait([
         getOffers(userId: widget.userId, filter: 'received'),
         getOffers(userId: widget.userId, filter: 'sent'),
@@ -80,77 +75,163 @@ class _OffersScreenState extends State<OffersScreen> with SingleTickerProviderSt
 
     return Scaffold(
       backgroundColor: cBg,
-      appBar: AppBar(
-        title: const Text('Offers',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-        backgroundColor: cNavBg,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _load)],
-        bottom: TabBar(
-          controller: _tabs,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-          tabs: [
-            _OfferTab(label: 'Received', badge: pendingReceived),
-            _OfferTab(label: 'Sent',     badge: pendingSent),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Offers',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: cText,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        Text(
+                          'Your negotiation center',
+                          style: TextStyle(fontSize: 15, color: cMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: cText),
+                    onPressed: _load,
+                  ),
+                ],
+              ),
+            ),
+            // ── Tab buttons ───────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _OfferTabBtn(
+                      label: 'Received',
+                      badge: pendingReceived,
+                      selected: _tabs.index == 0,
+                      onTap: () => _tabs.animateTo(0),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _OfferTabBtn(
+                      label: 'Sent',
+                      badge: pendingSent,
+                      selected: _tabs.index == 1,
+                      onTap: () => _tabs.animateTo(1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            // ── Body ──────────────────────────────────────────────────────
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: cRed))
+                  : _error != null
+                      ? _ErrorState(message: _error!, onRetry: _load)
+                      : TabBarView(
+                          controller: _tabs,
+                          children: [
+                            _OfferList(
+                              offers:    _received,
+                              userId:    widget.userId,
+                              emptyMsg:  'No offers received yet.',
+                              onChanged: _load,
+                            ),
+                            _OfferList(
+                              offers:    _sent,
+                              userId:    widget.userId,
+                              emptyMsg:  'You haven\'t made any offers yet.',
+                              onChanged: _load,
+                            ),
+                          ],
+                        ),
+            ),
           ],
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: cRed))
-          : _error != null
-              ? _ErrorState(message: _error!, onRetry: _load)
-              : TabBarView(
-                  controller: _tabs,
-                  children: [
-                    _OfferList(
-                      offers:   _received,
-                      userId:   widget.userId,
-                      emptyMsg: 'No offers received yet.',
-                      onChanged: _load,
-                    ),
-                    _OfferList(
-                      offers:   _sent,
-                      userId:   widget.userId,
-                      emptyMsg: 'You haven\'t made any offers yet.',
-                      onChanged: _load,
-                    ),
-                  ],
-                ),
     );
   }
 }
 
-class _OfferTab extends StatelessWidget {
+// ─── TAB TOGGLE BUTTON ───────────────────────────────────────────────────────
+
+class _OfferTabBtn extends StatelessWidget {
   final String label;
   final int badge;
-  const _OfferTab({required this.label, required this.badge});
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _OfferTabBtn({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.badge = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Tab(
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text(label),
-        if (badge > 0) ...[
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? cRed : cSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? cRed : cBorder),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: selected ? Colors.white : cText,
+              ),
             ),
-            child: Text('$badge',
-                style: const TextStyle(
-                    color: cRed, fontSize: 11, fontWeight: FontWeight.w800)),
-          ),
-        ],
-      ]),
+            if (badge > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: selected ? Colors.white : cRed,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$badge',
+                  style: TextStyle(
+                    color: selected ? cRed : Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
+
+// ─── ERROR STATE ─────────────────────────────────────────────────────────────
 
 class _ErrorState extends StatelessWidget {
   final String message;
@@ -204,7 +285,6 @@ class _OfferList extends StatelessWidget {
       return RefreshIndicator(
         color: cRed,
         onRefresh: () async => onChanged(),
-        // AlwaysScrollable makes pull-to-refresh work even in an empty list.
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
@@ -234,26 +314,22 @@ class _OfferList extends StatelessWidget {
 }
 
 // ─── OFFER CARD ──────────────────────────────────────────────────────────────
-//
-// One row in the list. Shows amount, counterparty, status, note preview, and
-// action buttons appropriate to the caller's role.
-
 class OfferCard extends StatelessWidget {
   final Offer offer;
   final int userId;
   final VoidCallback onChanged;
+  final bool readOnly;
 
   const OfferCard({
     super.key,
     required this.offer,
     required this.userId,
     required this.onChanged,
+    this.readOnly = false,
   });
 
   String _counterparty() {
-    // If the caller is the recipient, "other" = sender, and vice versa.
-    // Falls back to "User #<id>" when the username JOIN returned null.
-    if (offer.role == 'recipient') {
+      if (offer.role == 'recipient') {
       return offer.senderName?.trim().isNotEmpty == true
           ? offer.senderName!
           : 'User #${offer.senderId}';
@@ -267,15 +343,13 @@ class OfferCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () async {
+      onTap: readOnly ? null : () async { 
         await Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => OfferThreadScreen(
             rootOffer: offer,
             userId:    userId,
           ),
         ));
-        // A counter or response inside the thread view changes server state,
-        // so refresh when we return.
         onChanged();
       },
       child: Container(
@@ -309,8 +383,12 @@ class OfferCard extends StatelessWidget {
               maxLines: 1, overflow: TextOverflow.ellipsis,
             )),
             const SizedBox(width: 8),
-            Text('Listing #${offer.listingId}',
-                style: const TextStyle(fontSize: 11, color: cMuted)),
+            Text(
+              'Listing: ${offer.listingTitle ?? '#${offer.listingId}'}',
+              style: const TextStyle(fontSize: 11, color: cMuted),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ]),
           if (offer.note != null && offer.note!.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -330,7 +408,6 @@ class OfferCard extends StatelessWidget {
             const SizedBox(height: 10),
             _ResponseActions(offer: offer, userId: userId, onChanged: onChanged),
           ] else if (offer.isPending && offer.role == 'sender') ...[
-            // I sent it, still pending: I can withdraw it.
             const SizedBox(height: 10),
             _WithdrawAction(offer: offer, userId: userId, onChanged: onChanged),
           ],
@@ -414,9 +491,6 @@ class _ResponseActionsState extends State<_ResponseActions> {
         userId:  widget.userId,
         action:  action,
       );
-      // Clear any freshly-created "response to sent offer" rows that the
-      // backend will produce for *me* as the side that acted. This is a
-      // self-triggered event — I don't need to be badged about my own click.
       markOffersSeen(userId: widget.userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -459,8 +533,6 @@ class _ResponseActionsState extends State<_ResponseActions> {
         note:          result.note,
         parentOfferId: widget.offer.id,
       );
-      // Sending a counter also flips my received-parent to 'countered', but
-      // that's still a self-caused event — no need to badge myself about it.
       markOffersSeen(userId: widget.userId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -628,11 +700,6 @@ class _ActionBtn extends StatelessWidget {
 }
 
 // ─── OFFER THREAD SCREEN ─────────────────────────────────────────────────────
-//
-// Shows the full counter-chain for one listing between two parties: every
-// offer with the same `listing_id` that the caller is party to. Orders
-// oldest-first so the user can read the negotiation top-to-bottom.
-
 class OfferThreadScreen extends StatefulWidget {
   final Offer rootOffer;
   final int userId;
@@ -661,11 +728,6 @@ class _OfferThreadScreenState extends State<OfferThreadScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      // Pull every offer on this listing that the caller is a party to, then
-      // walk the parent_offer_id chain from the root to filter to just the
-      // thread this card belongs to. We identify "this thread" by the set of
-      // parties (sender_id, recipient_id) of the root offer — that pair is
-      // stable across the entire counter chain because the sides flip.
       final all = await getListingOffers(
         listingId: widget.rootOffer.listingId,
         userId:    widget.userId,
@@ -673,7 +735,6 @@ class _OfferThreadScreenState extends State<OfferThreadScreen> {
       final parties = {widget.rootOffer.senderId, widget.rootOffer.recipientId};
       final thread = all.where((o) =>
           parties.contains(o.senderId) && parties.contains(o.recipientId)).toList();
-      // getListingOffers already returns ascending by created_at; keep it.
       if (!mounted) return;
       setState(() { _thread = thread; _loading = false; });
     } catch (e) {
@@ -685,10 +746,12 @@ class _OfferThreadScreenState extends State<OfferThreadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: cBg,
+     backgroundColor: cBg,
       appBar: AppBar(
-        title: Text('Offer thread · Listing #${widget.rootOffer.listingId}',
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        title: Text(
+          '${widget.rootOffer.listingTitle ?? 'Listing #${widget.rootOffer.listingId}'} · Offer Thread',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
         backgroundColor: cNavBg,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -709,6 +772,7 @@ class _OfferThreadScreenState extends State<OfferThreadScreen> {
                       offer:     _thread[i],
                       userId:    widget.userId,
                       onChanged: _load,
+                      readOnly: true,
                     ),
                   ),
                 ),

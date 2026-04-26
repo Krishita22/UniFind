@@ -17,45 +17,62 @@ if (!in_array($status, $allowed, true)) api_error('Invalid status.');
 
 $rows = [];
 
-// Map lost & found statuses to marketplace statuses for unified filtering
+// Map marketplace statuses to lost & found statuses for unified filtering
 $lfStatusMap = [
-    'pending' => 'user_pending',
-    'approved' => 'admin_pending',
-    'denied' => 'admin_denied',
-    'resolved' => 'completed'
+    'admin_pending'      => 'pending',
+    'completion_pending' => 'pending',
+    'confirmed'          => 'approved',
+    'admin_denied'       => 'denied',
+    'completed'          => 'resolved',
 ];
-$lfStatus = array_search($status, $lfStatusMap) ?: $status;
+$lfStatus = isset($lfStatusMap[$status]) ? $lfStatusMap[$status] : null;
 
-// Get marketplace meetups
-$stmt = $conn->prepare("
-    SELECT
-        m.meetup_id, m.item_id, m.buyer_id, m.seller_id,
-        m.meetup_date, m.meetup_time, m.location, m.status, m.created_at,
-        m.buyer_photo_url, m.seller_photo_url,
-        b.username AS buyer_username, b.email AS buyer_email,
-        s.username AS seller_username, s.email AS seller_email,
-        COALESCE(mi.title, lfi.title, 'Meetup') AS item_title,
-        mi.price AS item_price,
-        mi.category AS item_category,
-        mi.image_url AS item_image,
-        CASE WHEN mi.id IS NOT NULL THEN 1 ELSE 0 END AS is_marketplace,
-        'marketplace' AS meetup_type
-    FROM meetups m
-    LEFT JOIN users b ON b.id = m.buyer_id
-    LEFT JOIN users s ON s.id = m.seller_id
-    LEFT JOIN marketplace_items mi ON m.item_id IS NOT NULL AND mi.id = m.item_id
-    LEFT JOIN lost_found_items lfi ON m.item_id IS NOT NULL AND lfi.id = m.item_id
-    WHERE m.status = ?
-    ORDER BY m.created_at DESC
+// Check if meetups table exists
+$tableCheckStmt = $conn->prepare("
+    SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'meetups'
 ");
-if (!$stmt) api_error('Server error: ' . $conn->error, 500);
-$stmt->bind_param('s', $status);
-$stmt->execute();
-$rows = array_merge($rows, $stmt->get_result()->fetch_all(MYSQLI_ASSOC));
-$stmt->close();
+$marketplaceTableExists = false;
+if ($tableCheckStmt) {
+    $tableCheckStmt->execute();
+    $tableCheckStmt->store_result();
+    $marketplaceTableExists = $tableCheckStmt->num_rows > 0;
+    $tableCheckStmt->close();
+}
+
+// Get marketplace meetups (only if table exists)
+if ($marketplaceTableExists) {
+    $stmt = $conn->prepare("
+        SELECT
+            m.meetup_id, m.item_id, m.buyer_id, m.seller_id,
+            m.meetup_date, m.meetup_time, m.location, m.status, m.created_at,
+            m.buyer_photo_url, m.seller_photo_url,
+            b.username AS buyer_username, b.email AS buyer_email,
+            s.username AS seller_username, s.email AS seller_email,
+            COALESCE(mi.title, lfi.title, 'Meetup') AS item_title,
+            mi.price AS item_price,
+            mi.category AS item_category,
+            mi.image_url AS item_image,
+            CASE WHEN mi.id IS NOT NULL THEN 1 ELSE 0 END AS is_marketplace,
+            'marketplace' AS meetup_type
+        FROM meetups m
+        LEFT JOIN users b ON b.id = m.buyer_id
+        LEFT JOIN users s ON s.id = m.seller_id
+        LEFT JOIN marketplace_items mi ON m.item_id IS NOT NULL AND mi.id = m.item_id
+        LEFT JOIN lost_found_items lfi ON m.item_id IS NOT NULL AND lfi.id = m.item_id
+        WHERE m.status = ?
+        ORDER BY m.created_at DESC
+    ");
+    if ($stmt) {
+        $stmt->bind_param('s', $status);
+        $stmt->execute();
+        $rows = array_merge($rows, $stmt->get_result()->fetch_all(MYSQLI_ASSOC));
+        $stmt->close();
+    }
+}
 
 // Get lost & found meetups if status maps to one
-if (in_array($lfStatus, ['pending', 'approved', 'denied', 'resolved'])) {
+if ($lfStatus !== null) {
     $stmt = $conn->prepare("
         SELECT
             m.id AS meetup_id, m.match_id AS item_id, NULL AS buyer_id, NULL AS seller_id,
@@ -92,3 +109,4 @@ usort($rows, function($a, $b) {
 });
 
 api_success($rows);
+?>

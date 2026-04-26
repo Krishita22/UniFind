@@ -522,7 +522,7 @@ class _FeaturesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const List<_FeatureData> features = [
-      _FeatureData(Icons.storefront_rounded, 'Campus Marketplace', 'Buy and sell textbooks, electronics, furniture, clothing, and more with other MSU students.'),
+      _FeatureData(Icons.storefront_rounded, 'Campus Marketplace', 'Buy and sell textbooks, electronics, furniture, clothing, & more with other MSU students.'),
       _FeatureData(Icons.search_rounded, 'Lost & Found', 'Report lost items or post things you\'ve found to help reunite students with their belongings.'),
       _FeatureData(Icons.bolt_rounded, 'Post in Seconds', 'Create a listing with a title, photo, price, and category in just a few clicks.'),
       _FeatureData(Icons.verified_user_rounded, 'MSU Community Only', 'Exclusively for Montclair State University members — a trusted, verified space you can rely on.'),
@@ -828,7 +828,7 @@ class _ContactSectionState extends State<_ContactSection> {
 
   try {
     final response = await http.post(
-      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_Test_API/contact.php'),
+      Uri.parse('http://cyan.csam.montclair.edu/~ivanovs1/UniFind_API/contact/contact.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'name': _name,

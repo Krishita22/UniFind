@@ -22,7 +22,10 @@ class _EmptyState extends StatelessWidget {
           Text(message, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: cText)),
           if (cta != null && onCta != null) ...[
             const SizedBox(height: 14),
-            _RedButton(label: cta!, icon: Icons.add_rounded, onTap: onCta!),
+            SizedBox(
+              width: 160,
+              child: _RedButton(label: cta!, icon: Icons.add_rounded, onTap: onCta!),
+            ),
           ],
         ],
       ),
