@@ -450,7 +450,7 @@ class _StandardUserShell extends StatelessWidget {
                                     ? unseenOfferCount
                                     : 0,
                           ),
-                          if (role != UserRole.fac && i == 1) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
+                          if (role != UserRole.fac && i == 2) ...[const SizedBox(width: 6), _NavPostButton(onTap: () => goToPostTab()), const SizedBox(width: 6)],
                         ],
                       ]),
                     ])),
