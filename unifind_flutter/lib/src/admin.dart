@@ -1553,14 +1553,14 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                 SizedBox(width: double.infinity, child: ElevatedButton.icon(
                                   onPressed: () async {
                                     try {
-                                      await adminAcceptClaim(claimId: c.id);
+                                      await adminAcceptClaim(claimId: c.id, itemId: item.id);
                                       if (ctx.mounted) {
                                         Navigator.pop(ctx);
                                         ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
                                           content: Row(children: const [
                                             Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
                                             SizedBox(width: 8),
-                                            Expanded(child: Text('Claim approved!')),
+                                            Expanded(child: Text('Claim approved! Chat opened.')),
                                           ]),
                                           backgroundColor: _cGreen,
                                           behavior: SnackBarBehavior.floating,
