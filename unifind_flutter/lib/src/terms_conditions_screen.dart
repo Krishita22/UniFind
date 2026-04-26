@@ -107,8 +107,8 @@ class _TermsTab extends StatelessWidget {
               '• Impersonating another person or entity\n'
               '• Using the platform for any illegal activity\n'
               '• Attempting to manipulate, spam, or defraud other users\n'
-              '• Posting false, misleading, or deliberately inaccurate information',
-          warningText: '⚠ Violations of these rules may result in immediate and permanent suspension from the platform.',
+              '• Posting false, misleading, or deliberately inaccurate information\n\n'
+              'Violations of these rules may result in immediate and permanent suspension from the platform.',
         ),
         _LegalSection(
           number: '4',
