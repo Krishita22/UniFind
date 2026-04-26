@@ -1006,6 +1006,23 @@ Future<Map<String, dynamic>> adminAcceptClaim({
   throw ApiException(data['error']?.toString() ?? 'Failed to accept claim.');
 }
 
+Future<Map<String, dynamic>> adminRejectClaim({
+  required String claimId,
+  required String itemId,
+  required String reason,
+}) async {
+  final response = await http.post(
+    Uri.parse('$_baseUrl/admin/claims/reject_claim.php'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'claim_id': claimId, 'item_id': itemId, 'reason': reason}),
+  );
+  final data = jsonDecode(response.body);
+  if (response.statusCode == 200 && data['success'] == true) {
+    return Map<String, dynamic>.from(data);
+  }
+  throw ApiException(data['error']?.toString() ?? 'Failed to reject claim.');
+}
+
 // ── MESSAGING ─────────────────────────────────────────────────────────────────
 
 Future<List<Map<String, dynamic>>> getInbox({required int userId}) async {
