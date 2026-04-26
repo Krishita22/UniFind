@@ -1,7 +1,8 @@
 part of '../main.dart';
 
 class DocumentationScreen extends StatelessWidget {
-  const DocumentationScreen({super.key});
+  final bool facultyOnly;
+  const DocumentationScreen({super.key, this.facultyOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -77,25 +78,39 @@ class DocumentationScreen extends StatelessWidget {
               content: 'UniFind is a campus marketplace and lost-and-found app for Montclair State University. Browse listings, filter by category, post items, and track your own listings — all in one place.',
             ),
             _DocSection(
-              icon: Icons.storefront_outlined,
-              title: 'Marketplace',
-              content: 'Browse items for sale from other MSU students. Filter by category (Textbooks, Electronics, Furniture, Clothing, Other) and search by keyword. Tap any item to see full details and contact the seller.',
+              icon: Icons.add_circle_outline_rounded,
+              title: 'Posting a Listing',
+              content: 'Tap the Post tab to create a listing. Choose the type (For Sale, Lost, Found), fill in the required fields, and hit Post Item. Your listing will be reviewed and appear shortly.',
             ),
+            if (!facultyOnly)
+              _DocSection(
+                icon: Icons.storefront_outlined,
+                title: 'Marketplace',
+                content: 'Browse items for sale from other MSU students. Filter by category (Textbooks, Electronics, Furniture, Clothing, Other) and search by keyword. Tap any item to see full details and contact the seller.',
+              ),
             _DocSection(
               icon: Icons.search_rounded,
               title: 'Lost & Found',
               content: 'View lost and found reports from the community. Filter between "Lost" and "Found" items, and browse by category to help find matches.',
             ),
             _DocSection(
-              icon: Icons.add_circle_outline_rounded,
-              title: 'Posting a Listing',
-              content: 'Tap the Post tab to create a listing. Choose the type (For Sale, Lost, Found), fill in the required fields, and hit Post Item. Your listing will be reviewed and appear shortly.',
-            ),
-            _DocSection(
               icon: Icons.list_alt_rounded,
               title: 'My Listings',
-              content: 'View all your posted marketplace items and lost/found reports in one place. Switch between tabs to manage each type.',
+              content: facultyOnly
+                  ? 'View and manage all your lost & found posts in one place. Tap any item to edit it, or delete it if it\'s been resolved.'
+                  : 'View all your posted marketplace items and lost/found reports in one place. Switch between tabs to manage each type.',
             ),
+            _DocSection(
+              icon: Icons.chat_bubble_outline_rounded,
+              title: 'Messages',
+              content: 'Chat directly with other users about listings or lost & found items. You\'ll receive a notification badge when new messages arrive. You can also propose a safe on-campus meetup directly from a conversation.',
+            ),
+            if (!facultyOnly)
+              _DocSection(
+                icon: Icons.local_offer_outlined,
+                title: 'Offers',
+                content: 'Make, receive, and negotiate price offers on marketplace listings. Accept, reject, or counter any offer. The Offers tab shows both sent and received offers with their full negotiation history.',
+              ),
             _DocSection(
               icon: Icons.person_outline_rounded,
               title: 'Your Profile',
