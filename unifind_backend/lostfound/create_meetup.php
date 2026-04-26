@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../config.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -43,7 +43,7 @@ if (!$claim) api_error('Claim not found.', 404);
 if ($claim['claim_status'] !== 'approved') api_error('Claim must be approved before proposing meetup.', 400);
 
 // Get found item details to get the finder's ID
-$itemStmt = $conn->prepare("SELECT poster_id FROM lost_found_items WHERE id = ? LIMIT 1");
+$itemStmt = $conn->prepare("SELECT poster_id, title FROM lost_found_items WHERE id = ? LIMIT 1");
 if (!$itemStmt) api_error('Item prepare error: ' . $conn->error, 500);
 $itemStmt->bind_param('i', $claim['found_item_id']);
 if (!$itemStmt->execute()) api_error('Item execute error: ' . $itemStmt->error, 500);
@@ -54,11 +54,9 @@ if (!$item) api_error('Found item not found.', 404);
 
 $finderId = $item['poster_id'];
 $claimantId = $claim['claimant_id'];
+$itemTitle = $item['title'];
 
-// For user-initiated claims, there's a lost item that the claimant reported
-// We need to find that lost item. A claim is made ON a found item FOR a lost item
-// The claimant created a lost item post, then claims a found item
-// Get the lost item posted by this claimant
+// Get the lost item posted by the claimant
 $claimantLostItemStmt = $conn->prepare("
     SELECT id FROM lost_found_items
     WHERE poster_id = ? AND type = 'lost'
@@ -111,13 +109,13 @@ $finderStmt->close();
 
 // Email to claimant: meetup proposed (waiting for admin approval)
 $subject = 'Meetup Proposed for Your Claim';
-$body = "Hi {$claimant['username']},\n\nYou have proposed a meetup for your claim. The meetup details are:\n\nDate: {$meetupDate}\nTime: {$meetupTime}\nLocation: {$meetupLocation}\n\nThe meetup is pending admin approval. You'll be notified once it's approved.\n\nBest regards,\nUniFind Team";
+$body = "Hi {$claimant['username']},\n\nYou have proposed a meetup for your claim on '{$itemTitle}'. The meetup details are:\n\nDate: {$meetupDate}\nTime: {$meetupTime}\nLocation: {$meetupLocation}\n\nThe meetup is pending admin approval. You'll be notified once it's approved.\n\nBest regards,\nUniFind Team";
 $headers = "From: UniFind <unifind@ivanovs1.nodomain>\r\n";
 @mail($claimant['email'], $subject, $body, $headers);
 
 // Email to finder: meetup proposed by claimant
 $subject = 'Meetup Proposed for Your Found Item';
-$body = "Hi {$finder['username']},\n\n{$claimant['username']} has proposed a meetup for your found item. The meetup details are:\n\nDate: {$meetupDate}\nTime: {$meetupTime}\nLocation: {$meetupLocation}\n\nThe meetup is pending admin approval. You'll be notified once it's approved.\n\nBest regards,\nUniFind Team";
+$body = "Hi {$finder['username']},\n\n{$claimant['username']} has proposed a meetup for your found item '{$itemTitle}'. The meetup details are:\n\nDate: {$meetupDate}\nTime: {$meetupTime}\nLocation: {$meetupLocation}\n\nThe meetup is pending admin approval. You'll be notified once it's approved.\n\nBest regards,\nUniFind Team";
 @mail($finder['email'], $subject, $body, $headers);
 
 api_success([
