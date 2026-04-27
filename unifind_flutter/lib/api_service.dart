@@ -1121,8 +1121,8 @@ Future<int> createMeetup({
   required int conversationId,
   required int buyerId,
   required int sellerId,
-  required String date,  
-  required String time,    
+  required String date,
+  required String time,
   required String location,
 }) async {
   final response = await http.post(
@@ -1135,7 +1135,7 @@ Future<int> createMeetup({
       'seller_id': sellerId,
       'meetup_date': date,
       'meetup_time': time,
-      'location': location,
+      'meetup_location': location,
     }),
   );
 
@@ -1155,7 +1155,7 @@ Future<Map<String, dynamic>> createLostFoundMeetup({
   required String location,
 }) async {
   final response = await http.post(
-    Uri.parse('$_baseUrl/admin/meetup/create_meetup.php'),
+    Uri.parse('$_baseUrl/messaging/meetup/create_meetup.php'),
     headers: {'Content-Type': 'application/json'},
     body: jsonEncode({
       'claim_id': claimId,
