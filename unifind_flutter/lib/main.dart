@@ -966,7 +966,7 @@ class _UniFindAppState extends State<UniFindApp> {
     }
 
     setState(() {
-      _tab = 1; // Go to marketplace page after posting
+      _tab = 0; // Go to marketplace page after posting
     });
   }
 
