@@ -463,22 +463,13 @@ class _StandardUserShell extends StatelessWidget {
                 ),
               ),
             ),
-      body: isMobile
-          ? SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 65),
-                child: IndexedStack(index: tab, children: screens),
-              ),
-            )
-          : IndexedStack(index: tab, children: screens),
+     body: IndexedStack(index: tab, children: screens),
       bottomNavigationBar: isMobile
           ? Theme(
               data: Theme.of(context).copyWith(
                 navigationBarTheme: NavigationBarThemeData(
                   labelTextStyle: WidgetStateProperty.all(
-                    const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white)),
-                  height: 65,
+                    const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),
               child: role == UserRole.fac
@@ -487,7 +478,6 @@ class _StandardUserShell extends StatelessWidget {
                   backgroundColor: cNavBg,
                   indicatorColor: Colors.white.withValues(alpha: 0.2),
                   labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  height: 65,
                   onDestinationSelected: (i) {
                     if (i == 1) { goToPostTab(ListingType.lost); return; }
                     onTabChanged(i == 0 ? 1 : i == 2 ? 3 : i == 3 ? 4 : 5);
@@ -505,12 +495,10 @@ class _StandardUserShell extends StatelessWidget {
                   backgroundColor: cNavBg,
                   indicatorColor: Colors.white.withValues(alpha: 0.2),
                   labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  height: 65,
                   onDestinationSelected: (i) {
                     if (i == 2) { goToPostTab(); return; }
                     onTabChanged(i == 5 ? 6 : i == 6 ? 5 : i);
-                  },
-                  destinations: [
+                  },                  destinations: [
                     const NavigationDestination(icon: Icon(Icons.storefront_outlined, color: Colors.white70), selectedIcon: Icon(Icons.storefront_rounded, color: Colors.white), label: 'Market'),
                     const NavigationDestination(icon: Icon(Icons.search_outlined, color: Colors.white70), selectedIcon: Icon(Icons.search_rounded, color: Colors.white), label: 'Lost/Found'),
                     const NavigationDestination(icon: Icon(Icons.add_circle_outline, color: Colors.white70), selectedIcon: Icon(Icons.add_circle_rounded, color: Colors.white), label: 'Post'),

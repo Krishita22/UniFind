@@ -888,10 +888,10 @@ class _BrowserLayoutState extends State<_BrowserLayout> {
                 child: widget.filtered.isEmpty
                     ? _EmptyState(message: 'No items found', cta: 'List an Item', onCta: widget.onListItem)
                     : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                         itemCount: widget.filtered.length,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3, mainAxisExtent: 260,
+                          crossAxisCount: 3, mainAxisExtent: 280,
                           crossAxisSpacing: 10, mainAxisSpacing: 10,
                         ),
                         itemBuilder: (ctx, i) => _MarketCard(
@@ -1247,175 +1247,109 @@ class _MarketCardState extends State<_MarketCard> with SingleTickerProviderState
               )],
             ),
             clipBehavior: Clip.antiAlias,
-            child: widget.compact
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: Stack(
                     children: [
-                      SizedBox(
-                        height: 160,
-                        child: Stack(
-                          children: [
-                            Image.network(
-                              widget.item.image,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20))),
-                            ),
-                            Positioned(
-                              top: 6, left: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(6)),
-                                child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
-                              ),
-                            ),
-                          ],
-                        ),
+                      Image.network(
+                        widget.item.image,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20))),
                       ),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 3, 8, 3),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
-                              const SizedBox(height: 3),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('\$${widget.item.price.toStringAsFixed(2)}',
-                                      style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                    decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(5), border: Border.all(color: cBorder)),
-                                    child: Text(widget.item.condition, style: const TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
-                                  ),
-                                ],
-                              ),
-                              const Spacer(),
-                              Center(
-                                child: GestureDetector(
-                                  onTap: _startingChat ? null : _openChat,
-                                  child: Icon(_startingChat ? Icons.hourglass_top_rounded : Icons.chat_bubble_outline, size: 12, color: cRed),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 4,
-                        child: Stack(
-                          children: [
-                            Image.network(
-                              widget.item.image,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const ColoredBox(color: cPlaceholder, child: Center(child: Icon(Icons.image_not_supported, color: cMuted, size: 20))),
-                            ),
-                            Positioned(
-                              top: 6, left: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(6)),
-                                child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
-                              const SizedBox(height: 15),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('\$${widget.item.price.toStringAsFixed(2)}',
-                                      style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                    decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(5), border: Border.all(color: cBorder)),
-                                    child: Text(widget.item.condition, style: const TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
-                                  ),
-                                ],
-                              ),
-                              const Spacer(),
-                              Row(
-                                children: [
-                                  if (widget.item.ratingCount > 0) Flexible(
-                                    child: GestureDetector(
-                                      onTap: () {
-                                        if (widget.item.sellerId != null) {
-                                          ReviewsSheet.show(context, userId: widget.item.sellerId!, userName: widget.item.seller);
-                                        }
-                                      },
-                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                        const Icon(Icons.star_rounded, size: 10, color: Color(0xFFF59E0B)),
-                                        const SizedBox(width: 2),
-                                        Flexible(
-                                          child: Text('${widget.item.avgRating?.toStringAsFixed(1) ?? '0'} (${widget.item.ratingCount})',
-                                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
-                                        ),
-                                      ]),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  if (widget.currentUserId != null && widget.item.sellerId != null && widget.currentUserId != widget.item.sellerId)
-                                    GestureDetector(
-                                      onTap: _startingChat ? null : _openChat,
-                                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                        Icon(_startingChat ? Icons.hourglass_top_rounded : Icons.chat_bubble_outline, size: 10, color: cRed),
-                                        const SizedBox(width: 2),
-                                        const Text('Chat', style: TextStyle(fontSize: 8, color: cRed, fontWeight: FontWeight.w700)),
-                                        const SizedBox(width: 8),
-                                      ]),
-                                    ),
-                                  GestureDetector(
-                                    onTap: () => showReportDialog(
-                                      context: context,
-                                      targetId: widget.item.id,
-                                      targetType: 'listing',
-                                      targetTitle: widget.item.title,
-                                      reporterEmail: widget.currentUserEmail,
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.flag_outlined, size: 10, color: cMuted),
-                                        SizedBox(width: 2),
-                                        Text('Report', style: TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                      Positioned(
+                        top: 6, left: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(color: cRed, borderRadius: BorderRadius.circular(6)),
+                          child: Text(widget.item.category, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.2)),
                         ),
                       ),
                     ],
                   ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Text(widget.item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: cText)),
+                        const SizedBox(height: 15),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('\$${widget.item.price.toStringAsFixed(2)}',
+                                style: const TextStyle(color: cRed, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: -0.3)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(5), border: Border.all(color: cBorder)),
+                              child: Text(widget.item.condition, style: const TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        Row(
+                          children: [
+                            if (widget.item.ratingCount > 0) GestureDetector(
+                              onTap: () {
+                                if (widget.item.sellerId != null) {
+                                  ReviewsSheet.show(context, userId: widget.item.sellerId!, userName: widget.item.seller);
+                                }
+                              },
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                const Icon(Icons.star_rounded, size: 10, color: Color(0xFFF59E0B)),
+                                const SizedBox(width: 2),
+                                Text('${widget.item.avgRating?.toStringAsFixed(1) ?? '0'} (${widget.item.ratingCount})',
+                                    style: const TextStyle(fontSize: 9, color: cMuted, fontWeight: FontWeight.w600)),
+                              ]),
+                            ),
+                            const Spacer(),
+                            if (widget.currentUserId != null && widget.item.sellerId != null && widget.currentUserId != widget.item.sellerId)
+                              GestureDetector(
+                                onTap: _startingChat ? null : _openChat,
+                                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  Icon(_startingChat ? Icons.hourglass_top_rounded : Icons.chat_bubble_outline, size: 10, color: cRed),
+                                  const SizedBox(width: 2),
+                                  const Text('Chat', style: TextStyle(fontSize: 8, color: cRed, fontWeight: FontWeight.w700)),
+                                  const SizedBox(width: 8),
+                                ]),
+                              ),
+                            GestureDetector(
+                              onTap: () => showReportDialog(
+                                context: context,
+                                targetId: widget.item.id,
+                                targetType: 'listing',
+                                targetTitle: widget.item.title,
+                                reporterEmail: widget.currentUserEmail,
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.flag_outlined, size: 10, color: cMuted),
+                                  SizedBox(width: 2),
+                                  Text('Report', style: TextStyle(fontSize: 8, color: cMuted, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
     );
   }
 }
