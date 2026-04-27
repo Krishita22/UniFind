@@ -435,7 +435,7 @@ void _showLostFoundPopup(
                                   GestureDetector(
                                     onTap: () async {
                                       Navigator.pop(ctx);
-                                      await _showProposeMeetupDialog(context, claimId: claimId);
+                                      await _showProposeMeetupDialog(context, claimId: claimId, conversationId: approvedChatConvId, userId: currentUserId);
                                     },
                                     child: Container(
                                       width: double.infinity,
@@ -962,7 +962,7 @@ class _LostFoundCardState extends State<_LostFoundCard>
 }
 
 // -- Propose Meetup Dialog for Lost & Found --
-Future<void> _showProposeMeetupDialog(BuildContext context, {required int claimId}) async {
+Future<void> _showProposeMeetupDialog(BuildContext context, {required int claimId, int? conversationId, int? userId}) async {
   final dateCtrl = TextEditingController();
   final timeCtrl = TextEditingController();
   final locationCtrl = TextEditingController();
@@ -1141,12 +1141,30 @@ Future<void> _showProposeMeetupDialog(BuildContext context, {required int claimI
                                 }
 
                                 try {
-                                  await createLostFoundMeetup(
+                                  final result = await createLostFoundMeetup(
                                     claimId: claimId,
                                     date: dateCtrl.text,
                                     time: timeCtrl.text,
                                     location: locationCtrl.text,
                                   );
+
+                                  final meetupId = result['meetup_id'];
+
+                                  if (conversationId != null && meetupId != null && userId != null) {
+                                    final meetupPayload = jsonEncode({
+                                      'meetup_id': meetupId,
+                                      'date': dateCtrl.text,
+                                      'time': dateCtrl.text,
+                                      'location': locationCtrl.text,
+                                      'status': 'admin_pending',
+                                      'proposer_id': userId,
+                                    });
+                                    await sendMessage(
+                                      conversationId: conversationId,
+                                      senderId: userId,
+                                      body: '__meetup__$meetupPayload',
+                                    );
+                                  }
 
                                   if (ctx.mounted) {
                                     Navigator.pop(ctx);
