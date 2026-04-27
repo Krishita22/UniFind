@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd unifind_flutter && flutter build web --release --base-href /",
+  "outputDirectory": "unifind_flutter/build/web",
+  "installCommand": "flutter pub get",
+  "env": {
+    "FLUTTER_CHANNEL": "stable"
+  }
+}
