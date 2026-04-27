@@ -618,7 +618,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (resp.statusCode != 200) return;
       final json = jsonDecode(resp.body) as Map<String, dynamic>;
       if (json['success'] != true) return;
-      final data = json['data'] as Map<String, dynamic>;
+      final dataRaw = json['data'];
+      if (dataRaw is! Map) return;
+      final data = dataRaw as Map<String, dynamic>;
       if (!mounted) return;
       setState(() {
         data.forEach((key, value) {
