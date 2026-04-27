@@ -1699,11 +1699,12 @@ class _MeetupCard extends StatelessWidget {
       ];
     }
 
+    // For Lost & Found meetups, hide all buttons - they're auto-submitted for admin approval
+    if (proposal.claimId != null) {
+      return [];
+    }
+
     if (proposal.status == MeetupStatus.userPending) {
-      // Lost & Found meetups are auto-submitted for admin approval, no user action needed
-      if (proposal.claimId != null) {
-        return [];
-      }
       if (_isProposer) {
         return [
           const SizedBox(height: 12),
