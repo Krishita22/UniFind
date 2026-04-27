@@ -75,7 +75,7 @@ if ($lostItemId <= 0) api_error('Lost item not found for claimant.', 404);
 // Create a match between the lost and found items
 $matchStmt = $conn->prepare("
     INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, status)
-    VALUES (?, ?, ?, 'active')
+    VALUES (?, ?, ?, 'pending')
 ");
 if (!$matchStmt) api_error('Match insert prepare error: ' . $conn->error, 500);
 $matchStmt->bind_param('iii', $lostItemId, $claim['found_item_id'], $claimantId);
