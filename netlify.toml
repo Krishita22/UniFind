@@ -1,6 +1,3 @@
 [build]
-  command = "cd unifind_flutter && flutter build web --release --base-href /"
   publish = "unifind_flutter/build/web"
-
-[build.environment]
-  FLUTTER_CHANNEL = "stable"
+  command = "echo 'Pre-built Flutter web files'"
