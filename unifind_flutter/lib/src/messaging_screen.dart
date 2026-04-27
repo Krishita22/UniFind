@@ -9,6 +9,7 @@ class Conversation {
   final DateTime? lastAt;
   final int unread;
   final int? listingId;
+  final int? claimId;
   final bool isComplete;
   final bool isLostFound;
   const Conversation({
@@ -18,6 +19,7 @@ class Conversation {
     required this.otherId,
     this.lastMessage, this.lastAt,
     required this.unread, this.listingId,
+    this.claimId,
     this.isComplete = false,
     this.isLostFound = false,
   });
@@ -45,6 +47,7 @@ class Conversation {
       lastAt:        m['last_at'] != null ? DateTime.tryParse(m['last_at'].toString()) : null,
       unread:        int.tryParse(m['unread']?.toString() ?? '0') ?? 0,
       listingId:     m['listing_id'] != null ? int.tryParse(m['listing_id'].toString()) : null,
+      claimId:       m['claim_id'] != null ? int.tryParse(m['claim_id'].toString()) : null,
       isComplete:    m['is_complete'] == 1 || m['is_complete'] == true || m['is_complete'] == '1',
       isLostFound:   m['is_lost_found'] == 1 || m['is_lost_found'] == true || m['is_lost_found'] == '1'
                      || (m['listing_id'] == null),  // fallback if backend doesn't send flag

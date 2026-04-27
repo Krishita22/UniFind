@@ -225,15 +225,40 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
       final dateStr = _date!.toIso8601String().split('T')[0];
 
       // ── Create meetup using api_service ───────────────────────────────
-      final meetupId = await createMeetup(
-        itemId:         widget.conv.isLostFound ? 0 : (widget.conv.listingId ?? 0),
-        conversationId: widget.conv.id,
-        buyerId:        widget.myId,
-        sellerId:       widget.conv.otherId,
-        date:           dateStr,
-        time:           timeStr,
-        location:       _selectedSpot,
-      );
+      late int meetupId;
+      if (widget.conv.isLostFound) {
+        // For lost & found, look up the claim_id
+        final claims = await getMyApprovedClaims(userId: widget.myId);
+        Map<String, dynamic>? claim;
+        try {
+          claim = claims.firstWhere((c) {
+            final convId = int.tryParse(c['conversation_id']?.toString() ?? '') ?? 0;
+            return convId == widget.conv.id;
+          });
+        } catch (_) {
+          throw Exception('No approved claim found for this conversation');
+        }
+        final claimId = int.tryParse(claim['claim_id']?.toString() ?? '') ?? 0;
+        if (claimId <= 0) throw Exception('Invalid claim_id');
+        final result = await createLostFoundMeetup(
+          claimId: claimId,
+          date: dateStr,
+          time: timeStr,
+          location: _selectedSpot,
+        );
+        meetupId = result['meetup_id'] as int? ?? 0;
+      } else {
+        meetupId = await createMeetup(
+          itemId:         widget.conv.listingId ?? 0,
+          conversationId: widget.conv.id,
+          buyerId:        widget.myId,
+          sellerId:       widget.conv.otherId,
+          date:           dateStr,
+          time:           timeStr,
+          location:       _selectedSpot,
+        );
+      }
+      if (meetupId <= 0) throw Exception('No meetup_id returned');
 
       // ── Post system message so both users see the card ────────────────
       final payload = jsonEncode({

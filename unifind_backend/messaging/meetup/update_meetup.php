@@ -11,17 +11,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
 if (!function_exists('api_success')) {
     function api_success($data) { header('Content-Type: application/json'); echo json_encode(['success' => true, 'data' => $data]); exit; }
     function api_error(string $message, int $status = 400) { http_response_code($status); header('Content-Type: application/json'); echo json_encode(['success' => false, 'error' => $message]); exit; }
+    function log_error($msg) { error_log('[update_meetup] ' . $msg); }
 }
 
 $body = json_decode(file_get_contents('php://input'), true) ?? [];
 $meetupId = (int)($body['meetup_id'] ?? 0);
 $status = (string)($body['status'] ?? '');
 
+log_error("Request: meetupId=$meetupId, status=$status");
+
 if ($meetupId <= 0) api_error('meetup_id required.', 400);
 if (empty($status)) api_error('status required.', 400);
 
 // Check if it's a marketplace meetup
-$mStmt = $conn->prepare('SELECT id FROM meetups WHERE meetup_id = ? LIMIT 1');
+$mStmt = $conn->prepare('SELECT meetup_id FROM meetups WHERE meetup_id = ?');
 if (!$mStmt) api_error('Prepare error: ' . $conn->error, 500);
 $mStmt->bind_param('i', $meetupId);
 if (!$mStmt->execute()) api_error('Execute error: ' . $mStmt->error, 500);
@@ -29,12 +32,9 @@ $marketplaceMeetup = $mStmt->get_result()->fetch_assoc();
 $mStmt->close();
 
 if ($marketplaceMeetup) {
-    // Update marketplace meetup
-    $stmt = $conn->prepare('UPDATE meetups SET status = ? WHERE meetup_id = ? LIMIT 1');
-    if (!$stmt) api_error('Prepare error: ' . $conn->error, 500);
-    $stmt->bind_param('si', $status, $meetupId);
-    if (!$stmt->execute()) api_error('Execute error: ' . $stmt->error, 500);
-    $stmt->close();
+    // Update marketplace meetup - use direct query to avoid binding issues
+    $updateSql = "UPDATE meetups SET status = '" . $conn->real_escape_string($status) . "' WHERE meetup_id = " . (int)$meetupId;
+    if (!$conn->query($updateSql)) api_error('Update error: ' . $conn->error, 500);
     api_success(['updated' => true, 'type' => 'marketplace']);
 }
 
@@ -57,12 +57,9 @@ if ($lfMeetup) {
     ];
     $mappedStatus = isset($statusMap[$status]) ? $statusMap[$status] : $status;
 
-    // Update lost & found meetup
-    $stmt = $conn->prepare('UPDATE lost_found_meetups SET status = ? WHERE id = ? LIMIT 1');
-    if (!$stmt) api_error('Prepare error: ' . $conn->error, 500);
-    $stmt->bind_param('si', $mappedStatus, $meetupId);
-    if (!$stmt->execute()) api_error('Execute error: ' . $stmt->error, 500);
-    $stmt->close();
+    // Update lost & found meetup - use direct query to avoid binding issues
+    $updateSql = "UPDATE lost_found_meetups SET status = '" . $conn->real_escape_string($mappedStatus) . "' WHERE id = " . (int)$meetupId;
+    if (!$conn->query($updateSql)) api_error('Update error: ' . $conn->error, 500);
     api_success(['updated' => true, 'type' => 'lost_found']);
 }
 
