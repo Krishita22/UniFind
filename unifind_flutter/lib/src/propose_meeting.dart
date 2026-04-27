@@ -227,19 +227,25 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
       // ── Create meetup using api_service ───────────────────────────────
       late int meetupId;
       if (widget.conv.isLostFound) {
-        // For lost & found, look up the claim_id
+        // For lost & found, the listing_id is the found_item_id
+        // Look up the approved claim for this found item and current user
         final claims = await getMyApprovedClaims(userId: widget.myId);
+        final foundItemId = widget.conv.listingId ?? 0;
+        if (foundItemId <= 0) throw Exception('No found item in conversation');
+
         Map<String, dynamic>? claim;
         try {
           claim = claims.firstWhere((c) {
-            final convId = int.tryParse(c['conversation_id']?.toString() ?? '') ?? 0;
-            return convId == widget.conv.id;
+            final itemId = int.tryParse(c['item_id']?.toString() ?? '') ?? 0;
+            return itemId == foundItemId;
           });
         } catch (_) {
-          throw Exception('No approved claim found for this conversation');
+          throw Exception('No approved claim found for this item');
         }
+
         final claimId = int.tryParse(claim['claim_id']?.toString() ?? '') ?? 0;
         if (claimId <= 0) throw Exception('Invalid claim_id');
+
         final result = await createLostFoundMeetup(
           claimId: claimId,
           date: dateStr,
