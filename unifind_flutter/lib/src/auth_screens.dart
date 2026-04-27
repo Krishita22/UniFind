@@ -36,9 +36,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     case 'INVALID_CREDENTIALS':
       return 'Invalid username or password.';
     case 'USER_NOT_FOUND':
-      return 'No account found for this username. Please sign up first.';
+      return 'No account found for this username. Username is case sensitive.';
     case 'EMAIL_NOT_FOUND':
-      return 'No account found for this username. Please sign up first.';
+      return 'No account found for this username Username is case sensitive.';
     case 'ACCOUNT_UNVERIFIED':
       return 'Your account is not verified yet. Please complete verification.';
     case 'ACCOUNT_BANNED':
