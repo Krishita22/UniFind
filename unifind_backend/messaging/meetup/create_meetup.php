@@ -31,11 +31,11 @@ if ($itemId > 0) {
 
     // Create marketplace meetup
     $stmt = $conn->prepare("
-        INSERT INTO meetups (item_id, conversation_id, buyer_id, seller_id, meetup_date, meetup_time, location, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'user_pending')
+        INSERT INTO meetups (item_id, buyer_id, seller_id, meetup_date, meetup_time, location, status)
+        VALUES (?, ?, ?, ?, ?, ?, 'user_pending')
     ");
     if (!$stmt) api_error('Prepare error: ' . $conn->error, 500);
-    $stmt->bind_param('iiisss', $itemId, $conversationId, $buyerId, $sellerId, $date, $time, $location);
+    $stmt->bind_param('iiisss', $itemId, $buyerId, $sellerId, $date, $time, $location);
     if (!$stmt->execute()) api_error('Execute error: ' . $stmt->error, 500);
     $meetupId = $conn->insert_id;
     $stmt->close();
@@ -92,8 +92,8 @@ if ($itemId > 0) {
 
     // Create match
     $matchStmt = $conn->prepare("
-        INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, status)
-        VALUES (?, ?, ?, 'pending')
+        INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, status, found_location, found_when, match_details)
+        VALUES (?, ?, ?, 'pending', '', '', '')
     ");
     if (!$matchStmt) api_error('Match prepare error: ' . $conn->error, 500);
     $matchStmt->bind_param('iii', $lostItemId, $claim['found_item_id'], $claimantId);
@@ -104,7 +104,7 @@ if ($itemId > 0) {
     // Create meetup
     $meetupStmt = $conn->prepare("
         INSERT INTO lost_found_meetups (match_id, meetup_date, meetup_time, meetup_location, status)
-        VALUES (?, ?, ?, ?, 'pending')
+        VALUES (?, ?, ?, ?, 'user_pending')
     ");
     if (!$meetupStmt) api_error('Meetup prepare error: ' . $conn->error, 500);
     $meetupStmt->bind_param('isss', $matchId, $date, $time, $location);

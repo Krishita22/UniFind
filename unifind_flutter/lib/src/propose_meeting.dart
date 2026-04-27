@@ -225,23 +225,35 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
       final dateStr = _date!.toIso8601String().split('T')[0];
 
       // ── Create meetup using api_service ───────────────────────────────
-      late int meetupId;
-      if (widget.conv.isLostFound) {
-        // For lost & found, the listing_id is the found_item_id
-        // Look up the approved claim for this found item and current user
-        final claims = await getMyApprovedClaims(userId: widget.myId);
-        final foundItemId = widget.conv.listingId ?? 0;
-        if (foundItemId <= 0) throw Exception('No found item in conversation');
+      int meetupId = 0;
 
-        Map<String, dynamic>? claim;
+      // Try marketplace first if listing_id exists
+      if (widget.conv.listingId != null && widget.conv.listingId! > 0) {
         try {
-          claim = claims.firstWhere((c) {
-            final itemId = int.tryParse(c['item_id']?.toString() ?? '') ?? 0;
-            return itemId == foundItemId;
-          });
-        } catch (_) {
-          throw Exception('No approved claim found for this item');
+          meetupId = await createMeetup(
+            itemId:         widget.conv.listingId ?? 0,
+            conversationId: widget.conv.id,
+            buyerId:        widget.myId,
+            sellerId:       widget.conv.otherId,
+            date:           dateStr,
+            time:           timeStr,
+            location:       _selectedSpot,
+          );
+        } catch (e) {
+          debugPrint('Marketplace meetup failed: $e, trying lost & found');
+          meetupId = 0;
         }
+      }
+
+      // If marketplace failed or no listing_id, try lost & found
+      if (meetupId <= 0) {
+        final claims = await getMyApprovedClaims(userId: widget.myId);
+        if (claims.isEmpty) throw Exception('No approved claims found');
+
+        // Find claim for this conversation (conversation doesn't have listing_id for L&F)
+        // Just use the first approved claim since there should only be one active
+        Map<String, dynamic>? claim = claims.isNotEmpty ? claims.first : null;
+        if (claim == null) throw Exception('No approved claim found');
 
         final claimId = int.tryParse(claim['claim_id']?.toString() ?? '') ?? 0;
         if (claimId <= 0) throw Exception('Invalid claim_id');
@@ -253,16 +265,6 @@ class _ProposeMeetupWizardState extends State<_ProposeMeetupWizard>
           location: _selectedSpot,
         );
         meetupId = result['meetup_id'] as int? ?? 0;
-      } else {
-        meetupId = await createMeetup(
-          itemId:         widget.conv.listingId ?? 0,
-          conversationId: widget.conv.id,
-          buyerId:        widget.myId,
-          sellerId:       widget.conv.otherId,
-          date:           dateStr,
-          time:           timeStr,
-          location:       _selectedSpot,
-        );
       }
       if (meetupId <= 0) throw Exception('No meetup_id returned');
 

@@ -828,6 +828,8 @@ class _AdminAppState extends State<AdminApp> {
                 foundItems: _lf.where((i) => i.type == 'found' && i.status == 'active').toList(),
                 matchedPairs: _matches,
                 onRefresh: _loadAll,
+                myId: 1,
+                myName: widget.adminUsername,
               ),
               _AdminMeetupsPanel(meetups: _meetups, onRefresh: _loadAll),
               _AdminUsersPanel(users: _users, onRefresh: _loadAll),
@@ -1441,7 +1443,9 @@ class _AdminLostFoundPanel extends StatefulWidget {
   final List<AdminLostFoundItem> foundItems;
   final List<MatchedPair> matchedPairs;
   final VoidCallback onRefresh;
-  const _AdminLostFoundPanel({required this.items, required this.lostItems, required this.foundItems, required this.matchedPairs, required this.onRefresh});
+  final int myId;
+  final String myName;
+  const _AdminLostFoundPanel({required this.items, required this.lostItems, required this.foundItems, required this.matchedPairs, required this.onRefresh, required this.myId, required this.myName});
 
   @override
   State<_AdminLostFoundPanel> createState() => _AdminLostFoundPanelState();
@@ -1555,18 +1559,19 @@ class _AdminLostFoundPanelState extends State<_AdminLostFoundPanel> {
                                     try {
                                       await adminAcceptClaim(claimId: c.id, itemId: item.id);
                                       if (ctx.mounted) {
-                                        Navigator.pop(ctx);
                                         ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
                                           content: Row(children: const [
                                             Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 16),
                                             SizedBox(width: 8),
-                                            Expanded(child: Text('Claim approved! Chat opened.')),
+                                            Expanded(child: Text('Claim approved! Chat opened for users.')),
                                           ]),
                                           backgroundColor: _cGreen,
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                           margin: const EdgeInsets.all(12),
+                                          duration: const Duration(seconds: 2),
                                         ));
+                                        Navigator.pop(ctx);
                                       }
                                       widget.onRefresh();
                                     } catch (e) {

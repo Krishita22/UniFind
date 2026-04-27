@@ -19,12 +19,13 @@ if ($userId <= 0) api_error('user_id required.', 400);
 $stmt = $conn->prepare(
     'SELECT c.id, c.subject, c.listing_id, c.user1_id, c.user2_id,
             u1.username AS user1_name, u2.username AS user2_name,
-            lfc.id AS claim_id,
+            u1.email AS user1_email, u2.email AS user2_email,
+            u1.first_name AS user1_first_name, u2.first_name AS user2_first_name,
+            (c.listing_id IS NULL) AS is_lost_found,
             (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.sent_at DESC LIMIT 1) AS last_msg,
             (SELECT m.sent_at FROM messages m WHERE m.conversation_id = c.id ORDER BY m.sent_at DESC LIMIT 1) AS last_at,
             (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.sender_id != ? AND m.is_read = 0) AS unread
      FROM conversations c
-     LEFT JOIN lost_found_claims lfc ON lfc.conversation_id = c.id
      JOIN users u1 ON u1.id = c.user1_id
      JOIN users u2 ON u2.id = c.user2_id
      WHERE c.user1_id = ? OR c.user2_id = ?

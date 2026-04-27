@@ -36,33 +36,35 @@ $reason = (string)($body['reason'] ?? '');
 if ($meetupId <= 0) api_error('meetup_id required.', 400);
 if (empty($reason)) api_error('reason required.', 400);
 
-// Try lost & found meetup first
-$lfStmt = $conn->prepare("
-    SELECT id FROM lost_found_meetups WHERE id = ? LIMIT 1
-");
-$isLostFound = false;
-if ($lfStmt) {
-    $lfStmt->bind_param('i', $meetupId);
-    $lfStmt->execute();
-    $lfRow = $lfStmt->get_result()->fetch_assoc();
-    $lfStmt->close();
-    $isLostFound = $lfRow !== null;
+// Try marketplace meetup first (check both id and meetup_id columns)
+$mStmt = $conn->prepare('SELECT id FROM meetups WHERE id = ? OR meetup_id = ? LIMIT 1');
+$isMarketplace = false;
+$marketplaceId = 0;
+if ($mStmt) {
+    $mStmt->bind_param('ii', $meetupId, $meetupId);
+    $mStmt->execute();
+    $mRow = $mStmt->get_result()->fetch_assoc();
+    $mStmt->close();
+    if ($mRow) {
+        $isMarketplace = true;
+        $marketplaceId = $mRow['id'];
+    }
 }
 
-if ($isLostFound) {
-    // Deny lost & found meetup
-    $status = 'denied';
-    $upd = $conn->prepare('UPDATE lost_found_meetups SET status = ?, denial_reason = ? WHERE id = ?');
+if ($isMarketplace) {
+    // Deny marketplace meetup
+    $status = 'user_cancelled';
+    $upd = $conn->prepare('UPDATE meetups SET status = ?, denial_reason = ? WHERE id = ?');
     if (!$upd) api_error('Prepare error: ' . $conn->error, 500);
-    if (!$upd->bind_param('ssi', $status, $reason, $meetupId)) api_error('Bind error: ' . $upd->error, 500);
+    if (!$upd->bind_param('ssi', $status, $reason, $marketplaceId)) api_error('Bind error: ' . $upd->error, 500);
     if (!$upd->execute()) api_error('Execute error: ' . $upd->error, 500);
     $upd->close();
 
-    api_success(['meetup_id' => $meetupId, 'type' => 'lost_found', 'status' => 'denied']);
+    api_success(['meetup_id' => $meetupId, 'type' => 'marketplace', 'status' => 'user_cancelled']);
 } else {
-    // Marketplace meetup (if it exists)
+    // Lost & found meetup (if it exists)
     $stmt = $conn->prepare("
-        SELECT id FROM meetups WHERE id = ? LIMIT 1
+        SELECT id FROM lost_found_meetups WHERE id = ? LIMIT 1
     ");
     if (!$stmt) api_error('Server error.', 500);
     $stmt->bind_param('i', $meetupId);
@@ -72,11 +74,11 @@ if ($isLostFound) {
     if (!$row) api_error('Meetup not found.', 404);
 
     $status = 'denied';
-    $upd = $conn->prepare('UPDATE meetups SET status = ?, denial_reason = ? WHERE id = ?');
+    $upd = $conn->prepare('UPDATE lost_found_meetups SET status = ?, denial_reason = ? WHERE id = ?');
     if (!$upd) api_error('Prepare error: ' . $conn->error, 500);
     if (!$upd->bind_param('ssi', $status, $reason, $meetupId)) api_error('Bind error: ' . $upd->error, 500);
     if (!$upd->execute()) api_error('Execute error: ' . $upd->error, 500);
     $upd->close();
 
-    api_success(['meetup_id' => $meetupId, 'type' => 'marketplace', 'status' => 'denied']);
+    api_success(['meetup_id' => $meetupId, 'type' => 'lost_found', 'status' => 'denied']);
 }

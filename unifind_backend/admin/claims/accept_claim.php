@@ -18,14 +18,16 @@ $claimId = (int)($body['claim_id'] ?? 0);
 
 if ($claimId <= 0) api_error('claim_id required.', 400);
 
-// Get claim details
+// Get claim details and conversation_id
 $claimStmt = $conn->prepare("
     SELECT c.id, c.claimant_id, c.found_item_id, c.status,
            u.email as claimant_email, u.username as claimant_username,
-           lf.title as item_title
+           lf.title as item_title, lf.poster_id as finder_id,
+           conv.id as conversation_id
     FROM lost_found_claims c
     JOIN users u ON c.claimant_id = u.id
     JOIN lost_found_items lf ON c.found_item_id = lf.id
+    LEFT JOIN conversations conv ON conv.listing_id = c.id
     WHERE c.id = ? LIMIT 1
 ");
 if (!$claimStmt) api_error('Prepare error: ' . $conn->error, 500);
@@ -35,6 +37,50 @@ $claim = $claimStmt->get_result()->fetch_assoc();
 $claimStmt->close();
 
 if (!$claim) api_error('Claim not found.', 404);
+
+// Create conversation if it doesn't exist
+if (!$claim['conversation_id']) {
+    $convId = null;
+    $subject = "Claim: " . $claim['item_title'];
+
+    // Check if conversation already exists
+    $existConv = $conn->prepare(
+        'SELECT id FROM conversations WHERE listing_id = ? AND ((user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)) LIMIT 1'
+    );
+    if ($existConv) {
+        $existConv->bind_param('iiiii', $claimId, $claim['claimant_id'], $claim['finder_id'], $claim['finder_id'], $claim['claimant_id']);
+        $existConv->execute();
+        $existRow = $existConv->get_result()->fetch_assoc();
+        $existConv->close();
+        if ($existRow) $convId = (int)$existRow['id'];
+    }
+
+    if ($convId === null) {
+        $convIns = $conn->prepare(
+            'INSERT INTO conversations (listing_id, user1_id, user2_id, subject, created_at) VALUES (?, ?, ?, ?, NOW())'
+        );
+        if ($convIns) {
+            $convIns->bind_param('iiis', $claimId, $claim['claimant_id'], $claim['finder_id'], $subject);
+            if ($convIns->execute()) $convId = (int)$convIns->insert_id;
+            $convIns->close();
+        }
+
+        // Opening message
+        if ($convId !== null) {
+            $opener = "Your claim for \"" . $claim['item_title'] . "\" has been approved! You can now coordinate meetup details here.";
+            $msgIns = $conn->prepare(
+                'INSERT INTO messages (conversation_id, sender_id, body, is_read, sent_at) VALUES (?, ?, ?, 0, NOW())'
+            );
+            if ($msgIns) {
+                $msgIns->bind_param('iis', $convId, $claim['claimant_id'], $opener);
+                $msgIns->execute();
+                $msgIns->close();
+            }
+        }
+    }
+
+    $claim['conversation_id'] = $convId;
+}
 
 // Record approval in claim_approvals
 $approvalStmt = $conn->prepare("
@@ -61,6 +107,7 @@ $headers = "From: UniFind <unifind@ivanovs1.nodomain>\r\n";
 
 api_success([
     'claim_id' => $claimId,
-    'status' => 'approved'
+    'status' => 'approved',
+    'conversation_id' => $claim['conversation_id']
 ]);
 ?>

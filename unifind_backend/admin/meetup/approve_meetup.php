@@ -17,7 +17,30 @@ $body     = json_decode(file_get_contents('php://input'), true) ?? [];
 $meetupId = (int)($body['meetup_id'] ?? 0);
 if ($meetupId <= 0) api_error('meetup_id required.');
 
-// Step 1: Get the meetup
+// Check if it's a marketplace meetup first
+$marketplaceStmt = $conn->prepare('SELECT id FROM meetups WHERE id = ? LIMIT 1');
+$isMarketplace = false;
+if ($marketplaceStmt) {
+    $marketplaceStmt->bind_param('i', $meetupId);
+    $marketplaceStmt->execute();
+    $mRow = $marketplaceStmt->get_result()->fetch_assoc();
+    $marketplaceStmt->close();
+    $isMarketplace = $mRow !== null;
+}
+
+if ($isMarketplace) {
+    // Approve marketplace meetup
+    $status = 'confirmed';
+    $upd = $conn->prepare('UPDATE meetups SET status = ? WHERE id = ?');
+    if (!$upd) api_error('Prepare error: ' . $conn->error, 500);
+    $upd->bind_param('si', $status, $meetupId);
+    if (!$upd->execute()) api_error('Execute error: ' . $upd->error, 500);
+    $upd->close();
+
+    api_success(['meetup_id' => $meetupId, 'type' => 'marketplace', 'status' => 'confirmed']);
+}
+
+// Try lost & found meetup
 $meetup = $conn->prepare("
     SELECT id, match_id, meetup_date, meetup_time, meetup_location, status
     FROM lost_found_meetups WHERE id = ? LIMIT 1
@@ -83,7 +106,7 @@ $foundUser->close();
 if (!$foundUserData) api_error('Found user not found', 404);
 
 // Step 7: Update meetup status
-$status = 'approved';
+$status = 'admin_pending';
 $upd = $conn->prepare('UPDATE lost_found_meetups SET status = ? WHERE id = ?');
 if (!$upd) api_error('Update prepare: ' . $conn->error, 500);
 $upd->bind_param('si', $status, $meetupId);
@@ -128,6 +151,6 @@ $headers = "MIME-Version: 1.0\r\nContent-type: text/html; charset=UTF-8\r\nFrom:
 api_success([
     'meetup_id' => $meetupId,
     'type' => 'lost_found',
-    'status' => 'approved'
+    'status' => 'admin_pending'
 ]);
 ?>
