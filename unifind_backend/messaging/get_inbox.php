@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../../config.php';
-require_once __DIR__ . '/../includes/crypto.php';
+require_once __DIR__ . '/../../crypto.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -21,13 +21,28 @@ $stmt = $conn->prepare(
             u1.username AS user1_name, u2.username AS user2_name,
             u1.email AS user1_email, u2.email AS user2_email,
             u1.first_name AS user1_first_name, u2.first_name AS user2_first_name,
-            (c.listing_id IS NULL) AS is_lost_found,
             (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.sent_at DESC LIMIT 1) AS last_msg,
             (SELECT m.sent_at FROM messages m WHERE m.conversation_id = c.id ORDER BY m.sent_at DESC LIMIT 1) AS last_at,
-            (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.sender_id != ? AND m.is_read = 0) AS unread
+            (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.sender_id != ? AND m.is_read = 0) AS unread,
+            c.is_complete,
+            CASE
+                WHEN c.listing_id IS NULL THEN 1
+                WHEN lfi.id IS NOT NULL THEN 1
+                WHEN lfc.id IS NOT NULL THEN 1
+                WHEN lfm.id IS NOT NULL THEN 1
+                WHEN mt.id IS NOT NULL THEN 1
+                WHEN c.subject LIKE "Match:%" THEN 1
+                WHEN c.subject LIKE "Claim Approved:%" THEN 1
+                WHEN c.subject LIKE "Lost & Found:%" THEN 1
+                ELSE 0
+            END AS is_lost_found
      FROM conversations c
      JOIN users u1 ON u1.id = c.user1_id
      JOIN users u2 ON u2.id = c.user2_id
+     LEFT JOIN lost_found_items lfi ON lfi.id = c.listing_id
+     LEFT JOIN lost_found_claims lfc ON lfc.id = c.listing_id
+     LEFT JOIN lost_found_matches lfm ON lfm.id = c.listing_id
+     LEFT JOIN matches mt ON mt.id = c.listing_id
      WHERE c.user1_id = ? OR c.user2_id = ?
      ORDER BY last_at DESC'
 );
