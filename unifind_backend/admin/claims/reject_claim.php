@@ -40,8 +40,8 @@ if (!$claim) api_error('Claim not found.', 404);
 
 // Record rejection in claim_approvals
 $rejectionStmt = $conn->prepare("
-    INSERT INTO claim_approvals (claim_id, status, rejection_reason, approved_at)
-    VALUES (?, 'rejected', ?, NOW())
+    INSERT INTO claim_approvals (claim_id, status, rejection_reason)
+    VALUES (?, 'rejected', ?)
 ");
 if (!$rejectionStmt) api_error('Rejection insert prepare: ' . $conn->error, 500);
 $rejectionStmt->bind_param('is', $claimId, $reason);
