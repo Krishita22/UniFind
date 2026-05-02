@@ -123,14 +123,18 @@ Core shared backend logic (`includes/`):
 Auth endpoints (`auth/`):
 - `login.php`, `logout.php`, `register.php`, `verify.php`, `resend_verification.php`
 
-Listing endpoints/pages (`listings/`):
+Listing endpoints (`listings/`):
 - `create.php`: create listing
 - `view.php`: view listing
+
+API endpoints:
+- `api_*.php`: various API endpoints for listings, offers, messages, notifications, ratings, etc.
 
 Other:
 - `assets/css/style.css`: backend styles.
 - `uploads/`: uploaded images/files.
 - `uploads/.htaccess`: blocks script execution in uploads.
+- `CPANEL_DEPLOYMENT.md`: backend deployment instructions.
 
 ## Notes
 - Flutter app is the main client UI.
