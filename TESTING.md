@@ -49,7 +49,7 @@ This document outlines all test cases for the UniFind application, covering the 
 
 **How to Create Test Accounts:**
 1. Register new accounts via the Flutter app with Montclair emails
-2. Use the admin panel to assign roles (Student/Faculty/Admin)
+2. Use the admin view to assign roles (Student/Faculty/Admin)
 3. Verify emails through registration process
 4. Document credentials in this section for team reference
 
@@ -750,7 +750,7 @@ This document outlines all test cases for the UniFind application, covering the 
 
 ---
 
-### 8. ADMIN PANEL TESTS
+### 8. ADMIN VIEW TESTS
 
 #### 8.1 User Management
 
