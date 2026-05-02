@@ -1,6 +1,6 @@
 # UniFind
 
-Ryisha Heusner, Stephania Ivanov, Sumaya Rahman, Nick Seminerio, Krishita Vaghani
+Ryisha Heusner, Stephania Ivanov, Sumaya Rahman, Krishita Vaghani, Nick Seminerio
 
 Marketplace app with lost and found - CSIT 415 Project.
 
