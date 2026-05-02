@@ -77,7 +77,7 @@ Main app code (`lib/`):
 - `lib/src/my_listings_screen.dart`: shows user’s own listings.
 - `lib/src/item_detail_screen.dart`: item details page.
 - `lib/src/documentation_screen.dart`: in-app docs/help page.
-- `lib/src/ui_controls.dart`: shared controls (search/chips/buttons).
+- `lib/src/ui_controls.dart`: shared controls.
 - `lib/src/ui_feedback.dart`: shared empty-state and feedback UI.
 - `lib/src/data.dart`: common models/enums/category lists.
 
