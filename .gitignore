@@ -17,3 +17,14 @@ unifind_flutter/ios/Flutter/ephemeral/
 unifind_flutter/macos/Flutter/ephemeral/
 unifind_flutter/linux/flutter/ephemeral/
 .claude/
+.vscode/
+
+# Xcode files
+*.pbxproj
+*.xcworkspace
+*.xcodeproj
+*.xcconfig
+DerivedData/
+xcuserdata/
+*.hmap
+*.ipa
