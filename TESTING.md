@@ -97,7 +97,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `weak`
   3. Click "Send Verification Code"
 - **Expected Result:** Error message: "Password must contain uppercase, digit, and special character"
-- **Actual Result:** Error message displayed, form rejected
+- **Actual Result:** Error message "Password must contain uppercase, digit, and special character" displayed, form rejected
 - **Status:** Pass
 
 **TC_AUTH_004: Registration - Username Already Taken**
@@ -108,7 +108,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Enter username: `johndoe123` (existing)
   4. Click "Check Availability" or proceed
 - **Expected Result:** Error: "Username already taken"
-- **Actual Result:** Error message displayed during username check
+- **Actual Result:** Error message "Username already taken" displayed during username validation
 - **Status:** Pass
 
 **TC_AUTH_005: Registration - Empty Required Fields**
@@ -118,7 +118,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Send Verification Code"
 - **Expected Result:** Form validation error: "Email is required"
-- **Actual Result:** Validation error displayed
+- **Actual Result:** Validation error "Email is required" displayed, form not submitted
 - **Status:** Pass
 
 **TC_AUTH_006: Registration - Verification Code Expired**
@@ -128,7 +128,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Wait 16+ minutes
   3. Enter code and submit
 - **Expected Result:** Error: "Verification code has expired. Request a new code."
-- **Actual Result:** Error message displayed
+- **Actual Result:** Error message "Verification code has expired. Request a new code." displayed
 - **Status:** Pass
 
 ---
@@ -153,7 +153,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Sign In"
 - **Expected Result:** Error: "No account found for this username"
-- **Actual Result:** Error message displayed
+- **Actual Result:** Error message "No account found for this username" displayed
 - **Status:** Pass
 
 **TC_AUTH_009: Login - Wrong Password**
@@ -163,7 +163,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `WrongPassword123!`
   3. Click "Sign In"
 - **Expected Result:** Error: "Invalid username or password"
-- **Actual Result:** Error message displayed
+- **Actual Result:** Error message "Invalid username or password" displayed
 - **Status:** Pass
 
 **TC_AUTH_010: Login - Unverified Email**
@@ -173,7 +173,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `[CORRECT_PASSWORD]`
   3. Click "Sign In"
 - **Expected Result:** Error: "Please verify your email before logging in" + option to resend code
-- **Actual Result:** Error message displayed with resend option
+- **Actual Result:** Error message "Please verify your email before logging in" displayed with "Resend Code" button
 - **Status:** Pass
 
 **TC_AUTH_011: Login - Email Instead of Username**
@@ -183,7 +183,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Sign In"
 - **Expected Result:** User-friendly error: "Please enter your username, not your email address"
-- **Actual Result:** Error message displayed guiding to use username
+- **Actual Result:** Error message "Please enter your username, not your email address" displayed
 - **Status:** Pass
 
 **TC_AUTH_012: Login - Case Sensitivity on Username**
@@ -193,7 +193,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `[CORRECT_PASSWORD]`
   3. Click "Sign In"
 - **Expected Result:** Username is case-sensitive, login fails with "No account found"
-- **Actual Result:** Login fails, error message displayed
+- **Actual Result:** Login fails with error message "No account found for this username" displayed
 - **Status:** Pass
 
 ---
@@ -221,7 +221,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Wait 31+ minutes
   3. Enter code and submit
 - **Expected Result:** Error: "Your reset code expired. Request a new code."
-- **Actual Result:** Error message displayed
+- **Actual Result:** Error message "Your reset code expired. Request a new code." displayed
 - **Status:** Pass
 
 **TC_AUTH_015: Password Reset - Email Not Found**
@@ -256,7 +256,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Fill in all fields except "Price"
   2. Click "Post Listing"
 - **Expected Result:** Form validation: "Price is required"
-- **Actual Result:** Validation error displayed, form not submitted
+- **Actual Result:** Validation error "Price is required" displayed, form not submitted
 - **Status:** Pass
 
 **TC_LIST_003: Create Listing - Invalid Price**
@@ -265,7 +265,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter price: `abc` (non-numeric)
   2. Click "Post Listing"
 - **Expected Result:** Error: "Price must be a valid number"
-- **Actual Result:** Validation error displayed
+- **Actual Result:** Validation error "Price must be a valid number" displayed, form not submitted
 - **Status:** Pass
 
 **TC_LIST_004: Create Listing - Negative Price**
@@ -274,7 +274,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter price: `-50`
   2. Click "Post Listing"
 - **Expected Result:** Error: "Price must be greater than 0"
-- **Actual Result:** Validation error displayed
+- **Actual Result:** Validation error "Price must be greater than 0" displayed, form not submitted
 - **Status:** Pass
 
 **TC_LIST_005: Create Listing - No Image**
@@ -292,7 +292,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to upload image larger than 5MB
 - **Expected Result:** Error: "Image size must be less than 5MB"
-- **Actual Result:** Upload rejected with size error
+- **Actual Result:** Error message "Image size must be less than 5MB" displayed, upload rejected
 - **Status:** Pass
 
 **TC_LIST_007: Create Listing - Invalid Image Format**
@@ -300,7 +300,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to upload `.pdf` file
 - **Expected Result:** Error: "Only JPG, PNG, and GIF images allowed"
-- **Actual Result:** Upload rejected with format error
+- **Actual Result:** Error message "Only JPG, PNG, and GIF images allowed" displayed, upload rejected
 - **Status:** Pass
 
 ---
@@ -370,7 +370,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to access edit screen for someone else's listing
 - **Expected Result:** Access denied, shows message "You can only edit your own listings"
-- **Actual Result:** Edit option not available or access denied message shown
+- **Actual Result:** Edit button disabled or error message "You can only edit your own listings" shown when attempting edit
 - **Status:** Pass
 
 **TC_LIST_015: Delete Own Listing**
@@ -427,7 +427,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Don't upload image
   3. Click "Post"
 - **Expected Result:** Error: "Image is required for lost/found items"
-- **Actual Result:** Validation error displayed, prevents submission
+- **Actual Result:** Validation error "Image is required for lost/found items" displayed, prevents submission
 - **Status:** Pass
 
 ---
@@ -579,7 +579,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter offer price: `0`
   2. Click "Send Offer"
 - **Expected Result:** Error: "Offer price must be greater than 0"
-- **Actual Result:** Validation error displayed
+- **Actual Result:** Validation error "Offer price must be greater than 0" displayed, form not submitted
 - **Status:** Pass
 
 **TC_OFFER_003: Make Offer - Price Higher Than Asking**
@@ -596,7 +596,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to make another offer on same listing
 - **Expected Result:** Message: "You already have an active offer on this listing"
-- **Actual Result:** Error message displayed preventing duplicate offer
+- **Actual Result:** Error message "You already have an active offer on this listing" displayed, offer form disabled
 - **Status:** Pass
 
 ---
@@ -696,7 +696,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to rate same transaction again
 - **Expected Result:** Message: "You have already rated this transaction"
-- **Actual Result:** Error message displayed, prevents duplicate rating
+- **Actual Result:** Error message "You have already rated this transaction" displayed, rating form disabled
 - **Status:** Pass
 
 ---
@@ -755,7 +755,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter new password
   3. Click "Update Password"
 - **Expected Result:** Error: "Current password is incorrect"
-- **Actual Result:** Error message displayed
+- **Actual Result:** Error message "Current password is incorrect" displayed, password not updated
 - **Status:** Pass
 
 ---
@@ -782,7 +782,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Provide reason
   4. Click "Confirm Ban"
 - **Expected Result:** User banned, cannot login, listings deactivated
-- **Actual Result:** User banned and removed from system
+- **Actual Result:** User status changed to "Banned", login attempt fails, all listings become inactive
 - **Status:** Pass
 
 **TC_ADMIN_003: Unban User**
@@ -792,7 +792,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Click "Unban User"
   3. Click "Confirm"
 - **Expected Result:** User unbanned, can login again
-- **Actual Result:** User unbanned and can login
+- **Actual Result:** User status changed from "Banned" to "Active", login succeeds with correct credentials
 - **Status:** Pass
 
 ---
@@ -825,7 +825,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Provide reason
   4. Click "Confirm"
 - **Expected Result:** Listing rejected, removed, seller notified with reason
-- **Actual Result:** Listing rejected and seller notified
+- **Actual Result:** Listing status changed to "Rejected", listing removed from queue, seller notified via email with rejection reason
 - **Status:** Pass
 
 ---
