@@ -10,7 +10,7 @@ This repository contains:
 
 ## Live Demo
 
-The app is deployed and accessible at:
+The app is deployed on cPanel at:
 
 **http://cyan.csam.montclair.edu/~ivanovs1/Unifind/**
 
@@ -84,6 +84,7 @@ Think of this repo as two big parts:
 - `README.md`: project guide and setup instructions.
 - `unifind_flutter/`: Flutter app folder.
 - `unifind_backend/`: PHP backend folder.
+- `.gitignore`: files to exclude from version control.
 
 ### `unifind_flutter/` (the app)
 
@@ -118,7 +119,7 @@ Testing:
 Platform folders:
 - `android/`, `ios/`, `linux/`, `macos/`, `web/`: platform-specific runner/config files.
 
-Generated folders/files (safe to regenerate):
+Generated folders/files (safe to regenerate and excluded from git):
 - `.dart_tool/`
 - `build/`
 - `ios/Flutter/ephemeral/`
@@ -131,7 +132,6 @@ Top-level files:
 - `index.php`: backend home/entry page.
 - `schema.sql`: database tables/schema.
 - `composer.json`: PHP package dependencies.
-- `CPANEL_DEPLOYMENT.md`: deployment steps.
 - `README.md`: backend-specific notes.
 - `.htaccess`: Apache server/security rules.
 
