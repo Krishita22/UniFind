@@ -361,8 +361,8 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Click "Edit"
   2. Change price
   3. Click "Save Changes"
-- **Expected Result:** Listing updated, new price displayed
-- **Actual Result:** Changes saved and reflected in listing
+- **Expected Result:** Changes saved, listing sent back to admin for approval, status shows "Pending Approval"
+- **Actual Result:** Changes saved, listing status changed to "Pending Approval", removed from marketplace until admin re-approves
 - **Status:** Pass
 
 **TC_LIST_014: Update Listing - Cannot Edit Others**
