@@ -1,3 +1,0 @@
-[build]
-  publish = "unifind_flutter/build/web"
-  command = "echo 'Pre-built Flutter web files'"
