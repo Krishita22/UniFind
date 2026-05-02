@@ -420,14 +420,14 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Actual Result:** Item created and sent to admin queue, status shows "Pending Approval"
 - **Status:** Pass
 
-**TC_LF_003: Lost/Found - Missing Image**
+**TC_LF_003: Lost/Found - No Image Optional**
 - **Precondition:** User is posting lost item
 - **Steps:**
   1. Fill all required fields
   2. Don't upload image
   3. Click "Post"
-- **Expected Result:** Error: "Image is required for lost/found items"
-- **Actual Result:** Validation error "Image is required for lost/found items" displayed, prevents submission
+- **Expected Result:** Lost/Found item posted successfully without image
+- **Actual Result:** Item created and sent to admin queue with status "Pending Approval", placeholder image used if no image provided
 - **Status:** Pass
 
 ---
