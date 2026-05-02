@@ -87,7 +87,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Send Verification Code"
 - **Expected Result:** Error message: "Please use a Montclair email address"
-- **Actual Result:** Error message "Please use a Montclair email address" displayed, form rejected
+- **Actual Result:** Error message "Please use a Montclair email address" displayed, form rejected, verification code NOT sent
 - **Status:** Pass
 
 **TC_AUTH_003: Registration - Password Too Weak**
