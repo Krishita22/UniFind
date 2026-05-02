@@ -11,14 +11,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
 if (!function_exists('api_success')) {
     function api_success($data) { header('Content-Type: application/json'); echo json_encode(['success' => true, 'data' => $data]); exit; }
     function api_error(string $message, int $status = 400) { http_response_code($status); header('Content-Type: application/json'); echo json_encode(['success' => false, 'error' => $message]); exit; }
-    function log_error($msg) { error_log('[update_meetup] ' . $msg); }
 }
 
 $body = json_decode(file_get_contents('php://input'), true) ?? [];
 $meetupId = (int)($body['meetup_id'] ?? 0);
 $status = (string)($body['status'] ?? '');
-
-log_error("Request: meetupId=$meetupId, status=$status");
 
 if ($meetupId <= 0) api_error('meetup_id required.', 400);
 if (empty($status)) api_error('status required.', 400);
@@ -39,7 +36,7 @@ if ($marketplaceMeetup) {
 }
 
 // Check if it's a lost & found meetup
-$lfStmt = $conn->prepare('SELECT id FROM lost_found_meetups WHERE id = ? LIMIT 1');
+$lfStmt = $conn->prepare('SELECT id FROM lost_found_meetups WHERE id = ?');
 if (!$lfStmt) api_error('Prepare error: ' . $conn->error, 500);
 $lfStmt->bind_param('i', $meetupId);
 if (!$lfStmt->execute()) api_error('Execute error: ' . $lfStmt->error, 500);
@@ -49,11 +46,11 @@ $lfStmt->close();
 if ($lfMeetup) {
     // Map marketplace statuses to lost & found enum values
     $statusMap = [
-        'user_pending' => 'pending',
-        'admin_pending' => 'pending',
-        'user_cancelled' => 'denied',
-        'confirmed' => 'approved',
-        'completed' => 'resolved',
+        'user_pending' => 'user_pending',
+        'admin_pending' => 'admin_pending',
+        'user_cancelled' => 'user_denied',
+        'confirmed' => 'confirmed',
+        'completed' => 'completed',
     ];
     $mappedStatus = isset($statusMap[$status]) ? $statusMap[$status] : $status;
 

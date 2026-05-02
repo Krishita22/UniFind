@@ -1,0 +1,5 @@
+[21-Apr-2026 21:50:48 UTC] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'ivanovs1_TestUser'@'localhost' (using password: YES) in /home/ivanovs1/public_html/UniFind_API/config.php on line 16
+[21-Apr-2026 21:50:52 UTC] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'ivanovs1_TestUser'@'localhost' (using password: YES) in /home/ivanovs1/public_html/UniFind_API/config.php on line 16
+[21-Apr-2026 21:50:53 UTC] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'ivanovs1_TestUser'@'localhost' (using password: YES) in /home/ivanovs1/public_html/UniFind_API/config.php on line 16
+[21-Apr-2026 21:50:53 UTC] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'ivanovs1_TestUser'@'localhost' (using password: YES) in /home/ivanovs1/public_html/UniFind_API/config.php on line 16
+[21-Apr-2026 21:50:56 UTC] PHP Warning:  mysqli::__construct(): (HY000/1045): Access denied for user 'ivanovs1_TestUser'@'localhost' (using password: YES) in /home/ivanovs1/public_html/UniFind_API/config.php on line 16

@@ -16,7 +16,6 @@ if (!function_exists('api_success')) {
 $body = json_decode(file_get_contents('php://input'), true) ?? [];
 $itemId = (int)($body['item_id'] ?? 0);
 $claimId = (int)($body['claim_id'] ?? 0);
-$conversationId = (int)($body['conversation_id'] ?? 0);
 $buyerId = (int)($body['buyer_id'] ?? 0);
 $sellerId = (int)($body['seller_id'] ?? 0);
 $date = (string)($body['meetup_date'] ?? '');
@@ -27,7 +26,7 @@ if (empty($date) || empty($time) || empty($location)) api_error('meetup_date, me
 
 if ($itemId > 0) {
     // MARKETPLACE MEETUP
-    if ($conversationId <= 0 || $buyerId <= 0 || $sellerId <= 0) api_error('For marketplace meetups: conversation_id, buyer_id, seller_id required.', 400);
+    if ($buyerId <= 0 || $sellerId <= 0) api_error('For marketplace meetups: buyer_id, seller_id required.', 400);
 
     // Create marketplace meetup
     $stmt = $conn->prepare("
@@ -47,10 +46,10 @@ if ($itemId > 0) {
 
     // Verify claim exists and is approved
     $claimStmt = $conn->prepare("
-        SELECT c.id, c.found_item_id, c.claimant_id, ca.status as claim_status
+        SELECT c.id, c.found_item_id, c.claimant_id
         FROM lost_found_claims c
         LEFT JOIN claim_approvals ca ON c.id = ca.claim_id AND ca.status = 'approved'
-        WHERE c.id = ? LIMIT 1
+        WHERE c.id = ? AND ca.status = 'approved' LIMIT 1
     ");
     if (!$claimStmt) api_error('Prepare error: ' . $conn->error, 500);
     $claimStmt->bind_param('i', $claimId);
@@ -58,8 +57,7 @@ if ($itemId > 0) {
     $claim = $claimStmt->get_result()->fetch_assoc();
     $claimStmt->close();
 
-    if (!$claim) api_error('Claim not found.', 404);
-    if ($claim['claim_status'] !== 'approved') api_error('Claim must be approved before proposing meetup.', 400);
+    if (!$claim) api_error('Claim not found or not approved.', 404);
 
     // Get found item details
     $itemStmt = $conn->prepare("SELECT poster_id FROM lost_found_items WHERE id = ? LIMIT 1");
@@ -71,7 +69,6 @@ if ($itemId > 0) {
 
     if (!$item) api_error('Found item not found.', 404);
 
-    $finderId = $item['poster_id'];
     $claimantId = $claim['claimant_id'];
 
     // Get claimant's lost item
@@ -92,8 +89,8 @@ if ($itemId > 0) {
 
     // Create match
     $matchStmt = $conn->prepare("
-        INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, status, found_location, found_when, match_details)
-        VALUES (?, ?, ?, 'pending', '', '', '')
+        INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, found_location, found_when, match_details, status)
+        VALUES (?, ?, ?, '', '', '', 'pending')
     ");
     if (!$matchStmt) api_error('Match prepare error: ' . $conn->error, 500);
     $matchStmt->bind_param('iii', $lostItemId, $claim['found_item_id'], $claimantId);

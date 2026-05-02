@@ -67,12 +67,12 @@ if ($stmt) {
     $stmt->close();
 
     foreach ($rows as $row) {
-        // Map lost & found enum values back to marketplace statuses for consistency
         $statusMap = [
-            'pending' => 'user_pending',
-            'approved' => 'confirmed',
-            'denied' => 'user_cancelled',
-            'resolved' => 'completed',
+            'user_pending' => 'user_pending',
+            'admin_pending' => 'admin_pending',
+            'confirmed' => 'confirmed',
+            'user_denied' => 'user_cancelled',
+            'completed' => 'completed',
         ];
         $mappedStatus = isset($statusMap[$row['status']]) ? $statusMap[$row['status']] : $row['status'];
 

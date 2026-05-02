@@ -1,0 +1,19 @@
+[26-Apr-2026 14:42:16 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:42:17 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:42:17 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:42:18 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:45:22 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:45:23 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:45:24 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:45:24 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:45:24 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:45:25 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 14:45:25 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 88
+[26-Apr-2026 17:48:43 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 39
+[26-Apr-2026 17:48:45 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of elements in type definition string doesn't match number of bind variables in /home/ivanovs1/public_html/UniFind_API/messaging/meetup/create_meetup.php on line 39
+[27-Apr-2026 06:50:48 UTC] [update_meetup] Request: meetupId=11, status=user_cancelled
+[27-Apr-2026 06:50:48 UTC] [update_meetup] Meetup not found: meetupId=11
+[27-Apr-2026 06:50:55 UTC] [update_meetup] Request: meetupId=11, status=user_cancelled
+[27-Apr-2026 06:50:55 UTC] [update_meetup] Meetup not found: meetupId=11
+[27-Apr-2026 06:52:07 UTC] [update_meetup] Request: meetupId=10, status=user_cancelled
+[27-Apr-2026 06:52:07 UTC] [update_meetup] Meetup not found: meetupId=10

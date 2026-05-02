@@ -1,0 +1,100 @@
+[26-Apr-2026 15:38:52 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:52 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:38:52 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:52 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:38:55 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:55 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:38:55 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:55 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:38:57 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:57 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:38:57 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:57 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:38:57 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:58 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:38:58 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:38:58 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:39:52 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:39:52 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:39:52 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:39:52 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:42 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:42 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:42 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:42 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:46 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:46 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:46 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:46 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:47 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:47 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:47 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:47 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:48 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:48 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:48 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:48 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:48 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:48 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96
+[26-Apr-2026 15:40:48 UTC] PHP Warning:  mysqli_stmt::bind_param(): Number of variables doesn't match number of parameters in prepared statement in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 91
+[26-Apr-2026 15:40:48 UTC] PHP Fatal error:  Uncaught Error: Call to a member function fetch_assoc() on bool in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php:96
+Stack trace:
+#0 {main}
+  thrown in /home/ivanovs1/public_html/UniFind_API/offers/get_offers.php on line 96

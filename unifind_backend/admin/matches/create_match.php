@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../config.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -51,23 +51,23 @@ $foundItem = $fStmt->get_result()->fetch_assoc();
 $fStmt->close();
 if (!$foundItem) api_error('Found item not found.', 404);
 
-// Create the match
+// Create the match (submitted_by, found_location, found_when, match_details are NOT NULL on server)
+$adminId = (int)$lostItem['poster_id'];
 $ins = $conn->prepare(
-    'INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, status, created_at) VALUES (?, ?, "pending", NOW())'
+    'INSERT INTO lost_found_matches (lost_item_id, matched_found_item_id, submitted_by, found_location, found_when, match_details, status, created_at) VALUES (?, ?, ?, "Admin matched", "N/A", "Matched by admin", "pending", NOW())'
 );
 if (!$ins) api_error('Server error.', 500);
-$ins->bind_param('ii', $lostItemId, $foundItemId);
+$ins->bind_param('iii', $lostItemId, $foundItemId, $adminId);
 if (!$ins->execute()) api_error('Failed to create match.', 500);
 $matchId = (int)$ins->insert_id;
 $ins->close();
 
-// Mark both items as matched
-$upd = $conn->prepare('UPDATE lost_found_items SET status = "matched" WHERE id IN (?, ?)');
-if ($upd) {
-    $upd->bind_param('ii', $lostItemId, $foundItemId);
-    $upd->execute();
-    $upd->close();
-}
+// Mark both items as resolved (resolved is valid enum value, matched is not)
+$upd = $conn->prepare('UPDATE lost_found_items SET status = "resolved" WHERE id = ? OR id = ?');
+if (!$upd) api_error('Prepare failed: ' . $conn->error, 500);
+$upd->bind_param('ii', $lostItemId, $foundItemId);
+if (!$upd->execute()) api_error('Failed to update items: ' . $upd->error, 500);
+$upd->close();
 
 // Start a conversation between the two item posters
 $lostPosterId  = (int)$lostItem['poster_id'];
@@ -114,3 +114,4 @@ if ($lostPosterId !== $foundPosterId) {
 }
 
 api_success(['match_id' => $matchId]);
+?>

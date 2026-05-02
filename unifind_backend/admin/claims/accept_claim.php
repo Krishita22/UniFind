@@ -99,15 +99,73 @@ $updateStmt->bind_param('i', $claimId);
 if (!$updateStmt->execute()) api_error('Update execute: ' . $updateStmt->error, 500);
 $updateStmt->close();
 
-// Send email to claimant
-$subject = 'Your Claim Has Been Approved';
-$body = "Hi {$claim['claimant_username']},\n\nYour claim for the item '{$claim['item_title']}' has been approved!\n\nYou can now propose a meetup time and location with the item finder.\n\nBest regards,\nUniFind Team";
-$headers = "From: UniFind <unifind@ivanovs1.nodomain>\r\n";
-@mail($claim['claimant_email'], $subject, $body, $headers);
+// Send styled HTML email to claimant
+$displayName = htmlspecialchars($claim['claimant_username']);
+$itemTitle   = htmlspecialchars($claim['item_title']);
+
+$emailSubject = 'Your Claim Has Been Approved — UniFind';
+$emailHtml = '
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claim Approved</title>
+</head>
+<body style="margin:0; padding:0; background-color:#F5F2ED; font-family: Helvetica, Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F5F2ED; padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:500px; background-color:#FFFFFF; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.08); overflow:hidden;">
+          <tr>
+            <td align="center" style="padding:40px 30px 36px 30px;">
+
+              <img src="https://i.imgur.com/wfe6qox.png" alt="UniFind Logo" style="width:220px; height:auto; margin-bottom:30px;">
+
+              <p style="margin:0 0 8px 0; text-align:center; font-size:26px; font-weight:bold; color:#000000;">
+                Hi ' . $displayName . '!
+              </p>
+              <p style="margin:0 0 24px 0; text-align:center; font-size:15px; line-height:1.6; color:#000000;">
+                Great news — your claim has been approved!
+              </p>
+
+              <!-- Item block -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F9F7F4; border-left:4px solid #DD2635; border-radius:4px; margin-bottom:24px;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <p style="margin:0 0 4px 0; font-size:12px; font-weight:bold; color:#8E8E8E; text-transform:uppercase; letter-spacing:0.5px;">Approved Item</p>
+                    <p style="margin:0; font-size:17px; font-weight:bold; color:#000000;">' . $itemTitle . '</p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 24px 0; text-align:center; font-size:14px; line-height:1.7; color:#333333;">
+                You can now open the UniFind app to coordinate a meetup time and location with the item finder directly through your messages.
+              </p>
+
+              <p style="color:#8E8E8E; font-size:12px; line-height:1.4; margin:0; text-align:center;">
+                &copy; 2026 UniFind. All rights reserved.
+              </p>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+';
+
+$emailHeaders  = "MIME-Version: 1.0\r\n";
+$emailHeaders .= "Content-Type: text/html; charset=UTF-8\r\n";
+$emailHeaders .= "From: UniFind <unifind@ivanovs1.nodomain>\r\n";
+
+@mail($claim['claimant_email'], $emailSubject, $emailHtml, $emailHeaders);
 
 api_success([
-    'claim_id' => $claimId,
-    'status' => 'approved',
+    'claim_id'        => $claimId,
+    'status'          => 'approved',
     'conversation_id' => $claim['conversation_id']
 ]);
 ?>
