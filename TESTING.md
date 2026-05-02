@@ -915,4 +915,3 @@ For future automation, consider:
 3. **Performance Baseline:** Establish performance metrics for regression testing
 4. **Load Testing Tool:** Use Apache JMeter for scalability testing
 5. **Security Scanning:** Implement OWASP ZAP for security vulnerability scanning
-6. **Email Validation:** Add Montclair domain validation to registration
