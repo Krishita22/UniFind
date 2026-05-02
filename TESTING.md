@@ -1,5 +1,8 @@
 # UniFind - Test Cases & Quality Assurance
 
+> ⚠️ **NOTE:** All email addresses and credentials in this document are **PLACEHOLDERS**. 
+> Replace them with actual test account credentials before running tests. See the Testing Environment section.
+
 ## Table of Contents
 1. [Test Plan Overview](#test-plan-overview)
 2. [Testing Environment](#testing-environment)
@@ -39,9 +42,16 @@ This document outlines all test cases for the UniFind application, covering the 
 - Authentication: Session-based
 
 **Credentials for Testing:**
-- Test User (Student): `testuser@montclair.edu` / `Password123!`
-- Test Faculty: `faculty@montclair.edu` / `Password123!`
-- Test Admin: `admin@montclair.edu` / `Password123!`
+> ⚠️ **IMPORTANT:** Replace these with actual test accounts created in your system
+- Test User (Student): `[CREATE_TEST_STUDENT_ACCOUNT]@montclair.edu` / `[PASSWORD]`
+- Test Faculty: `[CREATE_TEST_FACULTY_ACCOUNT]@montclair.edu` / `[PASSWORD]`
+- Test Admin: `[CREATE_TEST_ADMIN_ACCOUNT]@montclair.edu` / `[PASSWORD]`
+
+**How to Create Test Accounts:**
+1. Register new accounts via the Flutter app with Montclair emails
+2. Use the admin panel to assign roles (Student/Faculty/Admin)
+3. Verify emails through registration process
+4. Document credentials in this section for team reference
 
 ---
 
@@ -54,14 +64,14 @@ This document outlines all test cases for the UniFind application, covering the 
 **TC_AUTH_001: Successful Registration**
 - **Precondition:** User is on registration screen
 - **Steps:**
-  1. Enter email: `newuser@montclair.edu`
-  2. Enter password: `SecurePass123!`
-  3. Enter first name: `John`
-  4. Enter last name: `Doe`
-  5. Enter username: `johndoe123`
+  1. Enter email: `[NEW_TEST_EMAIL]@montclair.edu`
+  2. Enter password: `[STRONG_PASSWORD]` (6+ chars, uppercase, digit, special char)
+  3. Enter first name: `[TEST_FIRST_NAME]`
+  4. Enter last name: `[TEST_LAST_NAME]`
+  5. Enter username: `[UNIQUE_USERNAME]`
   6. Select role: `Student`
-  7. Enter age: `20`
-  8. Enter graduation year: `2026`
+  7. Enter age: `[AGE]`
+  8. Enter graduation year: `[YEAR]`
   9. Click "Send Verification Code"
   10. Receive verification email with code
   11. Enter verification code
@@ -73,7 +83,7 @@ This document outlines all test cases for the UniFind application, covering the 
 **TC_AUTH_002: Registration - Invalid Email**
 - **Precondition:** User is on registration screen
 - **Steps:**
-  1. Enter email: `invalid-email@gmail.com` (non-montclair email)
+  1. Enter email: `invalid@gmail.com` (non-montclair domain)
   2. Enter password: `SecurePass123!`
   3. Click "Send Verification Code"
 - **Expected Result:** Error message: "Please use a Montclair email address"
