@@ -1,6 +1,6 @@
 # UniFind - Test Cases & Quality Assurance
 
-> ⚠️ **NOTE:** All email addresses and credentials in this document are **PLACEHOLDERS**. 
+>  **NOTE:** All email addresses and credentials in this document are **PLACEHOLDERS**. 
 > Replace them with actual test account credentials before running tests. See the Testing Environment section.
 
 ## Table of Contents
@@ -42,7 +42,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - Authentication: Session-based
 
 **Credentials for Testing:**
-> ⚠️ **IMPORTANT:** Replace these with actual test accounts created in your system
+>  **IMPORTANT:** Replace these with actual test accounts created in your system
 - Test User (Student): `[CREATE_TEST_STUDENT_ACCOUNT]@montclair.edu` / `[PASSWORD]`
 - Test Faculty: `[CREATE_TEST_FACULTY_ACCOUNT]@montclair.edu` / `[PASSWORD]`
 - Test Admin: `[CREATE_TEST_ADMIN_ACCOUNT]@montclair.edu` / `[PASSWORD]`
@@ -77,7 +77,7 @@ This document outlines all test cases for the UniFind application, covering the 
   11. Enter verification code
   12. Click "Create Account"
 - **Expected Result:** Account created successfully, user logged in, redirected to welcome screen
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_002: Registration - Invalid Email**
@@ -87,7 +87,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Send Verification Code"
 - **Expected Result:** Error message: "Please use a Montclair email address"
-- **Actual Result:** ✗ Fail (system accepts non-Montclair emails)
+- **Actual Result:**  Fail (system accepts non-Montclair emails)
 - **Status:** Fail
 
 **TC_AUTH_003: Registration - Password Too Weak**
@@ -97,7 +97,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `weak`
   3. Click "Send Verification Code"
 - **Expected Result:** Error message: "Password must contain uppercase, digit, and special character"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_004: Registration - Username Already Taken**
@@ -108,7 +108,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Enter username: `johndoe123`
   4. Click "Check Availability" or proceed
 - **Expected Result:** Error: "Username already taken"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_005: Registration - Empty Required Fields**
@@ -118,7 +118,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Send Verification Code"
 - **Expected Result:** Form validation error: "Email is required"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_006: Registration - Verification Code Expired**
@@ -128,7 +128,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Wait 16+ minutes
   3. Enter code and submit
 - **Expected Result:** Error: "Verification code has expired. Request a new code."
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -143,7 +143,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Enter password: `SecurePass123!`
   4. Click "Sign In"
 - **Expected Result:** User logged in successfully, session created, redirected to home screen
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_008: Login - Invalid Username**
@@ -153,7 +153,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Sign In"
 - **Expected Result:** Error: "No account found for this username"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_009: Login - Wrong Password**
@@ -163,7 +163,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `WrongPassword123!`
   3. Click "Sign In"
 - **Expected Result:** Error: "Invalid username or password"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_010: Login - Unverified Email**
@@ -173,7 +173,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `CorrectPassword123!`
   3. Click "Sign In"
 - **Expected Result:** Error: "Please verify your email before logging in" + option to resend code
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_011: Login - Email Instead of Username**
@@ -183,7 +183,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Sign In"
 - **Expected Result:** User-friendly error: "Please enter your username, not your email address"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_012: Login - Case Sensitivity on Username**
@@ -193,7 +193,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Sign In"
 - **Expected Result:** Username is case-sensitive, login fails with "No account found"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -211,7 +211,7 @@ This document outlines all test cases for the UniFind application, covering the 
   6. Confirm password: `NewPassword123!`
   7. Click "Reset Password"
 - **Expected Result:** Password updated, user redirected to login, can login with new password
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_014: Password Reset - Code Expired**
@@ -221,7 +221,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Wait 31+ minutes
   3. Enter code and submit
 - **Expected Result:** Error: "Your reset code expired. Request a new code."
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_AUTH_015: Password Reset - Email Not Found**
@@ -230,7 +230,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter email: `nonexistent@montclair.edu`
   2. Click "Send Reset Code"
 - **Expected Result:** Message: "If an account exists, you'll receive a reset email" (doesn't reveal if email exists)
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -253,7 +253,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Upload image: `iphone.jpg`
   4. Click "Post Listing"
 - **Expected Result:** Listing posted successfully, goes to admin for approval
-- **Actual Result:** ✓ Pass (listing created, pending admin approval)
+- **Actual Result:**  Pass (listing created, pending admin approval)
 - **Status:** Pass
 
 **TC_LIST_002: Create Listing - Missing Required Field**
@@ -262,7 +262,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Fill in all fields except "Price"
   2. Click "Post Listing"
 - **Expected Result:** Form validation: "Price is required"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_003: Create Listing - Invalid Price**
@@ -271,7 +271,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter price: `abc` (non-numeric)
   2. Click "Post Listing"
 - **Expected Result:** Error: "Price must be a valid number"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_004: Create Listing - Negative Price**
@@ -280,7 +280,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter price: `-50`
   2. Click "Post Listing"
 - **Expected Result:** Error: "Price must be greater than 0"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_005: Create Listing - No Image**
@@ -290,7 +290,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Don't upload image
   3. Click "Post Listing"
 - **Expected Result:** Listing created with default placeholder image
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_006: Create Listing - Large Image**
@@ -298,7 +298,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to upload image larger than 5MB
 - **Expected Result:** Error: "Image size must be less than 5MB"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_007: Create Listing - Invalid Image Format**
@@ -306,7 +306,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to upload `.pdf` file
 - **Expected Result:** Error: "Only JPG, PNG, and GIF images allowed"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -319,7 +319,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. View marketplace page
   2. Listings should display with: title, price, image, condition, location
 - **Expected Result:** All listings displayed correctly
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_009: Search Listing by Keyword**
@@ -328,7 +328,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter search: `iPhone`
   2. Click search or press Enter
 - **Expected Result:** Only listings with "iPhone" in title/description shown
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_010: Filter Listings by Category**
@@ -336,7 +336,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Select category: `Electronics`
 - **Expected Result:** Only electronics listings displayed
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_011: Filter Listings by Price Range**
@@ -345,7 +345,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Set min price: `100`
   2. Set max price: `500`
 - **Expected Result:** Only listings between $100-$500 shown
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_012: View Listing Details**
@@ -354,7 +354,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Click on "iPhone 13" listing
   2. View detailed page
 - **Expected Result:** Full details shown: title, description, price, seller info, location, images
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -368,7 +368,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Change price from `600` to `550`
   3. Click "Save Changes"
 - **Expected Result:** Listing updated, new price displayed
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_014: Update Listing - Cannot Edit Others**
@@ -376,7 +376,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to access edit screen for someone else's listing
 - **Expected Result:** Access denied, shows message "You can only edit your own listings"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_015: Delete Own Listing**
@@ -385,7 +385,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Click "Delete Listing"
   2. Confirm deletion
 - **Expected Result:** Listing removed from marketplace
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LIST_016: Delete Listing - Confirmation Dialog**
@@ -395,7 +395,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Confirmation dialog appears
   3. Click "Cancel"
 - **Expected Result:** Listing not deleted, remains on marketplace
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -417,7 +417,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Upload image
   4. Click "Post"
 - **Expected Result:** Lost item posted, goes to admin for approval before visible in Lost & Found section
-- **Actual Result:** ✓ Pass (item created, pending admin approval)
+- **Actual Result:**  Pass (item created, pending admin approval)
 - **Status:** Pass
 
 **TC_LF_002: Post Found Item**
@@ -433,7 +433,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Upload image
   4. Click "Post"
 - **Expected Result:** Found item posted, goes to admin for approval before visible to public
-- **Actual Result:** ✓ Pass (item created, pending admin approval)
+- **Actual Result:**  Pass (item created, pending admin approval)
 - **Status:** Pass
 
 **TC_LF_003: Lost/Found - Missing Image**
@@ -443,7 +443,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Don't upload image
   3. Click "Post"
 - **Expected Result:** Error: "Image is required for lost/found items"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -458,7 +458,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Provide details: `Found it at lost & found desk`
   4. Click "Submit Claim"
 - **Expected Result:** Claim submitted to original poster for approval
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LF_005: Approve Claim**
@@ -469,7 +469,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Review claim details
   4. Click "Approve"
 - **Expected Result:** Claim approved, claimant notified, conversation started
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_LF_006: Reject Claim**
@@ -481,7 +481,7 @@ This document outlines all test cases for the UniFind application, covering the 
   4. Provide reason: `Not the correct backpack`
   5. Click "Reject"
 - **Expected Result:** Claim rejected, claimant notified
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -497,7 +497,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Initial message: `Is this still available?`
   3. Click "Send"
 - **Expected Result:** Conversation started, message sent, appears in Messages inbox
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_MSG_002: Send Message in Conversation**
@@ -507,7 +507,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Type message: `Can you send more pictures?`
   3. Click "Send"
 - **Expected Result:** Message sent, appears in chat history, recipient notified
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_MSG_003: View Message History**
@@ -516,7 +516,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Open conversation with John Doe
   2. View all previous messages
 - **Expected Result:** Full message history displayed in chronological order
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_MSG_004: Unread Message Count**
@@ -525,7 +525,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Navigate away from Messages tab
   2. Return to Messages tab
 - **Expected Result:** Unread count badge shows correct number
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -542,7 +542,7 @@ This document outlines all test cases for the UniFind application, covering the 
   5. Add note: `Let's meet at the info desk`
   6. Click "Send Proposal"
 - **Expected Result:** Meetup proposal sent to other user
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_MEET_002: Accept Meetup Proposal**
@@ -552,7 +552,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Review date/time/location
   3. Click "Accept"
 - **Expected Result:** Proposal accepted, both users notified, meetup confirmed
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_MEET_003: Decline Meetup Proposal**
@@ -562,7 +562,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Click "Decline"
   3. Reason: `Not available at that time`
 - **Expected Result:** Proposal declined, proposer notified
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_MEET_004: Propose Different Time**
@@ -573,7 +573,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Select new time: `3:00 PM`
   4. Click "Send Counter Proposal"
 - **Expected Result:** Counter proposal sent to original proposer
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -590,7 +590,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Add message: `Is this your lowest price?`
   4. Click "Send Offer"
 - **Expected Result:** Offer sent to seller, appears in their Offers inbox
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_OFFER_002: Make Offer - Price Validation**
@@ -599,7 +599,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter offer price: `0`
   2. Click "Send Offer"
 - **Expected Result:** Error: "Offer price must be greater than 0"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_OFFER_003: Make Offer - Price Higher Than Asking**
@@ -608,7 +608,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Enter offer price: `650`
   2. Click "Send Offer"
 - **Expected Result:** Offer sent (buyer allowed to offer higher), warning message optional
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_OFFER_004: Cannot Make Multiple Simultaneous Offers**
@@ -616,7 +616,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to make another offer on same listing
 - **Expected Result:** Message: "You already have an active offer on this listing"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -631,7 +631,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Review offer details
   4. Click "Accept Offer"
 - **Expected Result:** Offer accepted, buyer notified, conversation started for meetup
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_OFFER_006: Reject Offer**
@@ -641,7 +641,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Click on offer
   3. Click "Reject Offer"
 - **Expected Result:** Offer rejected, buyer notified
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_OFFER_007: Counter Offer**
@@ -651,7 +651,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter counter price: `575`
   3. Click "Send"
 - **Expected Result:** Counter offer sent to buyer, previous offer nullified
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_OFFER_008: Accept Counter Offer**
@@ -661,7 +661,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Review price
   3. Click "Accept Counter Offer"
 - **Expected Result:** Counter offer accepted, transaction confirmed
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -680,7 +680,7 @@ This document outlines all test cases for the UniFind application, covering the 
   5. Write review: `Great seller! Item exactly as described.`
   6. Click "Submit Rating"
 - **Expected Result:** Rating submitted, appears on seller's profile
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_RATE_002: Submit Negative Rating**
@@ -691,7 +691,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Write review: `Item arrived damaged`
   4. Click "Submit Rating"
 - **Expected Result:** Rating submitted (both positive and negative allowed)
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_RATE_003: View Seller Ratings**
@@ -700,7 +700,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Navigate to seller's profile
   2. View "Ratings" section
 - **Expected Result:** All ratings displayed with stars, reviews, and dates
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_RATE_004: Rating Average Calculation**
@@ -709,7 +709,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. View seller profile
   2. Check average rating display
 - **Expected Result:** Average correctly calculated and displayed (4.0 stars)
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_RATE_005: Cannot Rate Same Transaction Twice**
@@ -717,7 +717,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Try to rate same transaction again
 - **Expected Result:** Message: "You have already rated this transaction"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -732,7 +732,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Navigate to Profile tab
   2. View profile information
 - **Expected Result:** Displays: username, email, rating, number of listings, completed transactions
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_PROF_002: View Other User's Profile**
@@ -741,7 +741,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Click on seller name in listing detail
   2. View their profile
 - **Expected Result:** Shows public info: username, rating, reviews, active listings
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -755,7 +755,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Change username to: `johndoe456`
   3. Click "Save Changes"
 - **Expected Result:** Username updated, changes reflected immediately
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_PROF_004: Change Password**
@@ -767,7 +767,7 @@ This document outlines all test cases for the UniFind application, covering the 
   4. Confirm new password: `NewPassword456!`
   5. Click "Update Password"
 - **Expected Result:** Password changed, user can login with new password
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_PROF_005: Change Password - Wrong Current Password**
@@ -777,7 +777,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter new password: `NewPassword456!`
   3. Click "Update Password"
 - **Expected Result:** Error: "Current password is incorrect"
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -793,7 +793,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Click "Users"
   3. View list of all users
 - **Expected Result:** Displays all users with: email, username, role, status
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_ADMIN_002: Ban User**
@@ -804,7 +804,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Provide reason: `Violation of community guidelines`
   4. Click "Confirm Ban"
 - **Expected Result:** User banned, cannot login, listings deactivated
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_ADMIN_003: Unban User**
@@ -814,7 +814,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Click "Unban User"
   3. Click "Confirm"
 - **Expected Result:** User unbanned, can login again
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -827,7 +827,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. View "Pending Listings"
   2. Review listing from new seller
 - **Expected Result:** Shows title, description, price, images for review
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_ADMIN_005: Approve Listing**
@@ -836,7 +836,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Review listing details
   2. Click "Approve"
 - **Expected Result:** Listing approved, appears in marketplace, seller notified
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 **TC_ADMIN_006: Reject Listing**
@@ -847,7 +847,7 @@ This document outlines all test cases for the UniFind application, covering the 
   3. Provide reason: `Inappropriate content`
   4. Click "Confirm"
 - **Expected Result:** Listing rejected, removed, seller notified with reason
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -861,7 +861,7 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Steps:**
   1. Search for: `'; DROP TABLE listings; --`
 - **Expected Result:** Treated as literal string, no tables dropped, search returns no results
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 #### 9.2 XSS Prevention
@@ -873,7 +873,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Post listing
   3. View listing in marketplace
 - **Expected Result:** Script tags escaped/stripped, displayed as text
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 #### 9.3 CSRF Protection
@@ -884,7 +884,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Intercept request, remove CSRF token
   2. Resubmit request
 - **Expected Result:** Request rejected with 403 Forbidden
-- **Actual Result:** ✓ Pass
+- **Actual Result:**  Pass
 - **Status:** Pass
 
 ---
@@ -900,7 +900,7 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Load listings
   3. Measure load time
 - **Expected Result:** Page loads within 3 seconds, pagination works
-- **Actual Result:** ✓ Pass (2.1 seconds)
+- **Actual Result:**  Pass (2.1 seconds)
 - **Status:** Pass
 
 **TC_PERF_002: Search Performance**
@@ -909,7 +909,7 @@ This document outlines all test cases for the UniFind application, covering the 
   1. Search for common term
   2. Measure search time
 - **Expected Result:** Search completes within 1.5 seconds
-- **Actual Result:** ✓ Pass (0.8 seconds)
+- **Actual Result:**  Pass (0.8 seconds)
 - **Status:** Pass
 
 ---
