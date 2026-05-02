@@ -546,16 +546,6 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Actual Result:** Proposal marked as declined
 - **Status:** Pass
 
-**TC_MEET_004: Propose Different Time**
-- **Precondition:** User received meetup proposal
-- **Steps:**
-  1. Click "Propose Different Time"
-  2. Select new date and time
-  3. Click "Send Counter Proposal"
-- **Expected Result:** Counter proposal sent to original proposer
-- **Actual Result:** Counter proposal created and sent
-- **Status:** Pass
-
 ---
 
 ### 5. OFFER TESTS
@@ -931,8 +921,8 @@ For future automation, consider:
 
 ## Test Summary
 
-**Total Test Cases:** 65
-**Passed:** 65
+**Total Test Cases:** 64
+**Passed:** 64
 **Failed:** 0
 **Pass Rate:** 100%
 
@@ -940,7 +930,7 @@ For future automation, consider:
 - Authentication: 9 test cases
 - Marketplace Listings: 9 test cases
 - Lost & Found: 6 test cases
-- Messaging & Meetups: 8 test cases
+- Messaging & Meetups: 7 test cases
 - Offers: 8 test cases
 - Ratings & Reviews: 5 test cases
 - User Profile: 5 test cases
