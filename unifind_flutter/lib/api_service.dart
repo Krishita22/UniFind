@@ -62,11 +62,13 @@ Future<Map<String, dynamic>> sendSignupVerificationCode({
   final body = <String, dynamic>{
     'email': email,
   };
+  // password and first_name are only sent if provided; the backend may already
+  // have them from a prior step and will use its cached values if omitted.
   if (password != null && password.isNotEmpty) {
     body['password'] = password;
   }
   if (firstName != null && firstName.isNotEmpty) {
-    body['first_name'] = firstName; 
+    body['first_name'] = firstName;
   }
 
   final response = await http.post(
@@ -110,6 +112,7 @@ Future<Map<String, dynamic>> verifyCodeAndCreateAccount({
       'username':   username,
       'role':       role,
       'age':        age,
+      // Dart collection-if: graduation_year is only included in the JSON body when it is non-null.
       if (graduationYear != null) 'graduation_year': graduationYear,
     }),
   );
@@ -155,6 +158,8 @@ Future<Map<String, dynamic>> requestPasswordReset(String email) async {
     body: jsonEncode({'email': email}),
   );
   final data = jsonDecode(response.body);
+  // The backend returns success: true even when the email doesn't exist (to avoid email enumeration),
+  // but it also sets email_exists: false. We convert that to a thrown exception here.
   if (response.statusCode == 200 &&
       data['success'] == true &&
       data['email_exists'] == false) {
@@ -272,6 +277,8 @@ Future<Map<String, dynamic>> createListing({
   required String condition,
   required String location,
   required String email,
+  // Default image shown when the seller hasn't uploaded a photo.
+  // placehold.co is an external service — replace with a self-hosted asset for production.
   String image = 'https://placehold.co/400x400?text=?',
 }) async {
   final response = await http.post(
@@ -386,6 +393,8 @@ Future<Map<String, dynamic>> createLostFoundItem({
   required String type,
   required String location,
   required String email,
+  // Default image shown when the seller hasn't uploaded a photo.
+  // placehold.co is an external service — replace with a self-hosted asset for production.
   String image = 'https://placehold.co/400x400?text=?',
 }) async {
   final response = await http.post(

@@ -29,10 +29,12 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   void dispose() { _c.dispose(); super.dispose(); }
 
   String _loginErrorMessage(ApiException e) {
-  if (_username.trim().contains('@')) {
-    return 'Please enter your username, not your email address.';
-  }
-  switch (e.code) {
+    // If the user typed an email, catch that before checking the server error code
+    // — the backend receives it as a username lookup and returns a confusing error.
+    if (_username.trim().contains('@')) {
+      return 'Please enter your username, not your email address.';
+    }
+    switch (e.code) {
     case 'INVALID_CREDENTIALS':
       return 'Invalid username or password.';
     case 'USER_NOT_FOUND':
@@ -66,11 +68,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       print('DEBUG role value: ${user?['role']}');
 
       final loggedInEmail = (user?['email'] as String?) ?? _username.trim();
+      // The API has returned the user ID under several different keys across versions.
+      // Fall through all known locations before giving up.
       final rawId = user?['id'] ??
                 user?['user_id'] ??
                 data['user_id'] ??
                 data['id'] ??
                 data['data']?['id'];
+      // The API sometimes returns id as a JSON number, sometimes as a string — normalise to int.
       final loggedInUserId = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
       final loggedInUsername = ((user?['username'] ??
                   user?['user_name'] ??
@@ -270,6 +275,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 
   bool get _resetReady {
+    // Phase 1 (before code is sent): only email is required.
+    // Phase 2 (after code is sent): email, code, a strong password, and matching confirm are all required.
     if (!_codeSent) return _email.trim().isNotEmpty;
     return _email.trim().isNotEmpty &&
         _code.trim().isNotEmpty &&
@@ -279,6 +286,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 
   bool get _passwordStrong {
+    // Password policy: minimum 6 chars, no spaces, at least one uppercase letter,
+    // one digit, and one special character. Must match the backend's WEAK_PASSWORD check.
     return _newPassword.length >= 6 &&
         !_newPassword.contains(' ') &&
         RegExp(r'[A-Z]').hasMatch(_newPassword) &&
@@ -313,6 +322,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     });
 
     try {
+      // First call sends the reset code; second call (after _codeSent is true) verifies it and updates the password.
       if (!_codeSent) {
         final response = await requestPasswordReset(_email.trim().toLowerCase());
         if (!mounted) return;

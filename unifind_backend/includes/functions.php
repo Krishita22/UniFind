@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+// Shorthand for htmlspecialchars — always use this before rendering any user-supplied string in HTML.
 function e(string $value): string
 {
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -38,6 +39,9 @@ function is_montclair_email(string $email): bool
 
 function is_valid_password(string $password): bool
 {
+    // WARNING: This password rule (8 chars, letter + digit) does not match the Flutter client's
+    // validation (6 chars, uppercase, digit, special char). Keep both in sync to avoid users
+    // being rejected by one side but not the other.
     if (strlen($password) < 8) {
         return false;
     }
@@ -47,6 +51,8 @@ function is_valid_password(string $password): bool
 
 function short_desc(string $text, int $max = 120): string
 {
+    // Uses mb_ functions to correctly count and slice multi-byte (UTF-8) characters,
+    // so emoji and non-ASCII text don't get split mid-character.
     $text = trim($text);
     if (mb_strlen($text) <= $max) {
         return $text;

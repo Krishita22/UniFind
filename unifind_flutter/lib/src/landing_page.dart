@@ -23,6 +23,7 @@ class LandingPage extends StatelessWidget {
         child: LoginScreen(
           onLogin: (email, [userId, username, role, firstName]) {
             onLogin(email, userId, username, role, firstName);
+            // Pop all routes back to the landing page root so no intermediate screens remain on the stack.
             Navigator.of(ctx).popUntil((r) => r.isFirst);
           },
         ),
@@ -37,6 +38,9 @@ class LandingPage extends StatelessWidget {
         opacity: a,
         child: RegistrationScreen(
           onRegister: (email, [userId, username, role, firstName]) {
+            // Call onLogin here to set the global session state before showing the welcome screen.
+            // pushReplacement ensures the registration screen is removed from the stack,
+            // so the back button on WelcomeScreen goes directly to the landing page.
             onLogin(email, userId, username, role);
             Navigator.of(ctx).pushReplacement(
               MaterialPageRoute(
@@ -81,6 +85,7 @@ class LandingPage extends StatelessWidget {
             KeyedSubtree(key: _aboutKey, child: const _AboutSection()),
             KeyedSubtree(key: _faqKey, child: const _FaqSection()),
             KeyedSubtree(key: _contactKey, child: const _ContactSection()),
+            // Intentionally opens registration, not login — the banner is a conversion call-to-action.
             _ExclusiveBanner(onLogin: () => _openRegister(context)),
             const _Footer(),
           ],
@@ -114,6 +119,7 @@ class _LandingNav extends StatelessWidget {
         bottom: false,
         child: LayoutBuilder(
         builder: (context, constraints) {
+          // 920px is the breakpoint below which nav items are collapsed into a popup menu (tablet/phone width).
           final isCompact = constraints.maxWidth < 920;
 
           if (isCompact) {
