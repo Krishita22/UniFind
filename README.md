@@ -46,34 +46,6 @@ Examples:
 - `flutter run -d macos`
 - `flutter run -d ios`
 
-### Run on iPhone via Xcode
-
-1. Install iOS dependencies:
-
-```bash
-cd unifind_flutter
-flutter pub get
-cd ios
-pod install
-cd ..
-```
-
-2. Open the Xcode workspace (**not** the `.xcodeproj`):
-
-```bash
-open ios/Runner.xcworkspace
-```
-
-3. In Xcode:
-   - Select your iPhone from the device dropdown (top bar).
-   - Go to **Runner > Signing & Capabilities** and select your Apple Developer team.
-   - Click the **Run** button (or press `Cmd + R`).
-
-4. If you see **"Developer App Certificate is not trusted"** on your iPhone:
-   - On your iPhone go to **Settings > General > VPN & Device Management**.
-   - Tap your developer certificate and tap **Trust**.
-   - Run the app again from Xcode.
-
 ## Repository Structure 
 
 Think of this repo as two big parts:
