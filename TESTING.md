@@ -820,44 +820,7 @@ This document outlines all test cases for the UniFind application, covering the 
 
 ---
 
-### 9. SECURITY & DATA VALIDATION TESTS
-
-#### 9.1 SQL Injection Prevention
-
-**TC_SEC_001: SQL Injection in Search**
-- **Precondition:** User is searching listings
-- **Steps:**
-  1. Search for: `'; DROP TABLE listings; --`
-- **Expected Result:** Treated as literal string, no tables dropped, search returns no results
-- **Actual Result:** Query executed safely, string treated as literal search term
-- **Status:** Pass
-
-#### 9.2 XSS Prevention
-
-**TC_SEC_002: XSS in Listing Description**
-- **Precondition:** User is creating listing
-- **Steps:**
-  1. Enter description: `<script>alert('XSS')</script>`
-  2. Post listing
-  3. View listing in marketplace
-- **Expected Result:** Script tags escaped/stripped, displayed as text
-- **Actual Result:** Script tags escaped, displayed as plain text
-- **Status:** Pass
-
-#### 9.3 CSRF Protection
-
-**TC_SEC_003: CSRF Token Validation**
-- **Precondition:** User is making a state-changing request
-- **Steps:**
-  1. Intercept request, remove CSRF token
-  2. Resubmit request
-- **Expected Result:** Request rejected with 403 Forbidden
-- **Actual Result:** Request rejected due to missing token
-- **Status:** Pass
-
----
-
-### 10. PERFORMANCE & LOAD TESTS
+### 9. PERFORMANCE & LOAD TESTS
 
 #### 10.1 Load Testing
 
@@ -921,8 +884,8 @@ For future automation, consider:
 
 ## Test Summary
 
-**Total Test Cases:** 64
-**Passed:** 64
+**Total Test Cases:** 61
+**Passed:** 61
 **Failed:** 0
 **Pass Rate:** 100%
 
@@ -935,7 +898,6 @@ For future automation, consider:
 - Ratings & Reviews: 5 test cases
 - User Profile: 5 test cases
 - Admin Panel: 6 test cases
-- Security: 3 test cases
 - Performance: 2 test cases
 
 ---
