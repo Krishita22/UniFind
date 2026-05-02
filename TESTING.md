@@ -905,6 +905,7 @@ For future automation, consider:
 ## Known Issues & Limitations
 
 1. **Concurrent Offers:** If multiple offers accepted simultaneously, second acceptance may fail
+2. **Multiple Lost & Found Claims:** When multiple users claim the same found item, admin must manually decide which claim to approve. Recommend implementing automated process (e.g., first claim wins, or notify admin with automated recommendation)
 
 ---
 
