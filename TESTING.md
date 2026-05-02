@@ -87,8 +87,8 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Send Verification Code"
 - **Expected Result:** Error message: "Please use a Montclair email address"
-- **Actual Result:** ✓ Pass
-- **Status:** Pass
+- **Actual Result:** ✗ Fail (system accepts non-Montclair emails)
+- **Status:** Fail
 
 **TC_AUTH_003: Registration - Password Too Weak**
 - **Precondition:** User is on registration screen
@@ -252,8 +252,8 @@ This document outlines all test cases for the UniFind application, covering the 
      - Location: `Student Center`
   3. Upload image: `iphone.jpg`
   4. Click "Post Listing"
-- **Expected Result:** Listing posted successfully, appears in marketplace
-- **Actual Result:** ✓ Pass
+- **Expected Result:** Listing posted successfully, goes to admin for approval
+- **Actual Result:** ✓ Pass (listing created, pending admin approval)
 - **Status:** Pass
 
 **TC_LIST_002: Create Listing - Missing Required Field**
@@ -416,8 +416,8 @@ This document outlines all test cases for the UniFind application, covering the 
      - Category: `Bag/Backpack`
   3. Upload image
   4. Click "Post"
-- **Expected Result:** Lost item posted, visible in Lost & Found section
-- **Actual Result:** ✓ Pass
+- **Expected Result:** Lost item posted, goes to admin for approval before visible in Lost & Found section
+- **Actual Result:** ✓ Pass (item created, pending admin approval)
 - **Status:** Pass
 
 **TC_LF_002: Post Found Item**
@@ -432,8 +432,8 @@ This document outlines all test cases for the UniFind application, covering the 
      - Category: `Electronics`
   3. Upload image
   4. Click "Post"
-- **Expected Result:** Found item posted
-- **Actual Result:** ✓ Pass
+- **Expected Result:** Found item posted, goes to admin for approval before visible to public
+- **Actual Result:** ✓ Pass (item created, pending admin approval)
 - **Status:** Pass
 
 **TC_LF_003: Lost/Found - Missing Image**
@@ -954,9 +954,9 @@ For future automation, consider:
 ## Test Summary
 
 **Total Test Cases:** 65  
-**Passed:** 65  
-**Failed:** 0  
-**Pass Rate:** 100%
+**Passed:** 64  
+**Failed:** 1  
+**Pass Rate:** 98.5%
 
 ### Test Coverage by Feature:
 - Authentication: 9 test cases
