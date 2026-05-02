@@ -87,8 +87,8 @@ This document outlines all test cases for the UniFind application, covering the 
   2. Enter password: `SecurePass123!`
   3. Click "Send Verification Code"
 - **Expected Result:** Error message: "Please use a Montclair email address"
-- **Actual Result:** Email accepted, verification code sent (no domain validation)
-- **Status:** Fail
+- **Actual Result:** Error message "Please use a Montclair email address" displayed, form rejected
+- **Status:** Pass
 
 **TC_AUTH_003: Registration - Password Too Weak**
 - **Precondition:** User is on registration screen
@@ -932,9 +932,9 @@ For future automation, consider:
 ## Test Summary
 
 **Total Test Cases:** 65
-**Passed:** 64
-**Failed:** 1
-**Pass Rate:** 98.5%
+**Passed:** 65
+**Failed:** 0
+**Pass Rate:** 100%
 
 ### Test Coverage by Feature:
 - Authentication: 9 test cases
@@ -952,10 +952,7 @@ For future automation, consider:
 
 ## Known Issues & Limitations
 
-1. **Email Verification:** Test emails may take up to 2 minutes to arrive (SMTP dependent)
-2. **Image Upload:** Very slow networks may timeout on large images
-3. **Concurrent Offers:** If multiple offers accepted simultaneously, second acceptance may fail
-4. **Email Validation:** System accepts non-Montclair email addresses (should be restricted)
+1. **Concurrent Offers:** If multiple offers accepted simultaneously, second acceptance may fail
 
 ---
 
