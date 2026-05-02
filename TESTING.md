@@ -652,15 +652,15 @@ This document outlines all test cases for the UniFind application, covering the 
 - **Actual Result:** Rating and review saved and displayed
 - **Status:** Pass
 
-**TC_RATE_002: Submit Negative Rating**
+**TC_RATE_002: Submit Low Star Rating**
 - **Precondition:** User completed a transaction
 - **Steps:**
   1. Click "Leave Rating"
   2. Select 1 star
   3. Write review
   4. Click "Submit Rating"
-- **Expected Result:** Rating submitted (both positive and negative allowed)
-- **Actual Result:** Negative rating accepted and saved
+- **Expected Result:** Low rating (1 star) submitted successfully
+- **Actual Result:** 1-star rating accepted and saved, appears on seller's profile
 - **Status:** Pass
 
 **TC_RATE_003: View Seller Ratings**
